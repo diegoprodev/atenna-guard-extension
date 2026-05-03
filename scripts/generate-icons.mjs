@@ -12,7 +12,7 @@ mkdirSync(resolve(projectRoot, 'public/icons'), { recursive: true });
 
 for (const size of sizes) {
   await sharp(srcLogo)
-    .resize(size, size, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
+    .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png()
     .toFile(resolve(projectRoot, `public/icons/icon${size}.png`));
   console.log(`Generated icon${size}.png`);
