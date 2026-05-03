@@ -1,28 +1,44 @@
 /* Atenna Guard Prompt — all classes prefixed atenna- to avoid host page collisions */
 
+@keyframes atenna-icon-shine {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 0px rgba(255,255,255,0)); }
+  50%       { filter: brightness(1.35) drop-shadow(0 0 6px rgba(255,255,255,0.55)); }
+}
+
+@keyframes atenna-slide-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Button badge ─────────────────────────────────────── */
+
 .atenna-btn {
-  position: absolute;
-  top: 0;
-  right: 0;
-  background: #22c55e;
-  color: #ffffff;
+  position: fixed;
+  /* top + right set dynamically by injectButton.ts */
   border: none;
-  border-radius: 8px 8px 0 0;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px 3px 2px;
   cursor: pointer;
-  z-index: 9999;
+  z-index: 2147483647;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  transition: background 200ms ease, box-shadow 200ms ease;
   white-space: nowrap;
   line-height: 1.4;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+  background: #22c55e;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  overflow: visible;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.30);
+  transition: box-shadow 200ms ease, filter 200ms ease;
 }
 
 .atenna-btn:hover {
-  background: #16a34a;
-  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);
+  filter: brightness(1.08);
+  box-shadow: 0 3px 14px rgba(34, 197, 94, 0.50);
 }
 
 .atenna-btn:focus-visible {
@@ -31,38 +47,52 @@
 }
 
 .atenna-btn[data-active='true'] {
-  background: #15803d;
+  filter: brightness(0.88);
 }
 
-/* ── Panel ──────────────────────────────────────────── */
+/* Logo icon — 30px on ~21px badge = ~4.5px overflow top/bottom ("stamp" effect)
+   mix-blend-mode: lighten removes the black circle: black < green so it shows green,
+   white > green so it stays white → white logo on green badge, no black background */
+.atenna-btn__icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: block;
+  mix-blend-mode: lighten;
+  animation: atenna-icon-shine 2.6s ease-in-out infinite;
+}
+
+/* ── Panel ──────────────────────────────────────────────── */
 
 .atenna-panel {
   position: fixed;
-  right: 16px;
-  top: 50%;
-  transform: translateY(-50%);
+  /* right + bottom set dynamically by panel.ts — positions above the badge */
   width: 240px;
-  background: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
   z-index: 99999;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
-  color: #1f2937;
   padding: 14px;
   animation: atenna-slide-in 200ms ease;
+  background: #ffffff;
+  color: #1f2937;
 }
 
-@keyframes atenna-slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(-50%) translateX(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(-50%) translateX(0);
-  }
+/* Dark theme — applied via JS by measuring body background luminance,
+   so it tracks the platform's in-app toggle, not just the OS preference */
+.atenna-panel--dark {
+  background: #1e1e2e;
+  color: #e2e8f0;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55);
 }
+.atenna-panel--dark .atenna-panel__logo    { color: #4ade80; }
+.atenna-panel--dark .atenna-panel__close   { color: #6b7280; }
+.atenna-panel--dark .atenna-panel__close:hover { color: #e2e8f0; }
+.atenna-panel--dark .atenna-panel__divider { border-color: #2d3748; }
+.atenna-panel--dark .atenna-panel__platform { color: #6b7280; }
 
 .atenna-panel__header {
   display: flex;
@@ -76,6 +106,15 @@
   font-size: 13px;
   color: #15803d;
   letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.atenna-panel__logo img {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
 }
 
 .atenna-panel__close {
@@ -89,9 +128,7 @@
   transition: color 150ms ease;
 }
 
-.atenna-panel__close:hover {
-  color: #1f2937;
-}
+.atenna-panel__close:hover { color: #1f2937; }
 
 .atenna-panel__divider {
   border: none;

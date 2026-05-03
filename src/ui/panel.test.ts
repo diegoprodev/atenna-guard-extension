@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { togglePanel } from './panel';
 
 describe('togglePanel', () => {
@@ -27,9 +27,9 @@ describe('togglePanel', () => {
     expect(document.getElementById('atenna-panel')!.textContent).toContain('Gemini');
   });
 
-  it('panel contains "Atenna Guard ativo"', () => {
+  it('panel contains "Atenna ativo"', () => {
     togglePanel('ChatGPT');
-    expect(document.getElementById('atenna-panel')!.textContent).toContain('Atenna Guard ativo');
+    expect(document.getElementById('atenna-panel')!.textContent).toContain('Atenna ativo');
   });
 
   it('close button removes the panel', () => {
@@ -44,5 +44,24 @@ describe('togglePanel', () => {
     const panel = document.getElementById('atenna-panel')!;
     expect(panel.innerHTML).not.toContain('<script>');
     expect(panel.textContent).toContain('alert(1)');
+  });
+
+  it('adds atenna-panel--dark when body background is dark', () => {
+    // Simulate dark platform background
+    vi.spyOn(window, 'getComputedStyle').mockReturnValue(
+      { backgroundColor: 'rgb(20, 20, 30)' } as CSSStyleDeclaration
+    );
+    togglePanel('ChatGPT');
+    expect(document.getElementById('atenna-panel')!.classList.contains('atenna-panel--dark')).toBe(true);
+    vi.restoreAllMocks();
+  });
+
+  it('does not add atenna-panel--dark when body background is light', () => {
+    vi.spyOn(window, 'getComputedStyle').mockReturnValue(
+      { backgroundColor: 'rgb(255, 255, 255)' } as CSSStyleDeclaration
+    );
+    togglePanel('ChatGPT');
+    expect(document.getElementById('atenna-panel')!.classList.contains('atenna-panel--dark')).toBe(false);
+    vi.restoreAllMocks();
   });
 });
