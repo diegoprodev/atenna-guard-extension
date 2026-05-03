@@ -1,4 +1,5 @@
-/* Atenna Guard — Modal styles, all prefixed atenna-modal- */
+/* Atenna Guard — Modal. 2 cores: #22c55e (verde) + superfície (branco/preto).
+   Prefixo atenna-modal-* em todas as classes. */
 
 @keyframes atenna-modal-fade-in {
   from { opacity: 0; }
@@ -6,15 +7,15 @@
 }
 
 @keyframes atenna-modal-scale-in {
-  from { opacity: 0; transform: scale(0.94) translateY(8px); }
+  from { opacity: 0; transform: scale(0.96) translateY(6px); }
   to   { opacity: 1; transform: scale(1)    translateY(0);   }
 }
 
 @keyframes atenna-modal-toast-in {
-  0%   { opacity: 0; transform: translateY(6px); }
-  20%  { opacity: 1; transform: translateY(0);   }
-  80%  { opacity: 1; transform: translateY(0);   }
-  100% { opacity: 0; transform: translateY(6px); }
+  0%   { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  15%  { opacity: 1; transform: translateX(-50%) translateY(0);   }
+  80%  { opacity: 1; transform: translateX(-50%) translateY(0);   }
+  100% { opacity: 0; transform: translateX(-50%) translateY(6px); }
 }
 
 /* ── Overlay ─────────────────────────────────────────────── */
@@ -22,172 +23,158 @@
 .atenna-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 2147483646;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2147483647;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: atenna-modal-fade-in 180ms ease;
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  animation: atenna-modal-fade-in 160ms ease;
 }
 
 /* ── Modal box ───────────────────────────────────────────── */
 
 .atenna-modal {
+  --at-green: #22c55e;
+  --at-bg: #ffffff;
+  --at-text: #111111;
+  --at-border: rgba(0, 0, 0, 0.08);
+  --at-card-bg: #f7f7f7;
+  --at-header-bg: #ffffff;
+
   width: 520px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 64px);
   overflow-y: auto;
-  border-radius: 16px;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.22);
+  border-radius: 14px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.18);
   z-index: 2147483647;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
-  background: #ffffff;
-  color: #1f2937;
-  animation: atenna-modal-scale-in 220ms cubic-bezier(0.34, 1.26, 0.64, 1);
-  padding: 20px;
+  background: var(--at-bg);
+  color: var(--at-text);
+  animation: atenna-modal-scale-in 200ms cubic-bezier(0.34, 1.2, 0.64, 1);
   box-sizing: border-box;
+  scroll-behavior: smooth;
 }
 
 .atenna-modal--dark {
-  background: #1e1e2e;
-  color: #e2e8f0;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+  --at-bg: #0f0f0f;
+  --at-text: #f1f1f1;
+  --at-border: rgba(255, 255, 255, 0.08);
+  --at-card-bg: #1a1a1a;
+  --at-header-bg: #0f0f0f;
 }
 
-/* ── Header ──────────────────────────────────────────────── */
+/* ── Sticky header ───────────────────────────────────────── */
 
 .atenna-modal__header {
-  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--at-header-bg);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 4px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--at-border);
 }
 
 .atenna-modal__title {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 15px;
+  gap: 7px;
+  font-size: 14px;
   font-weight: 700;
-  color: #15803d;
+  color: var(--at-green);
   letter-spacing: 0.01em;
+  justify-self: start;
 }
 
-.atenna-modal--dark .atenna-modal__title { color: #4ade80; }
-
 .atenna-modal__title img {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
 }
 
+/* ── Header toggle ───────────────────────────────────────── */
+
+.atenna-modal__toggle {
+  display: flex;
+  background: var(--at-card-bg);
+  border-radius: 20px;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--at-border);
+}
+
+.atenna-modal__tab {
+  background: none;
+  border: none;
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  cursor: pointer;
+  color: var(--at-text);
+  opacity: 0.45;
+  transition: opacity 150ms ease, background 150ms ease, color 150ms ease;
+  white-space: nowrap;
+}
+
+.atenna-modal__tab--active {
+  background: var(--at-green);
+  color: #ffffff;
+  opacity: 1;
+}
+
 .atenna-modal__close {
+  justify-self: end;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
   padding: 2px 4px;
-  color: #9ca3af;
-  transition: color 150ms ease;
+  color: var(--at-text);
+  opacity: 0.35;
+  transition: opacity 150ms ease;
   border-radius: 6px;
+  font-family: inherit;
 }
 
-.atenna-modal__close:hover { color: #1f2937; }
-.atenna-modal--dark .atenna-modal__close:hover { color: #e2e8f0; }
+.atenna-modal__close:hover { opacity: 0.9; }
 
-.atenna-modal__subtitle {
-  font-size: 12px;
-  color: #6b7280;
-  margin-bottom: 16px;
+/* ── Body ────────────────────────────────────────────────── */
+
+.atenna-modal__body {
+  padding: 16px;
 }
 
-.atenna-modal--dark .atenna-modal__subtitle { color: #64748b; }
+/* ── Views ───────────────────────────────────────────────── */
 
-/* ── Input preview ───────────────────────────────────────── */
-
-.atenna-modal__input-preview {
-  background: #f3f4f6;
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 13px;
-  color: #374151;
-  margin-bottom: 16px;
-  max-height: 80px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
-  border: 1px solid #e5e7eb;
-  line-height: 1.5;
+.atenna-modal__view--hidden {
+  display: none;
 }
 
-.atenna-modal--dark .atenna-modal__input-preview {
-  background: #16213e;
-  color: #cbd5e1;
-  border-color: #2d3748;
-}
-
-.atenna-modal__input-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #6b7280;
-  margin-bottom: 4px;
-}
-
-.atenna-modal--dark .atenna-modal__input-label { color: #64748b; }
-
-.atenna-modal__input-empty {
-  color: #9ca3af;
-  font-style: italic;
-}
-
-/* ── Section label ───────────────────────────────────────── */
-
-.atenna-modal__section-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #6b7280;
-  margin-bottom: 10px;
-}
-
-.atenna-modal--dark .atenna-modal__section-label { color: #64748b; }
-
-/* ── Prompt cards ────────────────────────────────────────── */
+/* ── Prompt cards (Criar Prompt view) ────────────────────── */
 
 .atenna-modal__cards {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .atenna-modal__card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--at-border);
   border-radius: 10px;
   padding: 12px 14px;
-  background: #f9fafb;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  background: var(--at-card-bg);
+  transition: border-color 150ms ease;
 }
 
 .atenna-modal__card:hover {
-  border-color: #22c55e;
-  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.12);
-}
-
-.atenna-modal--dark .atenna-modal__card {
-  background: #16213e;
-  border-color: #2d3748;
-}
-
-.atenna-modal--dark .atenna-modal__card:hover {
-  border-color: #4ade80;
-  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.15);
+  border-color: var(--at-green);
 }
 
 .atenna-modal__card-header {
@@ -197,95 +184,146 @@
   margin-bottom: 8px;
 }
 
-.atenna-modal__card-title {
+.atenna-modal__card-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
 
 .atenna-modal__card-badge {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  background: #dcfce7;
-  color: #15803d;
-  border-radius: 6px;
+  background: var(--at-green);
+  color: #fff;
+  border-radius: 5px;
   padding: 2px 7px;
-  letter-spacing: 0.03em;
-}
-
-.atenna-modal--dark .atenna-modal__card-badge {
-  background: #14532d;
-  color: #4ade80;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .atenna-modal__card-desc {
-  font-size: 11px;
-  color: #6b7280;
+  font-size: 12px;
+  color: var(--at-text);
+  opacity: 0.45;
 }
-
-.atenna-modal--dark .atenna-modal__card-desc { color: #64748b; }
 
 .atenna-modal__card-actions {
   display: flex;
   gap: 6px;
+  align-items: center;
 }
 
 .atenna-modal__card-text {
   font-size: 12px;
-  color: #374151;
+  color: var(--at-text);
+  opacity: 0.75;
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 80px;
+  max-height: 72px;
   overflow-y: auto;
-  padding: 2px 0;
 }
-
-.atenna-modal--dark .atenna-modal__card-text { color: #cbd5e1; }
 
 /* ── Buttons ─────────────────────────────────────────────── */
 
-.atenna-modal__btn {
+/* Copy icon button — Fitts: larger target, Jakob: universal clipboard icon */
+.atenna-modal__btn-copy {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  border: none;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
   border-radius: 7px;
-  font-size: 12px;
-  font-weight: 600;
-  font-family: inherit;
+  border: 1px solid var(--at-border);
+  background: none;
   cursor: pointer;
-  padding: 5px 12px;
-  transition: filter 150ms ease, box-shadow 150ms ease;
-  white-space: nowrap;
+  color: var(--at-text);
+  opacity: 0.45;
+  transition: opacity 150ms ease, border-color 150ms ease;
+  padding: 0;
+  flex-shrink: 0;
 }
 
-.atenna-modal__btn--copy {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #e5e7eb;
+.atenna-modal__btn-copy:hover {
+  opacity: 1;
+  border-color: var(--at-green);
+  color: var(--at-green);
 }
 
-.atenna-modal__btn--copy:hover {
-  filter: brightness(0.94);
+/* USAR button — outline by default, green fill on hover only */
+.atenna-modal__btn-use {
+  display: inline-flex;
+  align-items: center;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 7px;
+  border: 1.5px solid var(--at-green);
+  background: transparent;
+  color: var(--at-green);
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: background 150ms ease, color 150ms ease;
 }
 
-.atenna-modal--dark .atenna-modal__btn--copy {
-  background: #2d3748;
-  color: #e2e8f0;
-  border-color: #4b5563;
-}
-
-.atenna-modal__btn--use {
-  background: #22c55e;
+.atenna-modal__btn-use:hover {
+  background: var(--at-green);
   color: #ffffff;
-  box-shadow: 0 1px 6px rgba(34, 197, 94, 0.30);
 }
 
-.atenna-modal__btn--use:hover {
-  filter: brightness(1.08);
-  box-shadow: 0 2px 10px rgba(34, 197, 94, 0.45);
+/* ── Edit view ───────────────────────────────────────────── */
+
+.atenna-modal__edit-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--at-text);
+  opacity: 0.4;
+  margin-bottom: 6px;
 }
+
+.atenna-modal__editor {
+  width: 100%;
+  min-height: 120px;
+  max-height: 200px;
+  border-radius: 8px;
+  border: 1px solid var(--at-border);
+  background: var(--at-card-bg);
+  color: var(--at-text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 10px 12px;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 150ms ease;
+}
+
+.atenna-modal__editor:focus {
+  border-color: var(--at-green);
+}
+
+.atenna-modal__regen {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px;
+  border: none;
+  border-radius: 8px;
+  background: var(--at-green);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 150ms ease;
+  letter-spacing: 0.02em;
+}
+
+.atenna-modal__regen:hover { filter: brightness(1.08); }
 
 /* ── Toast ───────────────────────────────────────────────── */
 
@@ -294,12 +332,12 @@
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  background: #1f2937;
-  color: #ffffff;
+  background: var(--at-text, #111);
+  color: var(--at-bg, #fff);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  padding: 8px 18px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 16px;
   border-radius: 100px;
   z-index: 2147483647;
   animation: atenna-modal-toast-in 1.8s ease forwards;

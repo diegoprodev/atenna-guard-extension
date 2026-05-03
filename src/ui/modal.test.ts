@@ -1,10 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { toggleModal } from './modal';
 
-// Stub chrome.runtime for content script context
 vi.stubGlobal('chrome', { runtime: { getURL: (p: string) => `chrome-extension://test/${p}` } });
 
-// Stub navigator.clipboard
 Object.defineProperty(navigator, 'clipboard', {
   value: { writeText: vi.fn().mockResolvedValue(undefined) },
   configurable: true,
@@ -39,41 +37,80 @@ describe('toggleModal', () => {
     expect(document.querySelectorAll('.atenna-modal__card').length).toBe(3);
   });
 
-  it('renders Copiar and USAR buttons for each card', () => {
+  it('renders copy icon and USAR buttons for each card', () => {
     toggleModal();
-    expect(document.querySelectorAll('.atenna-modal__btn--copy').length).toBe(3);
-    expect(document.querySelectorAll('.atenna-modal__btn--use').length).toBe(3);
+    expect(document.querySelectorAll('.atenna-modal__btn-copy').length).toBe(3);
+    expect(document.querySelectorAll('.atenna-modal__btn-use').length).toBe(3);
   });
 
-  it('shows empty-input placeholder when no platform input present', () => {
+  it('header has sticky toggle with two tabs', () => {
     toggleModal();
-    expect(document.querySelector('.atenna-modal__input-empty')).not.toBeNull();
+    expect(document.querySelectorAll('.atenna-modal__tab').length).toBe(2);
   });
 
-  it('shows current input text when platform input is present', () => {
+  it('"Criar Prompt" tab is active by default', () => {
+    toggleModal();
+    const active = document.querySelector('.atenna-modal__tab--active');
+    expect(active?.textContent).toContain('Criar Prompt');
+  });
+
+  it('clicking "Editar Texto" tab shows edit view', () => {
+    toggleModal();
+    const editTab = Array.from(document.querySelectorAll<HTMLButtonElement>('.atenna-modal__tab'))
+      .find(t => t.dataset.tab === 'edit')!;
+    editTab.click();
+    const editView = document.querySelector<HTMLElement>('[data-view="edit"]')!;
+    expect(editView.classList.contains('atenna-modal__view--hidden')).toBe(false);
+  });
+
+  it('edit view contains a textarea', () => {
+    toggleModal();
+    const editTab = Array.from(document.querySelectorAll<HTMLButtonElement>('.atenna-modal__tab'))
+      .find(t => t.dataset.tab === 'edit')!;
+    editTab.click();
+    expect(document.querySelector('.atenna-modal__editor')).not.toBeNull();
+  });
+
+  it('textarea pre-fills with current platform input', () => {
     const ta = document.createElement('textarea');
     ta.id = 'prompt-textarea';
-    ta.value = 'minha pergunta de teste';
+    ta.value = 'minha pergunta original';
     document.body.appendChild(ta);
     toggleModal();
-    expect(document.querySelector('.atenna-modal__input-preview')!.textContent).toContain('minha pergunta');
+    const editTab = Array.from(document.querySelectorAll<HTMLButtonElement>('.atenna-modal__tab'))
+      .find(t => t.dataset.tab === 'edit')!;
+    editTab.click();
+    const editor = document.querySelector<HTMLTextAreaElement>('.atenna-modal__editor')!;
+    expect(editor.value).toContain('minha pergunta original');
+  });
+
+  it('Gerar Prompts button regenerates cards and returns to prompts view', () => {
+    toggleModal();
+    const editTab = Array.from(document.querySelectorAll<HTMLButtonElement>('.atenna-modal__tab'))
+      .find(t => t.dataset.tab === 'edit')!;
+    editTab.click();
+    const editor = document.querySelector<HTMLTextAreaElement>('.atenna-modal__editor')!;
+    editor.value = 'novo texto para gerar';
+    document.querySelector<HTMLButtonElement>('.atenna-modal__regen')!.click();
+    const activeTab = document.querySelector('.atenna-modal__tab--active');
+    expect(activeTab?.textContent).toContain('Criar Prompt');
+    expect(document.querySelectorAll('.atenna-modal__card').length).toBe(3);
   });
 
   it('close button removes overlay', () => {
     toggleModal();
-    const closeBtn = document.querySelector('.atenna-modal__close') as HTMLButtonElement;
-    closeBtn.click();
+    (document.querySelector('.atenna-modal__close') as HTMLButtonElement).click();
     expect(document.getElementById('atenna-modal-overlay')).toBeNull();
   });
 
-  it('clicking overlay backdrop closes modal', () => {
+  it('clicking backdrop closes modal', () => {
     toggleModal();
-    const overlay = document.getElementById('atenna-modal-overlay')!;
-    overlay.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    document.getElementById('atenna-modal-overlay')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(document.getElementById('atenna-modal-overlay')).toBeNull();
   });
 
-  it('ESC key closes modal', () => {
+  it('ESC closes modal', () => {
     toggleModal();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(document.getElementById('atenna-modal-overlay')).toBeNull();
@@ -81,7 +118,7 @@ describe('toggleModal', () => {
 
   it('adds atenna-modal--dark when body is dark', () => {
     vi.spyOn(window, 'getComputedStyle').mockReturnValue(
-      { backgroundColor: 'rgb(20, 20, 30)' } as CSSStyleDeclaration
+      { backgroundColor: 'rgb(15, 15, 15)' } as CSSStyleDeclaration
     );
     toggleModal();
     expect(document.querySelector('.atenna-modal--dark')).not.toBeNull();
@@ -93,9 +130,8 @@ describe('toggleModal', () => {
     ta.value = '<script>alert(1)</script>';
     document.body.appendChild(ta);
     toggleModal();
-    const preview = document.querySelector('.atenna-modal__input-preview')!;
-    expect(preview.innerHTML).not.toContain('<script>');
-    expect(preview.textContent).toContain('alert(1)');
+    const cards = document.querySelector('.atenna-modal__cards')!;
+    expect(cards.innerHTML).not.toContain('<script>');
   });
 
   it('USAR button sets input text and closes modal', () => {
@@ -104,8 +140,7 @@ describe('toggleModal', () => {
     ta.value = 'texto original';
     document.body.appendChild(ta);
     toggleModal();
-    const useBtn = document.querySelector<HTMLButtonElement>('[data-use="0"]')!;
-    useBtn.click();
+    document.querySelector<HTMLButtonElement>('[data-use="0"]')!.click();
     expect(document.getElementById('atenna-modal-overlay')).toBeNull();
     expect(ta.value).not.toBe('texto original');
   });
@@ -116,8 +151,7 @@ describe('toggleModal', () => {
     ta.value = 'test';
     document.body.appendChild(ta);
     toggleModal();
-    const copyBtn = document.querySelector<HTMLButtonElement>('[data-copy="0"]')!;
-    copyBtn.click();
+    document.querySelector<HTMLButtonElement>('[data-copy="0"]')!.click();
     await Promise.resolve();
     expect(navigator.clipboard.writeText).toHaveBeenCalled();
   });

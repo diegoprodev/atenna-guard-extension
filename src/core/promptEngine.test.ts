@@ -28,7 +28,7 @@ describe('generatePrompts', () => {
     const v = generatePrompts('minha pergunta').find(v => v.type === 'Estruturado')!;
     expect(v.text).toContain('minha pergunta');
     expect(v.text).toContain('Contexto');
-    expect(v.text).toContain('Solução');
+    expect(v.text).toContain('Desenvolvimento');
   });
 
   it('handles empty input gracefully', () => {
