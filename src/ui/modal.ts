@@ -1,9 +1,8 @@
 import { getCurrentInput, getInputText, setInputText } from '../core/inputHandler';
 import { getUsage, incrementUsage, isAtLimit, MONTHLY_LIMIT } from '../core/usageCounter';
 
-const OVERLAY_ID = 'atenna-modal-overlay';
-const BACKEND_URL = 'http://localhost:8000/generate-prompts';
-const SUCCESS_MS = 500;
+const OVERLAY_ID  = 'atenna-modal-overlay';
+const SUCCESS_MS  = 500;
 
 const LOADING_MESSAGES = [
   'Gerando seus prompts com engenharia de IA...',
@@ -25,7 +24,18 @@ const COPY_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
 </svg>`;
 
+// ─── Module-level state ────────────────────────────────────
+
 let msgIntervalId: ReturnType<typeof setInterval> | undefined;
+
+interface PromptData { direct: string; technical: string; structured: string }
+
+// Cache last generated prompts so reopening with the same text skips re-generation.
+let promptCache: { forText: string; data: PromptData } | null = null;
+
+export function clearPromptCache(): void { promptCache = null; }
+
+// ─── Helpers ───────────────────────────────────────────────
 
 function clearMsgInterval(): void {
   if (msgIntervalId !== undefined) { clearInterval(msgIntervalId); msgIntervalId = undefined; }
@@ -55,7 +65,11 @@ export function toggleModal(): void {
 
 function openModal(): void {
   const platformInput = getCurrentInput();
-  const userText = platformInput ? getInputText(platformInput) : '';
+  const userText      = platformInput ? getInputText(platformInput).trim() : '';
+  const cacheHit      = promptCache !== null && promptCache.forText === userText && userText !== '';
+  // 'edit'    = "Criar Prompt" tab (user writes/edits text + clicks Gerar)
+  // 'prompts' = "Meus Prompts" tab (shows the 3 generated cards)
+  const defaultTab    = (userText !== '' || cacheHit) ? 'prompts' : 'edit';
 
   const overlay = document.createElement('div');
   overlay.id = OVERLAY_ID;
@@ -72,13 +86,20 @@ function openModal(): void {
     ? `<img src="${logoUrl}" width="22" height="22" alt="" aria-hidden="true"/>`
     : '';
 
-  // innerHTML used only for static structure — no user content here
+  // Tab labels swapped from original:
+  // data-tab="edit"    → "Criar Prompt" (write text, click Gerar)
+  // data-tab="prompts" → "Meus Prompts" (3 generated cards)
+  const editActive    = defaultTab === 'edit'    ? ' atenna-modal__tab--active' : '';
+  const promptsActive = defaultTab === 'prompts' ? ' atenna-modal__tab--active' : '';
+  const editSelected    = String(defaultTab === 'edit');
+  const promptsSelected = String(defaultTab === 'prompts');
+
   modal.innerHTML = `
     <div class="atenna-modal__header">
       <span class="atenna-modal__title">${logoImg}Atenna Prompt</span>
       <div class="atenna-modal__toggle" role="tablist">
-        <button class="atenna-modal__tab" data-tab="edit" role="tab" aria-selected="false">Meu Texto</button>
-        <button class="atenna-modal__tab atenna-modal__tab--active" data-tab="prompts" role="tab" aria-selected="true">Criar Prompt</button>
+        <button class="atenna-modal__tab${editActive}"    data-tab="edit"    role="tab" aria-selected="${editSelected}">Criar Prompt</button>
+        <button class="atenna-modal__tab${promptsActive}" data-tab="prompts" role="tab" aria-selected="${promptsSelected}">Meus Prompts</button>
       </div>
       <div class="atenna-modal__header-right">
         <span class="atenna-modal__usage" aria-label="Uso mensal">…</span>
@@ -86,8 +107,8 @@ function openModal(): void {
       </div>
     </div>
     <div class="atenna-modal__body">
-      <div class="atenna-modal__view" data-view="prompts"></div>
-      <div class="atenna-modal__view atenna-modal__view--hidden" data-view="edit">
+      <div class="atenna-modal__view${defaultTab === 'prompts' ? '' : ' atenna-modal__view--hidden'}" data-view="prompts"></div>
+      <div class="atenna-modal__view${defaultTab === 'edit'    ? '' : ' atenna-modal__view--hidden'}" data-view="edit">
         <div class="atenna-modal__edit-label">Seu texto</div>
         <textarea class="atenna-modal__editor" placeholder="Digite ou edite seu texto aqui..."></textarea>
         <button class="atenna-modal__regen">Gerar Prompts</button>
@@ -96,8 +117,8 @@ function openModal(): void {
   `;
 
   // User text goes via .value — never innerHTML
-  const editorEl = modal.querySelector<HTMLTextAreaElement>('.atenna-modal__editor')!;
-  editorEl.value = userText;
+  const editorEl    = modal.querySelector<HTMLTextAreaElement>('.atenna-modal__editor')!;
+  editorEl.value    = platformInput ? getInputText(platformInput) : '';
 
   const promptsView = modal.querySelector<HTMLElement>('[data-view="prompts"]')!;
   const usageBadge  = modal.querySelector<HTMLElement>('.atenna-modal__usage')!;
@@ -116,7 +137,10 @@ function openModal(): void {
   const views = modal.querySelectorAll<HTMLElement>('.atenna-modal__view');
 
   const switchTab = (target: string) => {
-    tabs.forEach(t  => { t.classList.toggle('atenna-modal__tab--active', t.dataset.tab === target); t.setAttribute('aria-selected', String(t.dataset.tab === target)); });
+    tabs.forEach(t  => {
+      t.classList.toggle('atenna-modal__tab--active', t.dataset.tab === target);
+      t.setAttribute('aria-selected', String(t.dataset.tab === target));
+    });
     views.forEach(v => v.classList.toggle('atenna-modal__view--hidden', v.dataset.view !== target));
   };
 
@@ -127,17 +151,29 @@ function openModal(): void {
     });
   });
 
-  // ── Regenerate from edit view ──────────────────────────
+  // ── Gerar button (from "Criar Prompt" view) ────────────
   modal.querySelector('.atenna-modal__regen')!.addEventListener('click', () => {
+    const text = editorEl.value.trim();
+    if (!text) return; // nothing to generate
     switchTab('prompts');
-    runFlow(promptsView, usageBadge, editorEl.value.trim(), platformInput, overlay);
+    runFlow(promptsView, usageBadge, text, platformInput, overlay);
   });
 
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
 
-  // Auto-generate on open
-  runFlow(promptsView, usageBadge, userText, platformInput, overlay);
+  // ── Auto-generate / show cache / idle ─────────────────
+  if (cacheHit) {
+    // Same text, already generated — show immediately, no spinner
+    void getUsage().then(u => updateUsageBadge(usageBadge, u.count));
+    renderPrompts(promptsView, promptCache!.data, platformInput, overlay);
+  } else if (userText !== '') {
+    // New text — auto-generate
+    runFlow(promptsView, usageBadge, userText, platformInput, overlay);
+  } else {
+    // Empty input — just show usage badge, stay on "Criar Prompt" tab
+    void getUsage().then(u => updateUsageBadge(usageBadge, u.count));
+  }
 
   (modal.querySelector('.atenna-modal__close') as HTMLButtonElement).focus();
 }
@@ -171,6 +207,9 @@ async function runFlow(
 
   const newUsage = await incrementUsage();
   updateUsageBadge(usageBadge, newUsage.count);
+
+  // Cache the result for this text
+  promptCache = { forText: userText, data };
 
   renderPrompts(container, data, platformInput, overlay);
 }
@@ -258,7 +297,7 @@ function renderLimitReached(container: HTMLElement): void {
 
 function renderPrompts(
   container:     HTMLElement,
-  data:          { direct: string; technical: string; structured: string },
+  data:          PromptData,
   platformInput: HTMLElement | null,
   overlay:       HTMLElement
 ): void {
@@ -287,8 +326,7 @@ function buildCard(
   card.className = 'atenna-modal__card';
   card.dataset.card = String(index);
 
-  // ── header ──
-  const header = document.createElement('div');
+  const header  = document.createElement('div');
   header.className = 'atenna-modal__card-header';
 
   const meta  = document.createElement('div');
@@ -323,7 +361,6 @@ function buildCard(
   header.appendChild(meta);
   header.appendChild(actions);
 
-  // ── prompt textarea (readonly) ──
   const ta = document.createElement('textarea');
   ta.className = 'atenna-modal__card-textarea';
   ta.readOnly = true;
@@ -334,7 +371,6 @@ function buildCard(
   card.appendChild(header);
   card.appendChild(ta);
 
-  // ── events ──
   copyBtn.addEventListener('click', () => {
     const text = ta.value;
     try {
@@ -366,31 +402,40 @@ function buildCard(
 function updateUsageBadge(badge: HTMLElement, count: number): void {
   badge.textContent = `${count}/${MONTHLY_LIMIT}`;
   badge.className = 'atenna-modal__usage';
-  if (count >= MONTHLY_LIMIT)       badge.classList.add('atenna-modal__usage--danger');
-  else if (count >= MONTHLY_LIMIT - 5) badge.classList.add('atenna-modal__usage--warning');
+  if (count >= MONTHLY_LIMIT)           badge.classList.add('atenna-modal__usage--danger');
+  else if (count >= MONTHLY_LIMIT - 5)  badge.classList.add('atenna-modal__usage--warning');
 }
 
-// ─── Backend fetch ─────────────────────────────────────────
+// ─── Backend fetch (via background worker to bypass CORS) ──
 
-export async function fetchPrompts(inputText: string): Promise<{
-  direct: string; technical: string; structured: string;
-}> {
+export async function fetchPrompts(inputText: string): Promise<PromptData> {
+  const fallback: PromptData = {
+    direct:      `Explique de forma clara e objetiva:\n\n${inputText}`,
+    technical:   `Você é um especialista. Analise profundamente:\n\n${inputText}`,
+    structured:  `Responda com contexto, solução e conclusão:\n\n${inputText}`,
+  };
   try {
-    const res = await fetch(BACKEND_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input: inputText }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
+    const response = await sendToBackground(inputText);
+    if (!response || !response.ok) throw new Error('backend error');
+    return response.data as PromptData;
   } catch (err) {
     console.error('[Atenna] erro backend:', err);
-    return {
-      direct:      `Explique de forma clara e objetiva:\n\n${inputText}`,
-      technical:   `Você é um especialista. Analise profundamente:\n\n${inputText}`,
-      structured:  `Responda com contexto, solução e conclusão:\n\n${inputText}`,
-    };
+    return fallback;
   }
+}
+
+function sendToBackground(inputText: string): Promise<{ ok: boolean; data: unknown } | null> {
+  return new Promise((resolve) => {
+    try {
+      chrome.runtime.sendMessage(
+        { type: 'ATENNA_FETCH', input: inputText },
+        (response: { ok: boolean; data: unknown } | null | undefined) => {
+          if (chrome.runtime.lastError) { resolve(null); return; }
+          resolve(response ?? null);
+        }
+      );
+    } catch { resolve(null); }
+  });
 }
 
 // ─── Helpers ───────────────────────────────────────────────

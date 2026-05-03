@@ -1,22 +1,28 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { toggleModal, fetchPrompts } from './modal';
+import { toggleModal, fetchPrompts, clearPromptCache } from './modal';
 
 // ── Shared state ───────────────────────────────────────────
 
 let chromeStore: Record<string, unknown> = {};
 
-const FETCH_OK = {
+const PROMPT_RESPONSE = {
   ok: true,
-  json: () => Promise.resolve({
+  data: {
     direct:     'prompt direto gerado pela IA',
     technical:  'prompt técnico gerado pela IA',
     structured: 'prompt estruturado gerado pela IA',
-  }),
+  },
 };
 
-function stubChrome() {
+function stubChrome(sendMsgResponse: unknown = PROMPT_RESPONSE) {
   vi.stubGlobal('chrome', {
-    runtime: { getURL: (p: string) => `chrome-extension://test/${p}` },
+    runtime: {
+      getURL: (p: string) => `chrome-extension://test/${p}`,
+      sendMessage: vi.fn().mockImplementation(
+        (_msg: unknown, cb: (r: unknown) => void) => { cb(sendMsgResponse); }
+      ),
+      lastError: undefined,
+    },
     storage: {
       local: {
         get: vi.fn().mockImplementation((key: string, cb: (r: Record<string, unknown>) => void) => {
@@ -31,15 +37,21 @@ function stubChrome() {
   });
 }
 
+// Helper: add a platform textarea with text so auto-generation runs
+function addTextarea(value = 'texto de teste') {
+  const ta = document.createElement('textarea');
+  ta.id = 'prompt-textarea';
+  ta.value = value;
+  document.body.appendChild(ta);
+  return ta;
+}
+
 // ── Helper: flush the full async flow ─────────────────────
-// runFlow: renderLoading (sync) → getUsage (Promise) → fetch (Promise)
+// runFlow: renderLoading (sync) → getUsage (Promise) → sendMessage (Promise)
 //          → renderSuccess (setTimeout 500ms) → incrementUsage (Promise) → renderPrompts.
 async function waitForFlow(): Promise<void> {
-  // Drain getUsage + fetchPrompts microtask chains (interleaved with for-loop)
   for (let i = 0; i < 15; i++) await Promise.resolve();
-  // Fire the 500ms renderSuccess timer
   vi.advanceTimersByTime(600);
-  // Drain incrementUsage chain + renderPrompts
   for (let i = 0; i < 12; i++) await Promise.resolve();
 }
 
@@ -49,9 +61,8 @@ describe('toggleModal', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     chromeStore = {};
-    // Re-stub everything: vi.restoreAllMocks() resets vi.fn() implementations
+    clearPromptCache();
     stubChrome();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(FETCH_OK));
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText: vi.fn().mockResolvedValue(undefined) },
       configurable: true,
@@ -114,17 +125,28 @@ describe('toggleModal', () => {
     expect(document.querySelector('.atenna-modal__usage')).not.toBeNull();
   });
 
-  it('"Criar Prompt" tab is active by default', () => {
-    toggleModal();
-    const active = document.querySelector<HTMLButtonElement>('.atenna-modal__tab--active');
-    expect(active?.dataset.tab).toBe('prompts');
-  });
+  // ── Tab labels and order ─────────────────────────────────
 
-  it('"Meu Texto" is first tab, "Criar Prompt" is second', () => {
+  it('"Criar Prompt" is first tab, "Meus Prompts" is second', () => {
     toggleModal();
     const tabs = document.querySelectorAll<HTMLButtonElement>('.atenna-modal__tab');
     expect(tabs[0].dataset.tab).toBe('edit');
+    expect(tabs[0].textContent).toBe('Criar Prompt');
     expect(tabs[1].dataset.tab).toBe('prompts');
+    expect(tabs[1].textContent).toBe('Meus Prompts');
+  });
+
+  it('"Criar Prompt" tab is active when input is empty', () => {
+    toggleModal(); // no textarea in DOM
+    const active = document.querySelector<HTMLButtonElement>('.atenna-modal__tab--active');
+    expect(active?.dataset.tab).toBe('edit');
+  });
+
+  it('"Meus Prompts" tab is active when input has text', () => {
+    addTextarea('algum texto');
+    toggleModal();
+    const active = document.querySelector<HTMLButtonElement>('.atenna-modal__tab--active');
+    expect(active?.dataset.tab).toBe('prompts');
   });
 
   // ── Dark mode ────────────────────────────────────────────
@@ -142,27 +164,45 @@ describe('toggleModal', () => {
     expect(document.querySelector('.atenna-modal--dark')).not.toBeNull();
   });
 
-  // ── Loading (sync, visible immediately) ──────────────────
+  // ── Empty input — no auto-generation ─────────────────────
 
-  it('shows spinner immediately on open', () => {
+  it('no spinner on open when input is empty', () => {
+    toggleModal();
+    expect(document.querySelector('.atenna-modal__spinner')).toBeNull();
+  });
+
+  it('shows spinner immediately when input has text', () => {
+    addTextarea('algum texto');
     toggleModal();
     expect(document.querySelector('.atenna-modal__spinner')).not.toBeNull();
   });
 
-  it('shows loading message immediately', () => {
+  it('shows loading message immediately when input has text', () => {
+    addTextarea('algum texto');
     toggleModal();
     expect(document.querySelector('.atenna-modal__loading-msg')).not.toBeNull();
+  });
+
+  it('no generation happens when input is empty', async () => {
+    toggleModal();
+    await waitForFlow();
+    // No cards should appear
+    expect(document.querySelectorAll('.atenna-modal__card').length).toBe(0);
+    // sendMessage should not have been called
+    expect((chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
   });
 
   // ── Async flow: loading → success → prompts ──────────────
 
   it('renders 3 cards after flow completes', async () => {
+    addTextarea('algum texto');
     toggleModal();
     await waitForFlow();
     expect(document.querySelectorAll('.atenna-modal__card').length).toBe(3);
   });
 
   it('each card has readonly textarea', async () => {
+    addTextarea('algum texto');
     toggleModal();
     await waitForFlow();
     const textareas = document.querySelectorAll<HTMLTextAreaElement>('.atenna-modal__card-textarea');
@@ -171,6 +211,7 @@ describe('toggleModal', () => {
   });
 
   it('each card has copy icon and USAR button', async () => {
+    addTextarea('algum texto');
     toggleModal();
     await waitForFlow();
     expect(document.querySelectorAll('.atenna-modal__btn-copy').length).toBe(3);
@@ -178,15 +219,39 @@ describe('toggleModal', () => {
   });
 
   it('cards are filled with backend-generated text', async () => {
+    addTextarea('algum texto');
     toggleModal();
     await waitForFlow();
     const ta = document.querySelector<HTMLTextAreaElement>('.atenna-modal__card-textarea')!;
     expect(ta.value).toContain('gerado pela IA');
   });
 
+  // ── Cache: no re-generation on reopen with same text ─────
+
+  it('reopening with same text shows cached prompts without calling backend again', async () => {
+    addTextarea('texto cacheado');
+    toggleModal();
+    await waitForFlow();
+    const callsAfterFirst = (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls.length;
+
+    // Close and reopen
+    toggleModal();
+    stubChrome(); // re-stub so we can track calls
+    document.body.innerHTML = '';
+    addTextarea('texto cacheado');
+    toggleModal();
+    // No flow needed — cache hit shows cards immediately
+    await Promise.resolve();
+
+    expect((chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    expect(document.querySelectorAll('.atenna-modal__card').length).toBe(3);
+    expect(callsAfterFirst).toBe(1);
+  });
+
   // ── Usage counter ────────────────────────────────────────
 
   it('usage badge shows X/15 format after generation', async () => {
+    addTextarea('algum texto');
     toggleModal();
     await waitForFlow();
     const badge = document.querySelector('.atenna-modal__usage')!;
@@ -194,6 +259,7 @@ describe('toggleModal', () => {
   });
 
   it('usage count is 1 after first generation', async () => {
+    addTextarea('algum texto');
     toggleModal();
     await waitForFlow();
     expect(document.querySelector('.atenna-modal__usage')!.textContent).toBe('1/15');
@@ -202,12 +268,12 @@ describe('toggleModal', () => {
   // ── Limit reached ────────────────────────────────────────
 
   it('shows limit UI when count is at 15', async () => {
+    addTextarea('algum texto');
     chromeStore['atenna_usage'] = {
       count: 15,
       resetDate: Date.now() + 30 * 24 * 60 * 60 * 1000,
     };
     toggleModal();
-    // renderLoading is sync; getUsage resolves in ~3 turns; renderLimitReached is sync
     for (let i = 0; i < 12; i++) await Promise.resolve();
     expect(document.querySelector('.atenna-modal__limit-icon')).not.toBeNull();
     expect(document.querySelector('.atenna-modal__loading-msg')!.textContent)
@@ -215,6 +281,7 @@ describe('toggleModal', () => {
   });
 
   it('usage badge shows danger class at limit', async () => {
+    addTextarea('algum texto');
     chromeStore['atenna_usage'] = {
       count: 15,
       resetDate: Date.now() + 30 * 24 * 60 * 60 * 1000,
@@ -228,10 +295,7 @@ describe('toggleModal', () => {
   // ── USAR button ──────────────────────────────────────────
 
   it('USAR fills platform input and closes modal', async () => {
-    const ta = document.createElement('textarea');
-    ta.id = 'prompt-textarea';
-    ta.value = 'texto original';
-    document.body.appendChild(ta);
+    const ta = addTextarea('texto original');
     toggleModal();
     await waitForFlow();
     document.querySelector<HTMLButtonElement>('.atenna-modal__btn-use')!.click();
@@ -243,6 +307,7 @@ describe('toggleModal', () => {
   // ── Copy button ──────────────────────────────────────────
 
   it('Copiar calls clipboard.writeText', async () => {
+    addTextarea('algum texto');
     toggleModal();
     await waitForFlow();
     document.querySelector<HTMLButtonElement>('.atenna-modal__btn-copy')!.click();
@@ -250,9 +315,10 @@ describe('toggleModal', () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalled();
   });
 
-  // ── Edit tab ─────────────────────────────────────────────
+  // ── Edit tab (Criar Prompt) ───────────────────────────────
 
-  it('"Meu Texto" tab shows edit view', () => {
+  it('"Criar Prompt" tab shows edit view when clicked', () => {
+    addTextarea('algum texto');
     toggleModal();
     Array.from(document.querySelectorAll<HTMLButtonElement>('.atenna-modal__tab'))
       .find(t => t.dataset.tab === 'edit')!.click();
@@ -263,23 +329,36 @@ describe('toggleModal', () => {
   });
 
   it('editor textarea is pre-filled with platform input text', () => {
-    const ta = document.createElement('textarea');
-    ta.id = 'prompt-textarea';
-    ta.value = 'texto do usuário no chat';
-    document.body.appendChild(ta);
+    addTextarea('texto do usuário no chat');
     toggleModal();
     expect(
       document.querySelector<HTMLTextAreaElement>('.atenna-modal__editor')!.value
     ).toBe('texto do usuário no chat');
   });
 
+  it('Gerar button triggers flow and switches to Meus Prompts', async () => {
+    toggleModal(); // empty input — Criar Prompt tab active
+    const editor = document.querySelector<HTMLTextAreaElement>('.atenna-modal__editor')!;
+    editor.value = 'meu texto para gerar';
+    document.querySelector<HTMLButtonElement>('.atenna-modal__regen')!.click();
+    const activeTab = document.querySelector<HTMLButtonElement>('.atenna-modal__tab--active');
+    expect(activeTab?.dataset.tab).toBe('prompts');
+    await waitForFlow();
+    expect(document.querySelectorAll('.atenna-modal__card').length).toBe(3);
+  });
+
+  it('Gerar button with empty editor does nothing', () => {
+    toggleModal();
+    document.querySelector<HTMLButtonElement>('.atenna-modal__regen')!.click();
+    // Should still be on edit tab (no switch)
+    const activeTab = document.querySelector<HTMLButtonElement>('.atenna-modal__tab--active');
+    expect(activeTab?.dataset.tab).toBe('edit');
+  });
+
   // ── Security ─────────────────────────────────────────────
 
   it('XSS: user input never appears raw as innerHTML in cards', async () => {
-    const ta = document.createElement('textarea');
-    ta.id = 'prompt-textarea';
-    ta.value = '<script>alert(1)</script>';
-    document.body.appendChild(ta);
+    addTextarea('<script>alert(1)</script>');
     toggleModal();
     await waitForFlow();
     document.querySelectorAll<HTMLTextAreaElement>('.atenna-modal__card-textarea')
@@ -291,7 +370,7 @@ describe('toggleModal', () => {
 
 describe('fetchPrompts', () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(FETCH_OK));
+    stubChrome();
   });
 
   it('returns backend data on success', async () => {
@@ -299,16 +378,21 @@ describe('fetchPrompts', () => {
     expect(result.direct).toBe('prompt direto gerado pela IA');
   });
 
-  it('returns fallback when fetch throws', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network')));
+  it('returns fallback when sendMessage returns null', async () => {
+    vi.stubGlobal('chrome', {
+      runtime: {
+        sendMessage: vi.fn().mockImplementation((_msg: unknown, cb: (r: unknown) => void) => { cb(null); }),
+        lastError: { message: 'no connection' },
+      },
+    });
     const result = await fetchPrompts('meu texto');
     expect(result.direct).toContain('meu texto');
     expect(result.technical).toContain('meu texto');
     expect(result.structured).toContain('meu texto');
   });
 
-  it('returns fallback when response is not ok', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 503 }));
+  it('returns fallback when backend returns not ok', async () => {
+    stubChrome({ ok: false, status: 503 });
     const result = await fetchPrompts('texto');
     expect(result.direct).toContain('texto');
   });

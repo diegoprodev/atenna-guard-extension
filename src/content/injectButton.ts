@@ -36,10 +36,11 @@ function positionButton(btn: HTMLButtonElement, input: HTMLElement): void {
     const cRect = container.getBoundingClientRect();
     if (cRect.width === 0 || cRect.height === 0) return;
 
-    // getBoundingClientRect().height is reliable after append (unlike offsetHeight)
     const btnH = btn.getBoundingClientRect().height || 26;
-    btn.style.top = `${cRect.top - btnH / 2}px`;
-    btn.style.right = `${window.innerWidth - cRect.right + BADGE_RIGHT_OFFSET}px`;
+    // Anchor to the BOTTOM edge of the container — stable when the input
+    // grows upward (ChatGPT / Claude / Gemini behavior).
+    btn.style.top    = `${cRect.bottom - btnH / 2}px`;
+    btn.style.right  = `${window.innerWidth - cRect.right + BADGE_RIGHT_OFFSET}px`;
   });
 }
 
