@@ -2,6 +2,27 @@
 
 All notable changes to **Atenna Guard Extension** are documented here.
 
+## [1.6.0] — 2026-05-03
+
+### Added
+- **Geração de prompts via IA** (`runFlow`): modal agora chama o backend FastAPI em vez de templates locais — Gemini 2.5 Flash Lite gera os 3 prompts.
+- **UX de carregamento**: spinner + mensagens rotativas a cada 1,5s durante a geração (`Gerando seus prompts...`, `Analisando seu contexto...`, etc.). Spinner visível **imediatamente** na abertura do modal (antes de qualquer await).
+- **Transição de sucesso**: ícone de check SVG animado com `cubic-bezier(0.34, 1.56, 0.64, 1)` + mensagem "Pronto!" por 500ms antes de exibir os cards.
+- **Contador de uso mensal** (`src/core/usageCounter.ts`): persistido em `chrome.storage.local`, limite de 15 gerações/mês com reset automático após 30 dias. Badge `X/15` no header do modal — verde (< 10), amarelo (≥ 10), vermelho (= 15).
+- **Tela de limite atingido**: ícone 🔒 + mensagem "Limite mensal atingido" quando `count >= 15`, sem spinner ou chamada à rede.
+- **Cards com textarea readonly**: prompts exibidos em `<textarea readonly>` — permite seleção sem edição; nenhum conteúdo do usuário vai via `innerHTML`.
+- **Botão USAR outline**: estilo outline verde por padrão, filled no hover — menor peso visual.
+- **Botão Copiar (ícone)**: substituído texto "Copiar" por ícone SVG universal de clipboard.
+- **Toggle no header**: `[Meu Texto] [Criar Prompt]` centralizado no header sticky — 2 cores, `320ms cubic-bezier`.
+
+### Changed
+- `renderLoading` movido para antes do primeiro `await` em `runFlow` — spinner exibido sincronamente.
+- Segurança: todo conteúdo do usuário inserido via `.textContent` / `.value`; SVGs estáticos (check, copy) via `innerHTML` com constantes compile-time.
+
+### Tests
+- **83 testes passando** (7 arquivos): novos suites para `usageCounter` (9 testes) e `modal` completo (29 testes) cobrindo open/close, dark mode, spinner sync, flow async, usage badge, limit UI, USAR, Copiar, XSS.
+- Root cause do stub reset documentada: `vi.restoreAllMocks()` reseta `vi.fn()` — solução: re-stub `chrome` e `fetch` em cada `beforeEach`.
+
 ## [1.5.0] — 2026-05-03
 
 ### Added
