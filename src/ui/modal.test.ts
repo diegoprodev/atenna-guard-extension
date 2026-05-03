@@ -54,7 +54,14 @@ describe('toggleModal', () => {
     expect(active?.textContent).toContain('Criar Prompt');
   });
 
-  it('clicking "Editar Texto" tab shows edit view', () => {
+  it('"Meu Texto" tab is first, "Criar Prompt" is second', () => {
+    toggleModal();
+    const tabs = document.querySelectorAll<HTMLButtonElement>('.atenna-modal__tab');
+    expect(tabs[0].dataset.tab).toBe('edit');
+    expect(tabs[1].dataset.tab).toBe('prompts');
+  });
+
+  it('clicking "Meu Texto" tab shows edit view', () => {
     toggleModal();
     const editTab = Array.from(document.querySelectorAll<HTMLButtonElement>('.atenna-modal__tab'))
       .find(t => t.dataset.tab === 'edit')!;

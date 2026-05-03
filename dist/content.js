@@ -38,8 +38,8 @@ Sintetize os pontos mais importantes e sugira ações concretas, aprofundamentos
     <div class="atenna-modal__header">
       <span class="atenna-modal__title">${d}Atenna Prompt</span>
       <div class="atenna-modal__toggle" role="tablist">
+        <button class="atenna-modal__tab" data-tab="edit" role="tab" aria-selected="false">Meu Texto</button>
         <button class="atenna-modal__tab atenna-modal__tab--active" data-tab="prompts" role="tab" aria-selected="true">Criar Prompt</button>
-        <button class="atenna-modal__tab" data-tab="edit" role="tab" aria-selected="false">Editar Texto</button>
       </div>
       <button class="atenna-modal__close" aria-label="Fechar">×</button>
     </div>

@@ -2,6 +2,16 @@
 
 All notable changes to **Atenna Guard Extension** are documented here.
 
+## [1.4.0] — 2026-05-03
+
+### Changed
+- **Toggle de abas invertido**: ordem corrigida para `[Meu Texto] [Criar Prompt]` — fonte (esquerda) → ação (direita), padrão UX de segmented controls.
+- **"Editar Texto" renomeado para "Meu Texto"**: nome mais intuitivo, referencia diretamente o texto digitado pelo usuário no input da plataforma.
+- **Transição do toggle suavizada**: de `150ms ease` para `320ms cubic-bezier(0.4, 0, 0.2, 1)` — visível e sutil, sem brusquidão.
+
+### Tests
+- 64 testes passando (6 arquivos).
+
 ## [1.3.0] — 2026-05-03
 
 ### Added
