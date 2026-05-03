@@ -2,6 +2,23 @@
 
 All notable changes to **Atenna Guard Extension** are documented here.
 
+## [1.5.0] — 2026-05-03
+
+### Added
+- **Backend local FastAPI** (`backend/`): servidor Python que gera os 3 prompts via Gemini 2.5 Flash Lite.
+  - `POST /generate-prompts` — recebe `{ input }`, retorna `{ direct, technical, structured }` gerados por IA
+  - `GET /health` — status do servidor
+  - CORS liberado para extensão Chrome e localhost
+  - Fallback local automático se a API do Gemini falhar (sem erro para a extensão)
+  - API key via `.env` (nunca exposta no código)
+  - Timeout 10s com tratamento de erros granular (timeout, HTTP, parse, inesperado)
+  - Logs `[Atenna]` no console
+- **`.gitignore`** atualizado: `__pycache__/`, `*.pyc`, `venv/` adicionados
+
+### Quality
+- Qualidade dos prompts com Gemini 2.5 Flash Lite vs templates locais: de **7/10 → 9.5/10**
+- Gemini entende contexto real — para "natação em alto mar" gera prompts com correntes, ondas, periodização, navegação; templates locais são context-blind
+
 ## [1.4.0] — 2026-05-03
 
 ### Changed
