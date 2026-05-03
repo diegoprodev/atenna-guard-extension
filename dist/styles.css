@@ -1,0 +1,160 @@
+/* Atenna Guard Prompt — all classes prefixed atenna- to avoid host page collisions */
+
+@keyframes atenna-icon-shine {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 0px rgba(255,255,255,0)); }
+  50%       { filter: brightness(1.35) drop-shadow(0 0 6px rgba(255,255,255,0.55)); }
+}
+
+@keyframes atenna-slide-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Button badge ─────────────────────────────────────── */
+
+.atenna-btn {
+  position: fixed;
+  /* top + right set dynamically by injectButton.ts */
+  border: none;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px 3px 2px;
+  cursor: pointer;
+  z-index: 2147483647;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  white-space: nowrap;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+  background: #22c55e;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  overflow: visible;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.30);
+  transition: box-shadow 200ms ease, filter 200ms ease;
+}
+
+.atenna-btn:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 3px 14px rgba(34, 197, 94, 0.50);
+}
+
+.atenna-btn:focus-visible {
+  outline: 2px solid #22c55e;
+  outline-offset: 2px;
+}
+
+.atenna-btn[data-active='true'] {
+  filter: brightness(0.88);
+}
+
+/* Logo icon — 30px on ~21px badge = ~4.5px overflow top/bottom ("stamp" effect)
+   mix-blend-mode: lighten removes the black circle: black < green so it shows green,
+   white > green so it stays white → white logo on green badge, no black background */
+.atenna-btn__icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: block;
+  mix-blend-mode: lighten;
+  animation: atenna-icon-shine 2.6s ease-in-out infinite;
+}
+
+/* ── Panel ──────────────────────────────────────────────── */
+
+.atenna-panel {
+  position: fixed;
+  /* right + bottom set dynamically by panel.ts — positions above the badge */
+  width: 240px;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  z-index: 99999;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  padding: 14px;
+  animation: atenna-slide-in 200ms ease;
+  background: #ffffff;
+  color: #1f2937;
+}
+
+/* Dark theme — applied via JS by measuring body background luminance,
+   so it tracks the platform's in-app toggle, not just the OS preference */
+.atenna-panel--dark {
+  background: #1e1e2e;
+  color: #e2e8f0;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55);
+}
+.atenna-panel--dark .atenna-panel__logo    { color: #4ade80; }
+.atenna-panel--dark .atenna-panel__close   { color: #6b7280; }
+.atenna-panel--dark .atenna-panel__close:hover { color: #e2e8f0; }
+.atenna-panel--dark .atenna-panel__divider { border-color: #2d3748; }
+.atenna-panel--dark .atenna-panel__platform { color: #6b7280; }
+
+.atenna-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.atenna-panel__logo {
+  font-weight: 600;
+  font-size: 13px;
+  color: #15803d;
+  letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.atenna-panel__logo img {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.atenna-panel__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: #9ca3af;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color 150ms ease;
+}
+
+.atenna-panel__close:hover { color: #1f2937; }
+
+.atenna-panel__divider {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 8px 0;
+}
+
+.atenna-panel__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.atenna-panel__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
+}
+
+.atenna-panel__platform {
+  font-size: 11px;
+  color: #9ca3af;
+  letter-spacing: 0.02em;
+}

@@ -1,0 +1,308 @@
+/* Atenna Guard — Modal styles, all prefixed atenna-modal- */
+
+@keyframes atenna-modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes atenna-modal-scale-in {
+  from { opacity: 0; transform: scale(0.94) translateY(8px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+
+@keyframes atenna-modal-toast-in {
+  0%   { opacity: 0; transform: translateY(6px); }
+  20%  { opacity: 1; transform: translateY(0);   }
+  80%  { opacity: 1; transform: translateY(0);   }
+  100% { opacity: 0; transform: translateY(6px); }
+}
+
+/* ── Overlay ─────────────────────────────────────────────── */
+
+.atenna-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 2147483646;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: atenna-modal-fade-in 180ms ease;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* ── Modal box ───────────────────────────────────────────── */
+
+.atenna-modal {
+  width: 520px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.22);
+  z-index: 2147483647;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  background: #ffffff;
+  color: #1f2937;
+  animation: atenna-modal-scale-in 220ms cubic-bezier(0.34, 1.26, 0.64, 1);
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.atenna-modal--dark {
+  background: #1e1e2e;
+  color: #e2e8f0;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+
+.atenna-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.atenna-modal__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #15803d;
+  letter-spacing: 0.01em;
+}
+
+.atenna-modal--dark .atenna-modal__title { color: #4ade80; }
+
+.atenna-modal__title img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.atenna-modal__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  padding: 2px 4px;
+  color: #9ca3af;
+  transition: color 150ms ease;
+  border-radius: 6px;
+}
+
+.atenna-modal__close:hover { color: #1f2937; }
+.atenna-modal--dark .atenna-modal__close:hover { color: #e2e8f0; }
+
+.atenna-modal__subtitle {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 16px;
+}
+
+.atenna-modal--dark .atenna-modal__subtitle { color: #64748b; }
+
+/* ── Input preview ───────────────────────────────────────── */
+
+.atenna-modal__input-preview {
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #374151;
+  margin-bottom: 16px;
+  max-height: 80px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid #e5e7eb;
+  line-height: 1.5;
+}
+
+.atenna-modal--dark .atenna-modal__input-preview {
+  background: #16213e;
+  color: #cbd5e1;
+  border-color: #2d3748;
+}
+
+.atenna-modal__input-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.atenna-modal--dark .atenna-modal__input-label { color: #64748b; }
+
+.atenna-modal__input-empty {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* ── Section label ───────────────────────────────────────── */
+
+.atenna-modal__section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+.atenna-modal--dark .atenna-modal__section-label { color: #64748b; }
+
+/* ── Prompt cards ────────────────────────────────────────── */
+
+.atenna-modal__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.atenna-modal__card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #f9fafb;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.atenna-modal__card:hover {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.12);
+}
+
+.atenna-modal--dark .atenna-modal__card {
+  background: #16213e;
+  border-color: #2d3748;
+}
+
+.atenna-modal--dark .atenna-modal__card:hover {
+  border-color: #4ade80;
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.15);
+}
+
+.atenna-modal__card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.atenna-modal__card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.atenna-modal__card-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: #dcfce7;
+  color: #15803d;
+  border-radius: 6px;
+  padding: 2px 7px;
+  letter-spacing: 0.03em;
+}
+
+.atenna-modal--dark .atenna-modal__card-badge {
+  background: #14532d;
+  color: #4ade80;
+}
+
+.atenna-modal__card-desc {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.atenna-modal--dark .atenna-modal__card-desc { color: #64748b; }
+
+.atenna-modal__card-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.atenna-modal__card-text {
+  font-size: 12px;
+  color: #374151;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 80px;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+
+.atenna-modal--dark .atenna-modal__card-text { color: #cbd5e1; }
+
+/* ── Buttons ─────────────────────────────────────────────── */
+
+.atenna-modal__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 5px 12px;
+  transition: filter 150ms ease, box-shadow 150ms ease;
+  white-space: nowrap;
+}
+
+.atenna-modal__btn--copy {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+
+.atenna-modal__btn--copy:hover {
+  filter: brightness(0.94);
+}
+
+.atenna-modal--dark .atenna-modal__btn--copy {
+  background: #2d3748;
+  color: #e2e8f0;
+  border-color: #4b5563;
+}
+
+.atenna-modal__btn--use {
+  background: #22c55e;
+  color: #ffffff;
+  box-shadow: 0 1px 6px rgba(34, 197, 94, 0.30);
+}
+
+.atenna-modal__btn--use:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 2px 10px rgba(34, 197, 94, 0.45);
+}
+
+/* ── Toast ───────────────────────────────────────────────── */
+
+.atenna-modal-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 18px;
+  border-radius: 100px;
+  z-index: 2147483647;
+  animation: atenna-modal-toast-in 1.8s ease forwards;
+  pointer-events: none;
+  white-space: nowrap;
+}

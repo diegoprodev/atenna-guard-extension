@@ -1,6 +1,6 @@
 import { detectPlatform } from './detectInput';
 import { injectButton } from './injectButton';
-import { togglePanel } from '../ui/panel';
+import { toggleModal } from '../ui/modal';
 
 function tryInject(): void {
   const config = detectPlatform();
@@ -9,7 +9,7 @@ function tryInject(): void {
   const input = document.querySelector(config.inputSelector);
   if (!input) return;
 
-  injectButton(config, () => togglePanel(config.name));
+  injectButton(config, () => toggleModal());
 }
 
 function init(): void {
