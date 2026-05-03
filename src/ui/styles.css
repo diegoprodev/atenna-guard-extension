@@ -1,0 +1,123 @@
+/* Atenna Guard Prompt — all classes prefixed atenna- to avoid host page collisions */
+
+.atenna-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #22c55e;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  cursor: pointer;
+  z-index: 9999;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  transition: background 200ms ease, box-shadow 200ms ease;
+  white-space: nowrap;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+}
+
+.atenna-btn:hover {
+  background: #16a34a;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);
+}
+
+.atenna-btn:focus-visible {
+  outline: 2px solid #22c55e;
+  outline-offset: 2px;
+}
+
+.atenna-btn[data-active='true'] {
+  background: #15803d;
+}
+
+/* ── Panel ──────────────────────────────────────────── */
+
+.atenna-panel {
+  position: fixed;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 240px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  z-index: 99999;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  color: #1f2937;
+  padding: 14px;
+  animation: atenna-slide-in 200ms ease;
+}
+
+@keyframes atenna-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+.atenna-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.atenna-panel__logo {
+  font-weight: 600;
+  font-size: 13px;
+  color: #15803d;
+  letter-spacing: 0.01em;
+}
+
+.atenna-panel__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: #9ca3af;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color 150ms ease;
+}
+
+.atenna-panel__close:hover {
+  color: #1f2937;
+}
+
+.atenna-panel__divider {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 8px 0;
+}
+
+.atenna-panel__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.atenna-panel__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
+}
+
+.atenna-panel__platform {
+  font-size: 11px;
+  color: #9ca3af;
+  letter-spacing: 0.02em;
+}
