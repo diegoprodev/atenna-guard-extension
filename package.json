@@ -2,6 +2,7 @@
   "name": "atenna-guard-extension",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "node scripts/generate-icons.mjs && vite build && vite build --config vite.bg.config.ts",
     "dev": "vite build --watch",
