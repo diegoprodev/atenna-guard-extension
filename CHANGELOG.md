@@ -2,6 +2,23 @@
 
 All notable changes to **Atenna Guard Extension** are documented here.
 
+## [1.3.0] — 2026-05-03
+
+### Added
+- **Modal central** (`src/ui/modal.ts` + `src/ui/modal.css`): substitui o painel lateral por um modal overlay 520px com animação fade+scale. Abre ao clicar no badge, fecha com ESC ou clique no backdrop.
+- **Geração de prompts** (`src/core/promptEngine.ts`): gera 3 variantes otimizadas a partir do texto atual do input — **Direto** (claro e objetivo), **Técnico** (detalhado com exemplos), **Estruturado** (organizado em seções).
+- **Input handler** (`src/core/inputHandler.ts`): lê e escreve no input de qualquer plataforma (ChatGPT `textarea`, Claude/Gemini `contenteditable`) de forma compatível com React via native value setter + `execCommand`.
+- **Botão Copiar**: copia o prompt para a área de transferência com fallback para `execCommand('copy')`. Toast de confirmação.
+- **Botão USAR**: preenche automaticamente o input da plataforma com o prompt escolhido e fecha o modal.
+- **Dark mode no modal**: detecta tema via luminância do `document.body` (mesmo mecanismo do painel anterior). Classe `.atenna-modal--dark` aplicada em runtime.
+- **Preview do texto atual**: modal exibe o texto já digitado no input para referência antes de escolher a variante.
+
+### Changed
+- `src/content/content.ts`: `togglePanel` substituído por `toggleModal`.
+- `manifest.json`: `modal.css` adicionado ao array `css` do content script.
+- `vite.config.ts`: `modal.css` adicionado ao `viteStaticCopy`.
+- Tests: 59 testes passando em 6 arquivos (+ 29 novos testes: promptEngine ×7, inputHandler ×8, modal ×14).
+
 ## [1.2.0] — 2026-05-03
 
 ### Fixed
