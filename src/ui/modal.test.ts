@@ -19,7 +19,7 @@ function stubChrome(sendMsgResponse: unknown = PROMPT_RESPONSE) {
     runtime: {
       getURL: (p: string) => `chrome-extension://test/${p}`,
       sendMessage: vi.fn().mockImplementation(
-        (_msg: unknown, cb: (r: unknown) => void) => { cb(sendMsgResponse); }
+        (_msg: unknown, cb?: (r: unknown) => void) => { cb?.(sendMsgResponse); }
       ),
       lastError: undefined,
     },
@@ -188,8 +188,10 @@ describe('toggleModal', () => {
     await waitForFlow();
     // No cards should appear
     expect(document.querySelectorAll('.atenna-modal__card').length).toBe(0);
-    // sendMessage should not have been called
-    expect((chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    // ATENNA_FETCH should not have been called
+    const fetchCalls = (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls
+      .filter(([msg]: [{ type?: string }]) => msg.type === 'ATENNA_FETCH');
+    expect(fetchCalls.length).toBe(0);
   });
 
   // ── Async flow: loading → success → prompts ──────────────
@@ -232,7 +234,9 @@ describe('toggleModal', () => {
     addTextarea('texto cacheado');
     toggleModal();
     await waitForFlow();
-    const callsAfterFirst = (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls.length;
+    // Count only ATENNA_FETCH calls (analytics ATENNA_TRACK calls are also present)
+    const fetchCallsAfterFirst = (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls
+      .filter(([msg]: [{ type?: string }]) => msg.type === 'ATENNA_FETCH').length;
 
     // Close and reopen
     toggleModal();
@@ -240,29 +244,31 @@ describe('toggleModal', () => {
     document.body.innerHTML = '';
     addTextarea('texto cacheado');
     toggleModal();
-    // No flow needed — cache hit shows cards immediately
-    await Promise.resolve();
+    // Cache hit renders after getUsage+isPro microtask ticks
+    for (let i = 0; i < 8; i++) await Promise.resolve();
 
-    expect((chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    const fetchCallsOnReopen = (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls
+      .filter(([msg]: [{ type?: string }]) => msg.type === 'ATENNA_FETCH').length;
+    expect(fetchCallsOnReopen).toBe(0);
     expect(document.querySelectorAll('.atenna-modal__card').length).toBe(3);
-    expect(callsAfterFirst).toBe(1);
+    expect(fetchCallsAfterFirst).toBe(1);
   });
 
   // ── Usage counter ────────────────────────────────────────
 
-  it('usage badge shows X/15 format after generation', async () => {
+  it('usage badge shows X/10 format after generation', async () => {
     addTextarea('algum texto');
     toggleModal();
     await waitForFlow();
     const badge = document.querySelector('.atenna-modal__usage')!;
-    expect(badge.textContent).toMatch(/^\d+\/15$/);
+    expect(badge.textContent).toMatch(/^\d+\/10$/);
   });
 
   it('usage count is 1 after first generation', async () => {
     addTextarea('algum texto');
     toggleModal();
     await waitForFlow();
-    expect(document.querySelector('.atenna-modal__usage')!.textContent).toBe('1/15');
+    expect(document.querySelector('.atenna-modal__usage')!.textContent).toBe('1/10');
   });
 
   // ── Limit reached ────────────────────────────────────────
@@ -358,7 +364,7 @@ describe('toggleModal', () => {
   // ── Security ─────────────────────────────────────────────
 
   it('XSS: user input never appears raw as innerHTML in cards', async () => {
-    addTextarea('<script>alert(1)</script>');
+    addTextarea('conteúdo malicioso <script>alert(1)</script> no prompt');
     toggleModal();
     await waitForFlow();
     document.querySelectorAll<HTMLTextAreaElement>('.atenna-modal__card-textarea')

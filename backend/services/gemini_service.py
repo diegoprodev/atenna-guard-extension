@@ -12,20 +12,37 @@ GEMINI_URL = (
 )
 
 # Instrução clara de formato para o Gemini — sem markdown, só JSON puro
-SYSTEM_PROMPT = """Gere 3 versões de prompt otimizado com base no texto do usuário abaixo.
+SYSTEM_PROMPT = """Você é um especialista em engenharia de prompts e estruturação de pensamento.
+Sua missão é melhorar o raciocínio do usuário, estruturar intenção e gerar prompts superiores ao que ele faria sozinho.
+Nunca gere prompts genéricos. Nunca repita o input sem melhoria real.
 
-As 3 versões devem ser:
-1. Direto — claro, objetivo, sem rodeios. Máximo 2 parágrafos.
-2. Técnico — profundo, com role assignment de especialista sênior, exemplos práticos, pontos de atenção e boas práticas relevantes ao tema.
-3. Estruturado — organizado em seções: Contexto, Desenvolvimento, Exemplos Práticos, Conclusão e Próximos Passos.
+Se o texto contiver campos como "Objetivo:", "Contexto:", "Formato preferido:", use-os para personalizar com precisão.
 
-Texto do usuário: {input_text}
+Gere 3 versões e para cada uma uma frase curta descrevendo o que aquele prompt vai gerar:
 
-Retorne APENAS JSON válido, sem markdown, sem blocos de código, sem texto extra. Formato exato:
+1. DIRETO: simples, claro, sem redundância. Máximo 2 parágrafos. NÃO copie o original — reformule de forma mais objetiva.
+2. ESTRUTURADO: seções bem definidas — Contexto, Objetivo, Abordagem, Exemplos Práticos, Formato de Saída.
+3. TÉCNICO: papel de especialista sênior + critérios de sucesso mensuráveis + restrições + lógica de raciocínio + formato rígido. Mínimo 3 parágrafos.
+
+Entrada do usuário:
+{input_text}
+
+REGRAS:
+- Elimine ambiguidade, enriqueça contexto, ajuste ao nível do usuário
+- "direct": máximo 2 parágrafos, muito mais conciso
+- "technical": role assignment obrigatório, critérios mensuráveis, exemplos
+- "structured": todas as 5 seções presentes
+- *_preview: frase curta (máx 12 palavras) descrevendo o que o prompt vai gerar
+- TODOS os valores: STRINGS de texto puro (nunca objetos JSON aninhados)
+
+Retorne APENAS JSON válido:
 {{
   "direct": "...",
+  "direct_preview": "Vai gerar uma resposta clara e objetiva sobre o tema",
+  "structured": "Contexto: ...\n\nObjetivo: ...\n\nAbordagem: ...\n\nExemplos Práticos: ...\n\nFormato de Saída: ...",
+  "structured_preview": "Vai gerar uma resposta organizada em seções didáticas",
   "technical": "...",
-  "structured": "..."
+  "technical_preview": "Vai gerar uma análise profunda com aplicação profissional"
 }}"""
 
 
@@ -61,7 +78,7 @@ async def generate_prompts(input_text: str) -> dict:
         ],
         "generationConfig": {
             "temperature": 0.7,
-            "maxOutputTokens": 1024,
+            "maxOutputTokens": 2048,
         }
     }
 
@@ -90,11 +107,17 @@ async def generate_prompts(input_text: str) -> dict:
                 raw_text = raw_text[4:]
             raw_text = raw_text.strip()
 
-        result = json.loads(raw_text)
+        result = json.loads(raw_text, strict=False)
 
         # Valida que as 3 chaves existem
         if not all(k in result for k in ("direct", "technical", "structured")):
             raise ValueError("Resposta do Gemini não contém as chaves esperadas")
+
+        # Garante que todos os valores são strings — Gemini às vezes retorna
+        # "structured" como objeto JSON aninhado em vez de string.
+        for key in ("direct", "technical", "structured"):
+            if not isinstance(result[key], str):
+                result[key] = json.dumps(result[key], ensure_ascii=False)
 
         print("[Atenna] Prompt gerado com sucesso")
         return result

@@ -13,6 +13,12 @@ vi.stubGlobal('ResizeObserver', class {
 });
 vi.stubGlobal('chrome', {
   runtime: { getURL: (path: string) => `chrome-extension://test/${path}` },
+  storage: {
+    local: {
+      get: vi.fn().mockImplementation((_key: string, cb: (r: Record<string, unknown>) => void) => cb({})),
+      set: vi.fn(),
+    },
+  },
 });
 
 function setup() {

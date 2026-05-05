@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from schemas.prompt_schema import PromptRequest, PromptResponse
 from services.gemini_service import generate_prompts
+from routes.analytics import router as analytics_router
 
 app = FastAPI(
     title="Atenna Guard Prompt — Backend",
@@ -17,6 +18,8 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+app.include_router(analytics_router)
 
 
 @app.get("/health", tags=["Health"])

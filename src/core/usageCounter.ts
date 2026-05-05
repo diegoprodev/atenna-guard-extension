@@ -1,9 +1,17 @@
 const STORAGE_KEY = 'atenna_usage';
-export const MONTHLY_LIMIT = 15;
+const TOTAL_KEY   = 'atenna_total_count';
+
+export const DAILY_LIMIT = 10;
 
 export interface UsageData {
-  count: number;
-  resetDate: number; // ms timestamp
+  count:     number;
+  resetDate: number; // ms timestamp — midnight tonight
+}
+
+function midnightTonight(): number {
+  const d = new Date();
+  d.setHours(24, 0, 0, 0);
+  return d.getTime();
 }
 
 async function storageGet(): Promise<UsageData | undefined> {
@@ -33,10 +41,7 @@ export async function getUsage(): Promise<UsageData> {
   const now = Date.now();
 
   if (!raw || now >= raw.resetDate) {
-    const fresh: UsageData = {
-      count: 0,
-      resetDate: now + 30 * 24 * 60 * 60 * 1000,
-    };
+    const fresh: UsageData = { count: 0, resetDate: midnightTonight() };
     await storageSet(fresh);
     return fresh;
   }
@@ -52,5 +57,27 @@ export async function incrementUsage(): Promise<UsageData> {
 }
 
 export function isAtLimit(usage: UsageData): boolean {
-  return usage.count >= MONTHLY_LIMIT;
+  return usage.count >= DAILY_LIMIT;
+}
+
+// ─── All-time total (never resets — used for conversion triggers) ──
+
+export async function getTotalCount(): Promise<number> {
+  return new Promise(resolve => {
+    try {
+      chrome.storage.local.get(TOTAL_KEY, r =>
+        resolve((r[TOTAL_KEY] as number) ?? 0)
+      );
+    } catch { resolve(0); }
+  });
+}
+
+export async function incrementTotalCount(): Promise<number> {
+  const current = await getTotalCount();
+  const next = current + 1;
+  return new Promise(resolve => {
+    try {
+      chrome.storage.local.set({ [TOTAL_KEY]: next }, () => resolve(next));
+    } catch { resolve(next); }
+  });
 }

@@ -1,5 +1,8 @@
 import { getCurrentInput, getInputText, setInputText } from '../core/inputHandler';
-import { getUsage, incrementUsage, isAtLimit, MONTHLY_LIMIT } from '../core/usageCounter';
+import { getUsage, incrementUsage, isAtLimit, DAILY_LIMIT, getTotalCount, incrementTotalCount } from '../core/usageCounter';
+import { isPro } from '../core/planManager';
+import { track } from '../core/analytics';
+import type { PromptOrigin, PromptType } from '../core/analytics';
 
 const OVERLAY_ID  = 'atenna-modal-overlay';
 const SUCCESS_MS  = 500;
@@ -28,12 +31,74 @@ const COPY_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
 
 let msgIntervalId: ReturnType<typeof setInterval> | undefined;
 
-interface PromptData { direct: string; technical: string; structured: string }
+interface PromptData {
+  direct: string; technical: string; structured: string;
+  direct_preview?: string; technical_preview?: string; structured_preview?: string;
+}
 
 // Cache last generated prompts so reopening with the same text skips re-generation.
 let promptCache: { forText: string; data: PromptData } | null = null;
 
-export function clearPromptCache(): void { promptCache = null; }
+let upgradeShown = false;
+const UPGRADE_TRIGGER = 3; // show upgrade banner after this many total generations
+
+export function clearPromptCache(): void { promptCache = null; upgradeShown = false; }
+
+// ─── Vague input detection (V3) ───────────────────────────
+
+function isVagueInput(text: string): boolean {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  return words.length === 1;
+}
+
+function renderSuggestion(
+  container: HTMLElement,
+  onImprove: () => void,
+  onIgnore:  () => void,
+): void {
+  container.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'atenna-modal__suggest';
+
+  const icon = document.createElement('span');
+  icon.className = 'atenna-modal__suggest-icon';
+  icon.textContent = '💡';
+
+  const msg = document.createElement('p');
+  msg.className = 'atenna-modal__suggest-text';
+  msg.textContent = 'Posso melhorar seu prompt com o Builder — quer tentar?';
+
+  const actions = document.createElement('div');
+  actions.className = 'atenna-modal__suggest-actions';
+
+  const improveBtn = document.createElement('button');
+  improveBtn.className = 'atenna-modal__suggest-btn atenna-modal__suggest-btn--primary';
+  improveBtn.textContent = 'Melhorar agora';
+  improveBtn.addEventListener('click', onImprove);
+
+  const ignoreBtn = document.createElement('button');
+  ignoreBtn.className = 'atenna-modal__suggest-btn';
+  ignoreBtn.textContent = 'Ignorar';
+  ignoreBtn.addEventListener('click', onIgnore);
+
+  actions.appendChild(improveBtn);
+  actions.appendChild(ignoreBtn);
+  wrap.appendChild(icon);
+  wrap.appendChild(msg);
+  wrap.appendChild(actions);
+  container.appendChild(wrap);
+}
+
+// ─── Builder chip value helper ─────────────────────────────
+
+function getBuilderVal(fieldEl: HTMLElement): string {
+  const chip  = fieldEl.querySelector<HTMLButtonElement>('.atenna-modal__chip--active');
+  const ta    = fieldEl.querySelector<HTMLTextAreaElement>('.atenna-modal__builder-q');
+  const chipV = chip?.dataset.value ?? '';
+  const taV   = ta?.value.trim() ?? '';
+  if (chipV && taV) return `${chipV}: ${taV}`;
+  return chipV || taV;
+}
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -111,6 +176,56 @@ function openModal(): void {
       <div class="atenna-modal__view${defaultTab === 'edit'    ? '' : ' atenna-modal__view--hidden'}" data-view="edit">
         <div class="atenna-modal__edit-label">Seu texto</div>
         <textarea class="atenna-modal__editor" placeholder="Digite ou edite seu texto aqui..."></textarea>
+        <button class="atenna-modal__builder-toggle" type="button">
+          <span class="atenna-modal__builder-toggle-icon">✦</span>
+          Builder Inteligente
+          <span class="atenna-modal__builder-toggle-arrow">›</span>
+        </button>
+        <div class="atenna-modal__builder">
+          <p class="atenna-modal__builder-hint">Escolha ou descreva — combinamos para gerar prompts superiores</p>
+          <div class="atenna-modal__builder-item">
+            <span class="atenna-modal__builder-num">1</span>
+            <div class="atenna-modal__builder-field">
+              <label class="atenna-modal__builder-label">Qual o objetivo?</label>
+              <div class="atenna-modal__chips" data-group="objetivo">
+                <button type="button" class="atenna-modal__chip" data-value="Aprender">📚 Aprender</button>
+                <button type="button" class="atenna-modal__chip" data-value="Resolver problema">⚙️ Resolver</button>
+                <button type="button" class="atenna-modal__chip" data-value="Entender profundamente">🧠 Entender</button>
+                <button type="button" class="atenna-modal__chip" data-value="Criar algo novo">🚀 Criar</button>
+                <button type="button" class="atenna-modal__chip" data-value="Analisar">📊 Analisar</button>
+              </div>
+              <textarea class="atenna-modal__builder-q" rows="1" placeholder="Outro objetivo (opcional)"></textarea>
+            </div>
+          </div>
+          <div class="atenna-modal__builder-item">
+            <span class="atenna-modal__builder-num">2</span>
+            <div class="atenna-modal__builder-field">
+              <label class="atenna-modal__builder-label">Para quem? Qual o contexto?</label>
+              <div class="atenna-modal__chips" data-group="contexto">
+                <button type="button" class="atenna-modal__chip" data-value="Iniciante">🟢 Iniciante</button>
+                <button type="button" class="atenna-modal__chip" data-value="Intermediário">🟡 Intermediário</button>
+                <button type="button" class="atenna-modal__chip" data-value="Avançado">🔴 Avançado</button>
+                <button type="button" class="atenna-modal__chip" data-value="Profissional">🏢 Profissional</button>
+                <button type="button" class="atenna-modal__chip" data-value="Caso específico">🎯 Específico</button>
+              </div>
+              <textarea class="atenna-modal__builder-q" rows="1" placeholder="Contexto adicional (opcional)"></textarea>
+            </div>
+          </div>
+          <div class="atenna-modal__builder-item">
+            <span class="atenna-modal__builder-num">3</span>
+            <div class="atenna-modal__builder-field">
+              <label class="atenna-modal__builder-label">Formato e nível de detalhe?</label>
+              <div class="atenna-modal__chips" data-group="formato">
+                <button type="button" class="atenna-modal__chip" data-value="Explicação simples">📄 Simples</button>
+                <button type="button" class="atenna-modal__chip" data-value="Passo a passo">📋 Passo a passo</button>
+                <button type="button" class="atenna-modal__chip" data-value="Estruturado em seções">🧩 Estruturado</button>
+                <button type="button" class="atenna-modal__chip" data-value="Profissional">💼 Profissional</button>
+                <button type="button" class="atenna-modal__chip" data-value="Técnico profundo">🔬 Técnico</button>
+              </div>
+              <textarea class="atenna-modal__builder-q" rows="1" placeholder="Formato personalizado (opcional)"></textarea>
+            </div>
+          </div>
+        </div>
         <button class="atenna-modal__regen">Gerar Prompts</button>
       </div>
     </div>
@@ -151,29 +266,82 @@ function openModal(): void {
     });
   });
 
+  // ── Builder toggle ─────────────────────────────────────
+  const builderToggleEl = modal.querySelector<HTMLButtonElement>('.atenna-modal__builder-toggle')!;
+  const builderEl       = modal.querySelector<HTMLElement>('.atenna-modal__builder')!;
+
+  builderToggleEl.addEventListener('click', () => {
+    const isOpen = builderEl.classList.contains('atenna-modal__builder--open');
+    if (!isOpen) void track('builder_opened');
+    builderEl.classList.toggle('atenna-modal__builder--open', !isOpen);
+    builderToggleEl.classList.toggle('atenna-modal__builder-toggle--open', !isOpen);
+  });
+
+  // ── Chip selection (one active per group) ──────────────
+  builderEl.querySelectorAll<HTMLElement>('.atenna-modal__chips').forEach(group => {
+    group.querySelectorAll<HTMLButtonElement>('.atenna-modal__chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        group.querySelectorAll('.atenna-modal__chip')
+          .forEach(c => c.classList.remove('atenna-modal__chip--active'));
+        chip.classList.add('atenna-modal__chip--active');
+      });
+    });
+  });
+
   // ── Gerar button (from "Criar Prompt" view) ────────────
   modal.querySelector('.atenna-modal__regen')!.addEventListener('click', () => {
-    const text = editorEl.value.trim();
-    if (!text) return; // nothing to generate
+    const baseText      = editorEl.value.trim();
+    const isBuilderOpen = builderEl.classList.contains('atenna-modal__builder--open');
+
+    let text: string;
+    if (isBuilderOpen) {
+      const fields   = modal.querySelectorAll<HTMLElement>('.atenna-modal__builder-field');
+      const objetivo = getBuilderVal(fields[0]);
+      const contexto = getBuilderVal(fields[1]);
+      const formato  = getBuilderVal(fields[2]);
+      if (!objetivo && !contexto && !formato && !baseText) return;
+      text = buildStructuredInput(objetivo, contexto, formato, baseText);
+    } else {
+      if (!baseText) return;
+      text = baseText;
+    }
+    const origin: PromptOrigin = isBuilderOpen ? 'builder' : 'manual';
     switchTab('prompts');
-    runFlow(promptsView, usageBadge, text, platformInput, overlay);
+    void isPro().then(pro => runFlow(promptsView, usageBadge, text, platformInput, overlay, origin, pro));
   });
 
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
 
   // ── Auto-generate / show cache / idle ─────────────────
-  if (cacheHit) {
-    // Same text, already generated — show immediately, no spinner
-    void getUsage().then(u => updateUsageBadge(usageBadge, u.count));
-    renderPrompts(promptsView, promptCache!.data, platformInput, overlay);
-  } else if (userText !== '') {
-    // New text — auto-generate
-    runFlow(promptsView, usageBadge, userText, platformInput, overlay);
-  } else {
-    // Empty input — just show usage badge, stay on "Criar Prompt" tab
-    void getUsage().then(u => updateUsageBadge(usageBadge, u.count));
-  }
+  // Show spinner synchronously so it's visible on the very first paint
+  if (!cacheHit && userText !== '') renderLoading(promptsView);
+
+  void (async () => {
+    const [usage, pro] = await Promise.all([getUsage(), isPro()]);
+    updateUsageBadge(usageBadge, usage.count, pro);
+
+    if (cacheHit) {
+      renderPrompts(promptsView, promptCache!.data, platformInput, overlay, 'manual');
+    } else if (userText !== '') {
+      if (pro && isVagueInput(userText)) {
+        void track('auto_suggestion_shown');
+        renderSuggestion(
+          promptsView,
+          () => {
+            void track('auto_suggestion_accepted');
+            switchTab('edit');
+            builderEl.classList.add('atenna-modal__builder--open');
+            builderToggleEl.classList.add('atenna-modal__builder-toggle--open');
+          },
+          () => runFlow(promptsView, usageBadge, userText, platformInput, overlay, 'auto', pro),
+        );
+      } else {
+        runFlow(promptsView, usageBadge, userText, platformInput, overlay, 'auto', pro);
+      }
+    }
+    // Empty input: badge already shown, stay on "Criar Prompt" tab
+  })();
 
   (modal.querySelector('.atenna-modal__close') as HTMLButtonElement).focus();
 }
@@ -185,33 +353,35 @@ async function runFlow(
   usageBadge:    HTMLElement,
   userText:      string,
   platformInput: HTMLElement | null,
-  overlay:       HTMLElement
+  overlay:       HTMLElement,
+  origin:        PromptOrigin = 'manual',
+  pro:           boolean = false,
 ): Promise<void> {
   renderLoading(container);
 
   const usage = await getUsage();
-  updateUsageBadge(usageBadge, usage.count);
+  updateUsageBadge(usageBadge, usage.count, pro);
 
-  if (isAtLimit(usage)) {
+  if (!pro && isAtLimit(usage)) {
     renderLimitReached(container);
     return;
   }
 
   const data = await fetchPrompts(userText);
 
-  if (!document.getElementById(OVERLAY_ID)) return; // closed during fetch
+  if (!document.getElementById(OVERLAY_ID)) return;
 
   await renderSuccess(container);
 
-  if (!document.getElementById(OVERLAY_ID)) return; // closed during animation
+  if (!document.getElementById(OVERLAY_ID)) return;
 
-  const newUsage = await incrementUsage();
-  updateUsageBadge(usageBadge, newUsage.count);
+  const [newUsage, totalCount] = await Promise.all([incrementUsage(), incrementTotalCount()]);
+  updateUsageBadge(usageBadge, newUsage.count, pro);
+  void track('prompt_generated', { origin });
 
-  // Cache the result for this text
   promptCache = { forText: userText, data };
 
-  renderPrompts(container, data, platformInput, overlay);
+  renderPrompts(container, data, platformInput, overlay, origin, totalCount);
 }
 
 // ─── Render: loading ───────────────────────────────────────
@@ -285,12 +455,46 @@ function renderLimitReached(container: HTMLElement): void {
 
   const sub = document.createElement('p');
   sub.className = 'atenna-modal__loading-sub';
-  sub.textContent = `Você usou ${MONTHLY_LIMIT} gerações este mês. O contador reseta automaticamente em 30 dias.`;
+  sub.textContent = `Você atingiu ${DAILY_LIMIT} gerações hoje. O contador reseta à meia-noite.`;
 
   wrap.appendChild(icon);
   wrap.appendChild(msg);
   wrap.appendChild(sub);
   container.appendChild(wrap);
+}
+
+// ─── Render: upgrade trigger ──────────────────────────────
+
+function renderUpgradeTrigger(): HTMLElement {
+  const card = document.createElement('div');
+  card.className = 'atenna-modal__upgrade';
+
+  const icon = document.createElement('span');
+  icon.className   = 'atenna-modal__upgrade-icon';
+  icon.textContent = '🚀';
+
+  const msg = document.createElement('p');
+  msg.className   = 'atenna-modal__upgrade-msg';
+  msg.textContent = 'Você está criando prompts melhores que 90% das pessoas. Quer desbloquear o modo completo?';
+
+  const btn = document.createElement('button');
+  btn.className   = 'atenna-modal__upgrade-btn';
+  btn.textContent = '🔓 Desbloquear Pro';
+  btn.addEventListener('click', () => {
+    void track('upgrade_clicked');
+    showToast('Em breve! 🚀');
+  });
+
+  const dismiss = document.createElement('button');
+  dismiss.className   = 'atenna-modal__upgrade-dismiss';
+  dismiss.textContent = 'Agora não';
+  dismiss.addEventListener('click', () => card.remove());
+
+  card.appendChild(icon);
+  card.appendChild(msg);
+  card.appendChild(btn);
+  card.appendChild(dismiss);
+  return card;
 }
 
 // ─── Render: prompt cards ──────────────────────────────────
@@ -299,28 +503,37 @@ function renderPrompts(
   container:     HTMLElement,
   data:          PromptData,
   platformInput: HTMLElement | null,
-  overlay:       HTMLElement
+  overlay:       HTMLElement,
+  origin:        PromptOrigin = 'manual',
+  totalCount:    number = 0,
 ): void {
   clearMsgInterval();
   container.innerHTML = '';
 
-  const entries = [
-    { label: 'Direto',      description: 'Claro e objetivo',      text: data.direct },
-    { label: 'Técnico',     description: 'Aprofundado e preciso', text: data.technical },
-    { label: 'Estruturado', description: 'Organizado em seções',  text: data.structured },
+  const entries: Array<{ emoji: string; label: string; speed: string; description: string; text: string; preview?: string; prompt_type: PromptType }> = [
+    { emoji: '🟢', label: 'Direto',      speed: '⚡ Rápido',      description: 'Claro e objetivo',      text: data.direct,     preview: data.direct_preview,     prompt_type: 'direct' },
+    { emoji: '🟡', label: 'Estruturado', speed: '⚖️ Equilibrado',  description: 'Organizado em seções',  text: data.structured, preview: data.structured_preview, prompt_type: 'structured' },
+    { emoji: '🔴', label: 'Técnico',     speed: '🚀 Profundo',     description: 'Aprofundado e preciso', text: data.technical,  preview: data.technical_preview,  prompt_type: 'technical' },
   ];
 
   const cards = document.createElement('div');
   cards.className = 'atenna-modal__cards';
-  entries.forEach((v, i) => cards.appendChild(buildCard(v, i, platformInput, overlay)));
+  entries.forEach((v, i) => cards.appendChild(buildCard(v, i, platformInput, overlay, origin)));
+
+  if (!upgradeShown && totalCount >= UPGRADE_TRIGGER) {
+    upgradeShown = true;
+    cards.appendChild(renderUpgradeTrigger());
+  }
+
   container.appendChild(cards);
 }
 
 function buildCard(
-  v:             { label: string; description: string; text: string },
+  v:             { emoji: string; label: string; speed: string; description: string; text: string; preview?: string; prompt_type: PromptType },
   index:         number,
   platformInput: HTMLElement | null,
-  overlay:       HTMLElement
+  overlay:       HTMLElement,
+  origin:        PromptOrigin,
 ): HTMLElement {
   const card = document.createElement('div');
   card.className = 'atenna-modal__card';
@@ -334,13 +547,18 @@ function buildCard(
 
   const badge = document.createElement('span');
   badge.className = 'atenna-modal__card-badge';
-  badge.textContent = v.label;           // textContent — safe
+  badge.textContent = `${v.emoji} ${v.label}`;  // textContent — safe
+
+  const speed = document.createElement('span');
+  speed.className = 'atenna-modal__card-speed';
+  speed.textContent = v.speed;           // textContent — safe
 
   const desc = document.createElement('span');
   desc.className = 'atenna-modal__card-desc';
   desc.textContent = v.description;      // textContent — safe
 
   meta.appendChild(badge);
+  meta.appendChild(speed);
   meta.appendChild(desc);
 
   const actions = document.createElement('div');
@@ -361,6 +579,16 @@ function buildCard(
   header.appendChild(meta);
   header.appendChild(actions);
 
+  if (v.preview) {
+    const previewEl = document.createElement('p');
+    previewEl.className = 'atenna-modal__card-preview';
+    previewEl.textContent = v.preview;   // textContent — safe
+    card.appendChild(header);
+    card.appendChild(previewEl);
+  } else {
+    card.appendChild(header);
+  }
+
   const ta = document.createElement('textarea');
   ta.className = 'atenna-modal__card-textarea';
   ta.readOnly = true;
@@ -368,7 +596,6 @@ function buildCard(
   ta.rows = 4;
   ta.setAttribute('aria-label', `Prompt ${v.label}`);
 
-  card.appendChild(header);
   card.appendChild(ta);
 
   copyBtn.addEventListener('click', () => {
@@ -384,6 +611,7 @@ function buildCard(
   });
 
   useBtn.addEventListener('click', () => {
+    void track('prompt_used', { prompt_type: v.prompt_type, origin });
     if (platformInput) {
       setInputText(platformInput, ta.value);
       clearMsgInterval();
@@ -399,14 +627,30 @@ function buildCard(
 
 // ─── Usage badge ───────────────────────────────────────────
 
-function updateUsageBadge(badge: HTMLElement, count: number): void {
-  badge.textContent = `${count}/${MONTHLY_LIMIT}`;
-  badge.className = 'atenna-modal__usage';
-  if (count >= MONTHLY_LIMIT)           badge.classList.add('atenna-modal__usage--danger');
-  else if (count >= MONTHLY_LIMIT - 5)  badge.classList.add('atenna-modal__usage--warning');
+function updateUsageBadge(badge: HTMLElement, count: number, pro = false): void {
+  if (pro) {
+    badge.textContent = 'Pro ✓';
+    badge.className   = 'atenna-modal__usage atenna-modal__usage--pro';
+    return;
+  }
+  badge.textContent = `${count}/${DAILY_LIMIT}`;
+  badge.className   = 'atenna-modal__usage';
+  if (count >= DAILY_LIMIT)           badge.classList.add('atenna-modal__usage--danger');
+  else if (count >= DAILY_LIMIT - 3)  badge.classList.add('atenna-modal__usage--warning');
 }
 
 // ─── Backend fetch (via background worker to bypass CORS) ──
+
+// ─── Builder: structured input assembler ──────────────────
+
+function buildStructuredInput(objetivo: string, contexto: string, formato: string, baseText: string): string {
+  const lines: string[] = [];
+  if (objetivo) lines.push(`Objetivo: ${objetivo}`);
+  if (contexto) lines.push(`Contexto: ${contexto}`);
+  if (formato)  lines.push(`Formato preferido: ${formato}`);
+  if (baseText) lines.push(`\nTexto base:\n${baseText}`);
+  return lines.join('\n');
+}
 
 export async function fetchPrompts(inputText: string): Promise<PromptData> {
   const fallback: PromptData = {
@@ -419,7 +663,7 @@ export async function fetchPrompts(inputText: string): Promise<PromptData> {
     if (!response || !response.ok) throw new Error('backend error');
     return response.data as PromptData;
   } catch (err) {
-    console.error('[Atenna] erro backend:', err);
+    console.warn('[Atenna] erro backend:', err);
     return fallback;
   }
 }
