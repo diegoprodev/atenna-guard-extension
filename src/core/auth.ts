@@ -41,6 +41,23 @@ export function isSessionValid(session: Session): boolean {
   return Date.now() / 1000 < session.expires_at - 60; // 60s buffer
 }
 
+export async function getActiveSession(): Promise<Session | null> {
+  const session = await getStoredSession();
+  if (!session) return null;
+  return isSessionValid(session) ? session : null;
+}
+
+export function decodeJwtPayload(token: string): Record<string, unknown> {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) throw new Error('Invalid JWT format');
+    const decoded = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(decoded);
+  } catch {
+    return {};
+  }
+}
+
 // ─── Auth actions ─────────────────────────────────────────
 
 export async function signInWithMagicLink(email: string): Promise<{ error?: string }> {

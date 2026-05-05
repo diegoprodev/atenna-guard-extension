@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { toggleModal, fetchPrompts, clearPromptCache } from './modal';
+import * as auth from '../core/auth';
+import * as planManager from '../core/planManager';
 
 // ── Shared state ───────────────────────────────────────────
 
@@ -15,6 +17,19 @@ const PROMPT_RESPONSE = {
 };
 
 function stubChrome(sendMsgResponse: unknown = PROMPT_RESPONSE) {
+  // Default to a valid session so tests proceed past login screen
+  // Valid JWT with sub claim for syncPlanFromSupabase: header.payload.signature
+  const testJwtPayload = btoa(JSON.stringify({ sub: 'test-user-id', email: 'test@example.com' }));
+  const testJwt = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${testJwtPayload}.test-signature`;
+  const defaultSession = {
+    access_token: testJwt,
+    email: 'test@example.com',
+    expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
+  };
+  if (!chromeStore['atenna_jwt']) {
+    chromeStore['atenna_jwt'] = defaultSession;
+  }
+
   vi.stubGlobal('chrome', {
     runtime: {
       getURL: (p: string) => `chrome-extension://test/${p}`,
@@ -32,6 +47,9 @@ function stubChrome(sendMsgResponse: unknown = PROMPT_RESPONSE) {
           Object.assign(chromeStore, data);
           cb?.();
         }),
+        remove: vi.fn().mockImplementation((_key: string, cb?: () => void) => {
+          cb?.();
+        }),
       },
     },
   });
@@ -47,12 +65,12 @@ function addTextarea(value = 'texto de teste') {
 }
 
 // ── Helper: flush the full async flow ─────────────────────
-// runFlow: renderLoading (sync) → getUsage (Promise) → sendMessage (Promise)
-//          → renderSuccess (setTimeout 500ms) → incrementUsage (Promise) → renderPrompts.
+// Modal init: getActiveSession → syncPlanFromSupabase (dynamic import + fetch) → getUsage/isPro → runFlow
+// runFlow: renderLoading → getUsage → sendMessage → renderSuccess (500ms) → incrementUsage → renderPrompts
 async function waitForFlow(): Promise<void> {
-  for (let i = 0; i < 15; i++) await Promise.resolve();
+  for (let i = 0; i < 30; i++) await Promise.resolve();
   vi.advanceTimersByTime(600);
-  for (let i = 0; i < 12; i++) await Promise.resolve();
+  for (let i = 0; i < 30; i++) await Promise.resolve();
 }
 
 // ── Suite ─────────────────────────────────────────────────
@@ -70,6 +88,18 @@ describe('toggleModal', () => {
     vi.spyOn(window, 'getComputedStyle').mockReturnValue(
       { backgroundColor: 'rgb(255, 255, 255)' } as CSSStyleDeclaration
     );
+    // Mock auth functions so tests skip the session check logic
+    vi.spyOn(auth, 'getActiveSession').mockResolvedValue({
+      access_token: 'test-token',
+      email: 'test@example.com',
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+    });
+    vi.spyOn(planManager, 'syncPlanFromSupabase').mockResolvedValue(undefined);
+    // Mock fetch for any other calls
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ plan: 'free' }],
+    });
     vi.useFakeTimers();
   });
 

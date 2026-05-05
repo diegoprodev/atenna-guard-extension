@@ -3,13 +3,14 @@
   "name": "Atenna Prompt",
   "version": "1.1.0",
   "description": "Gere prompts melhores com IA no ChatGPT, Claude e Gemini. Builder inteligente com 3 níveis de profundidade.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "tabs"],
   "host_permissions": [
     "https://chat.openai.com/*",
     "https://chatgpt.com/*",
     "https://claude.ai/*",
     "https://gemini.google.com/*",
-    "http://localhost/*"
+    "http://localhost/*",
+    "https://*.supabase.co/*"
   ],
   "content_scripts": [
     {

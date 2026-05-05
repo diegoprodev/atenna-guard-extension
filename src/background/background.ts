@@ -2,6 +2,17 @@ const BACKEND_URL   = 'http://localhost:8000/generate-prompts';
 const ANALYTICS_URL = 'http://localhost:8000/track';
 const JWT_KEY       = 'atenna_jwt';
 
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) throw new Error('Invalid JWT format');
+    const decoded = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(decoded);
+  } catch {
+    return {};
+  }
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log('[Atenna Guard] Extension installed.');
 });
@@ -59,4 +70,31 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 
   return false;
+});
+
+chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+  // Listen for magic link callback from Supabase
+  if (changeInfo.url && changeInfo.url.includes('#access_token=')) {
+    const url = new URL(changeInfo.url);
+    const fragment = url.hash.substring(1);
+    const params = new URLSearchParams(fragment);
+    const accessToken = params.get('access_token');
+    const expiresIn = params.get('expires_in');
+
+    if (accessToken && expiresIn) {
+      const payload = decodeJwtPayload(accessToken);
+      const email = payload.email as string | undefined;
+
+      if (email) {
+        const expiresAtSeconds = Math.floor(Date.now() / 1000) + parseInt(expiresIn, 10);
+        chrome.storage.local.set({
+          [JWT_KEY]: {
+            access_token: accessToken,
+            email,
+            expires_at: expiresAtSeconds,
+          },
+        });
+      }
+    }
+  }
 });

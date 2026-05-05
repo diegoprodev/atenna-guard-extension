@@ -719,3 +719,96 @@
 }
 
 .atenna-modal__upgrade-dismiss:hover { opacity: 0.7; }
+
+/* ── Login view ──────────────────────────────────────────── */
+
+.atenna-modal__login {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 32px 24px;
+  align-items: center;
+  text-align: center;
+}
+
+.atenna-modal__login-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--at-text);
+  margin: 0;
+}
+
+.atenna-modal__login-subtitle {
+  font-size: 13px;
+  color: var(--at-text);
+  opacity: 0.7;
+  margin: 0;
+}
+
+.atenna-modal__login-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.atenna-modal__login-input {
+  padding: 10px 12px;
+  border: 1px solid var(--at-border);
+  border-radius: 7px;
+  font-size: 13px;
+  background: var(--at-bg);
+  color: var(--at-text);
+  font-family: inherit;
+  transition: border-color 150ms ease;
+}
+
+.atenna-modal__login-input:focus {
+  outline: none;
+  border-color: var(--at-green);
+}
+
+.atenna-modal__login-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.atenna-modal__login-btn {
+  padding: 10px 16px;
+  background: var(--at-green);
+  color: #ffffff;
+  border: none;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 150ms ease;
+}
+
+.atenna-modal__login-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.atenna-modal__login-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.atenna-modal__login-status {
+  font-size: 12px;
+  min-height: 18px;
+  color: var(--at-text);
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.atenna-modal__login-status--success,
+.atenna-modal__login-status--error {
+  opacity: 1;
+}
+
+.atenna-modal__login-status--error {
+  color: #ef4444;
+}

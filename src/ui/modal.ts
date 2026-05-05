@@ -1,6 +1,7 @@
 import { getCurrentInput, getInputText, setInputText } from '../core/inputHandler';
 import { getUsage, incrementUsage, isAtLimit, DAILY_LIMIT, getTotalCount, incrementTotalCount } from '../core/usageCounter';
-import { isPro } from '../core/planManager';
+import { isPro, syncPlanFromSupabase } from '../core/planManager';
+import { getActiveSession, signInWithMagicLink } from '../core/auth';
 import { track } from '../core/analytics';
 import type { PromptOrigin, PromptType } from '../core/analytics';
 
@@ -318,6 +319,17 @@ function openModal(): void {
   if (!cacheHit && userText !== '') renderLoading(promptsView);
 
   void (async () => {
+    const session = await getActiveSession();
+
+    // No session: show login view
+    if (!session) {
+      renderLoginView(promptsView);
+      return;
+    }
+
+    // Session exists: sync plan and continue
+    await syncPlanFromSupabase(session);
+
     const [usage, pro] = await Promise.all([getUsage(), isPro()]);
     updateUsageBadge(usageBadge, usage.count, pro);
 
@@ -461,6 +473,74 @@ function renderLimitReached(container: HTMLElement): void {
   wrap.appendChild(msg);
   wrap.appendChild(sub);
   container.appendChild(wrap);
+}
+
+function renderLoginView(container: HTMLElement): void {
+  clearMsgInterval();
+  container.innerHTML = '';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'atenna-modal__login';
+
+  const title = document.createElement('h2');
+  title.className = 'atenna-modal__login-title';
+  title.textContent = 'Entrar no Atenna';
+
+  const subtitle = document.createElement('p');
+  subtitle.className = 'atenna-modal__login-subtitle';
+  subtitle.textContent = 'Enviaremos um link de acesso para seu email';
+
+  const inputGroup = document.createElement('div');
+  inputGroup.className = 'atenna-modal__login-group';
+
+  const input = document.createElement('input');
+  input.type = 'email';
+  input.className = 'atenna-modal__login-input';
+  input.placeholder = 'seu@email.com';
+  input.autocomplete = 'email';
+
+  const btn = document.createElement('button');
+  btn.className = 'atenna-modal__login-btn';
+  btn.textContent = 'Enviar link';
+
+  const status = document.createElement('div');
+  status.className = 'atenna-modal__login-status';
+
+  const handleClick = async () => {
+    const email = input.value.trim();
+    if (!email) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+
+    const result = await signInWithMagicLink(email);
+    if (result.error) {
+      status.textContent = `Erro: ${result.error}`;
+      status.classList.add('atenna-modal__login-status--error');
+      btn.disabled = false;
+      btn.textContent = 'Enviar link';
+    } else {
+      status.textContent = '✅ Verifique seu email';
+      status.classList.add('atenna-modal__login-status--success');
+      input.disabled = true;
+      btn.style.display = 'none';
+    }
+  };
+
+  btn.addEventListener('click', handleClick);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') void handleClick();
+  });
+
+  inputGroup.appendChild(input);
+  inputGroup.appendChild(btn);
+  wrap.appendChild(title);
+  wrap.appendChild(subtitle);
+  wrap.appendChild(inputGroup);
+  wrap.appendChild(status);
+  container.appendChild(wrap);
+
+  input.focus();
 }
 
 // ─── Render: upgrade trigger ──────────────────────────────
