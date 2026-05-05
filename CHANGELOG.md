@@ -2,6 +2,70 @@
 
 All notable changes to **Atenna Guard Extension** are documented here.
 
+## [2.0.0] — 2026-05-05
+
+### Added
+- **Supabase integration** — Complete backend database setup for production:
+  - Project `kezbssjmgwtrunqeoyir` configured with 5 tables: `profiles`, `subscriptions`, `usage_daily`, `analytics_events`, `prompt_generations`
+  - Row Level Security (RLS) enabled on all tables — user-level data isolation via `auth.uid()`
+  - Auto-profile trigger: `handle_new_user()` creates profile on `auth.users` signup
+  - Indexes on `user_id`, `date`, `anonymous_id` for query performance
+  - Support for anonymous user tracking via `anonymous_id` (GDPR-compliant)
+
+- **Auth skeleton** (`src/core/auth.ts`):
+  - Supabase magic link signup integration
+  - JWT storage in `chrome.storage.local` with session validity check (60s buffer)
+  - `getStoredSession()`, `storeSession()`, `clearSession()`, `signOut()` helpers
+  - Real project credentials: `SUPABASE_URL` and `SUPABASE_ANON_KEY` configured
+
+- **Plan management** (`src/core/planManager.ts`):
+  - Free/Pro plan distinction via `chrome.storage.local['atenna_plan']`
+  - `isPro()` async checker for conditional UI rendering
+  - Plan awareness in auto-generation and usage limits
+
+- **Analytics system** (`src/core/analytics.ts`):
+  - Event tracking: `prompt_generated`, `prompt_used`, `builder_opened`, `auto_suggestion_shown`, `auto_suggestion_accepted`, `upgrade_clicked`
+  - Fire-and-forget telemetry via background worker (`ATENNA_TRACK` message)
+  - Anonymous user ID support (never PII)
+  - Metadata: `prompt_type` (direct/structured/technical), `origin` (builder/auto/manual)
+  - Backend endpoint `POST /track` writes to `backend/data/events.jsonl`
+
+- **Chrome Store compliance**:
+  - `docs/privacy-policy.md` — complete privacy policy covering data collection, storage, usage, user rights
+  - `manifest.json` updated: `version: 1.1.0`, `name: "Atenna Prompt"`, Chrome Store description
+  - Backend `.env` with Supabase credentials (SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY)
+
+- **Backend analytics route** (`backend/routes/analytics.py`):
+  - `POST /track` endpoint receives event data, writes to `backend/data/events.jsonl`
+  - Integrated into FastAPI app via router inclusion
+
+### Changed
+- **Usage limit model**: Daily limit (`DAILY_LIMIT=10`) instead of monthly; reset at midnight instead of 30-day rolling window
+- **Usage counter**: 
+  - Moved to `src/core/usageCounter.ts` with daily reset logic
+  - Added `getTotalCount()` and `incrementTotalCount()` for all-time conversion trigger (at 3 generations, show upgrade card)
+- **Modal behavior**:
+  - `runFlow()` now plan-aware: pro users bypass daily limit, auto-suggestion shown only for pro users with vague input
+  - `renderPrompts()` displays upgrade trigger when `totalCount >= 3`
+  - Usage badge shows "Pro ✓" for pro users, "X/10" for free users
+  - `incrementUsage()` called alongside `track('prompt_generated')` in runFlow
+
+- **Background worker** (`src/background/background.ts`):
+  - `ATENNA_FETCH`: adds JWT header from `atenna_jwt` storage before calling `/generate-prompts`
+  - `ATENNA_TRACK`: fire-and-forget analytics (no callback expected)
+  - Removed callback requirement for analytics messages
+
+### Tests
+- **All 92 tests passing** — no new failures introduced; existing tests updated for daily limits
+- Cache test fixed: timing adjusted for async flow with plan checks
+- Stub callback made optional: `cb?.(response)` for analytics support
+
+### Deployment
+- Supabase CLI linked with personal access token
+- Migration applied successfully to remote project — all DDL, triggers, RLS policies active
+- Both builds regenerated: content.js (22.74 kB), background.js (1.03 kB)
+- Ready for production auth flow and telemetry
+
 ## [1.6.0] — 2026-05-03
 
 ### Added
