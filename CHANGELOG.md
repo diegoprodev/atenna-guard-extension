@@ -2,6 +2,51 @@
 
 All notable changes to **Atenna Guard Extension** are documented here.
 
+## [2.1.0] — 2026-05-05
+
+### Added
+- **Authentication UI** (`src/ui/modal.ts`, `src/ui/modal.css`):
+  - Login screen with email input and magic link flow (`renderLoginView`)
+  - Shows only when user has no valid session
+  - Status messages: "Verifique seu email" on success, error text on failure
+  - CSS styles for login form: `.atenna-modal__login`, `.atenna-modal__login-input`, `.atenna-modal__login-btn`
+
+- **Session validation** (`src/core/auth.ts`):
+  - `getActiveSession()` — reads stored JWT and validates expiry (60s buffer) before returning
+  - `decodeJwtPayload(token)` — shared JWT utility for extracting claims (sub, email, etc.)
+  - Modal now gates entire flow behind session check: no session = login view
+
+- **Magic link callback capture** (`src/background/background.ts`):
+  - `chrome.tabs.onUpdated` listener captures Supabase redirect URL (`#access_token=...`)
+  - Parses JWT payload to extract email and expiry time
+  - Stores complete session in `chrome.storage.local['atenna_jwt']`
+  - Works silently — no UI needed, user just sees extension icon light up after email click
+
+- **Supabase plan sync** (`src/core/planManager.ts`):
+  - `syncPlanFromSupabase(session)` — fetches user's plan from `profiles` table via REST API
+  - Replaces local-only plan with real database state
+  - Called on every modal open after session validation
+  - Silently fails if network error (user keeps previous plan value)
+
+- **Manifest permissions**:
+  - Added `"tabs"` permission for `chrome.tabs.onUpdated` access
+  - Added `"https://*.supabase.co/*"` host permission for Supabase API calls
+
+### Changed
+- **Modal initialization**: Now waits for session validation + plan sync before showing prompts or builder
+- **Test setup**: All 92 tests updated with session mocks; `getActiveSession()` and `syncPlanFromSupabase()` stubbed in beforeEach
+- **waitForFlow() timing**: Increased Promise.resolve() loops from 15→30 to account for dynamic import and fetch overhead
+
+### Tests
+- **All 92 tests passing** — no regressions; test suite updated for new auth flow
+- Session mocks applied globally in `beforeEach` to bypass login screen in tests
+- `syncPlanFromSupabase` mocked to resolve immediately without network calls
+
+### Deployment
+- Both builds regenerated: content.js (26.92 kB), background.js (1.57 kB)
+- Commit: feat: Auth UI — login screen, session restore, Supabase plan sync
+- All auth primitives from v2.0.0 now wired to UI and fully functional
+
 ## [2.0.0] — 2026-05-05
 
 ### Added
