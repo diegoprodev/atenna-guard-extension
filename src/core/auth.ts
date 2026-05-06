@@ -60,17 +60,30 @@ export function decodeJwtPayload(token: string): Record<string, unknown> {
 
 // ─── Auth actions ─────────────────────────────────────────
 
-export async function signInWithMagicLink(email: string): Promise<{ error?: string }> {
+export async function signInWithPassword(email: string, password: string): Promise<{ error?: string; session?: Session }> {
   try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/magiclink`, {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
-      body:    JSON.stringify({ email }),
+      body:    JSON.stringify({ email, password }),
     });
-    if (res.status === 400) return { error: 'Email inválido. Verifique e tente novamente.' };
+    if (res.status === 400 || res.status === 401) return { error: 'Email ou senha incorretos.' };
     if (res.status === 422) return { error: 'Email em formato inválido.' };
-    if (!res.ok) return { error: 'Erro ao enviar. Tente novamente em alguns segundos.' };
-    return {};
+    if (!res.ok) return { error: 'Erro ao fazer login. Tente novamente em alguns segundos.' };
+
+    const body = await res.json() as Record<string, unknown>;
+    const accessToken = body.access_token as string;
+    const expiresIn = body.expires_in as number || 3600;
+    const payload = decodeJwtPayload(accessToken);
+    const userEmail = (payload.email as string) || email;
+
+    const session: Session = {
+      access_token: accessToken,
+      email: userEmail,
+      expires_at: Math.floor(Date.now() / 1000) + expiresIn,
+    };
+    await storeSession(session);
+    return { session };
   } catch (e) {
     return { error: 'Sem conexão. Verifique sua internet e tente novamente.' };
   }
@@ -119,7 +132,7 @@ export async function resetPassword(email: string): Promise<{ error?: string }> 
 }
 
 function getCallbackUrl(): string {
-  return 'https://atennnaplugin.maestro-n8n.site/auth/callback';
+  return 'https://atennaplugin.maestro-n8n.site/auth/callback';
 }
 
 export async function signOut(): Promise<void> {

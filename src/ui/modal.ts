@@ -1,7 +1,7 @@
 import { getCurrentInput, getInputText, setInputText } from '../core/inputHandler';
 import { getUsage, incrementUsage, isAtLimit, DAILY_LIMIT, getTotalCount, incrementTotalCount, getMonthlyUsage, MONTHLY_LIMIT } from '../core/usageCounter';
 import { isPro, syncPlanFromSupabase } from '../core/planManager';
-import { getActiveSession, signInWithMagicLink, signUpWithPassword, resetPassword } from '../core/auth';
+import { getActiveSession, signInWithPassword, signUpWithPassword, resetPassword } from '../core/auth';
 import { track, trackEvent } from '../core/analytics';
 import { getHistory, addToHistory, toggleFavorite } from '../core/history';
 import type { PromptOrigin, PromptType } from '../core/analytics';
@@ -907,7 +907,7 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
     btn.textContent = 'Entrando…';
     status.textContent = '';
 
-    const result = await signInWithMagicLink(email);
+    const result = await signInWithPassword(email, pwd);
     if (result.error) {
       void trackEvent('login_error', { error: result.error });
       status.textContent = result.error;
@@ -917,12 +917,13 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
       btn.textContent = 'Entrar';
     } else {
       void trackEvent('login_success');
-      status.innerHTML = '<strong>Verifique seu email!</strong><br>Clique no link de confirmação para entrar.';
+      status.textContent = 'Login realizado! Recarregando...';
       status.classList.remove('atenna-modal__login-status--error');
       status.classList.add('atenna-modal__login-status--success');
       emailInput.disabled = true;
       passwordInput.disabled = true;
-      btn.style.display = 'none';
+      btn.disabled = true;
+      setTimeout(() => window.location.reload(), 1000);
     }
   };
 
