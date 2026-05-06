@@ -725,12 +725,12 @@
 .atenna-modal__login {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 40px 32px;
+  gap: 16px;
+  padding: 28px 28px;
   align-items: center;
   text-align: center;
   justify-content: center;
-  min-height: 100%;
+  overflow: hidden;
 }
 
 .atenna-modal__login-title {
@@ -758,6 +758,44 @@
   width: 100%;
   max-width: 320px;
   margin: 8px 0 0;
+}
+
+.atenna-modal__input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.atenna-modal__input-icon-left {
+  position: absolute;
+  left: 12px;
+  color: var(--at-text);
+  opacity: 0.5;
+  font-size: 16px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.atenna-modal__input-wrapper .atenna-modal__login-input {
+  padding-left: 40px;
+}
+
+.atenna-modal__input-icon-right {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--at-text);
+  opacity: 0.5;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: opacity 150ms ease;
+  z-index: 2;
+}
+
+.atenna-modal__input-icon-right:hover {
+  opacity: 0.8;
 }
 
 .atenna-modal__login-input {

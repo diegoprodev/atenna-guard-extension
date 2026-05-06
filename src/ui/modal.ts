@@ -515,56 +515,6 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
     <div class="atenna-modal__feature">Otimizado para IA moderna</div>
   `;
 
-  const inputGroup = document.createElement('div');
-  inputGroup.className = 'atenna-modal__login-group';
-
-  const input = document.createElement('input');
-  input.type = 'email';
-  input.className = 'atenna-modal__login-input';
-  input.placeholder = 'seu@email.com';
-  input.autocomplete = 'email';
-
-  const btn = document.createElement('button');
-  btn.className = 'atenna-modal__login-btn';
-  btn.textContent = 'Entrar';
-
-  const status = document.createElement('div');
-  status.className = 'atenna-modal__login-status';
-
-  const handleClick = async () => {
-    const email = input.value.trim();
-    if (!email) {
-      status.textContent = 'Informe seu email';
-      status.classList.remove('atenna-modal__login-status--error', 'atenna-modal__login-status--success');
-      status.classList.add('atenna-modal__login-status--warning');
-      return;
-    }
-
-    btn.disabled = true;
-    btn.textContent = 'Enviando…';
-    status.textContent = '';
-
-    const result = await signInWithMagicLink(email);
-    if (result.error) {
-      status.textContent = result.error;
-      status.classList.remove('atenna-modal__login-status--success');
-      status.classList.add('atenna-modal__login-status--error');
-      btn.disabled = false;
-      btn.textContent = 'Entrar';
-    } else {
-      status.innerHTML = '<strong>Verifique seu email!</strong><br>Clique no link de confirmação para entrar.';
-      status.classList.remove('atenna-modal__login-status--error');
-      status.classList.add('atenna-modal__login-status--success');
-      input.disabled = true;
-      btn.style.display = 'none';
-    }
-  };
-
-  btn.addEventListener('click', handleClick);
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') void handleClick();
-  });
-
   const linksDiv = document.createElement('div');
   linksDiv.className = 'atenna-modal__login-links';
 
@@ -581,17 +531,11 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
   linksDiv.appendChild(signupLink);
   linksDiv.appendChild(resetLink);
 
-  inputGroup.appendChild(input);
-  inputGroup.appendChild(btn);
   wrap.appendChild(title);
   wrap.appendChild(subtitle);
   wrap.appendChild(features);
-  wrap.appendChild(inputGroup);
-  wrap.appendChild(status);
   wrap.appendChild(linksDiv);
   container.appendChild(wrap);
-
-  input.focus();
 }
 
 function renderSignupView(container: HTMLElement, switchView: (view: string) => void): void {
@@ -613,23 +557,71 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
   const inputGroup = document.createElement('div');
   inputGroup.className = 'atenna-modal__login-group';
 
+  // Email com ícone
+  const emailWrapper = document.createElement('div');
+  emailWrapper.className = 'atenna-modal__input-wrapper';
   const emailInput = document.createElement('input');
   emailInput.type = 'email';
   emailInput.className = 'atenna-modal__login-input';
   emailInput.placeholder = 'seu@email.com';
   emailInput.autocomplete = 'email';
+  const emailIcon = document.createElement('span');
+  emailIcon.className = 'atenna-modal__input-icon-left';
+  emailIcon.textContent = '✉';
+  emailWrapper.appendChild(emailIcon);
+  emailWrapper.appendChild(emailInput);
 
+  // Senha com ícone + eye toggle
+  const passwordWrapper = document.createElement('div');
+  passwordWrapper.className = 'atenna-modal__input-wrapper';
   const passwordInput = document.createElement('input');
   passwordInput.type = 'password';
   passwordInput.className = 'atenna-modal__login-input';
   passwordInput.placeholder = 'Senha (mín. 6 caracteres)';
   passwordInput.autocomplete = 'new-password';
+  const pwdIcon = document.createElement('span');
+  pwdIcon.className = 'atenna-modal__input-icon-left';
+  pwdIcon.textContent = '🔒'.replace('🔒', '⚿');
+  const eyeToggle = document.createElement('button');
+  eyeToggle.className = 'atenna-modal__input-icon-right';
+  eyeToggle.type = 'button';
+  eyeToggle.textContent = '◯';
+  eyeToggle.title = 'Mostrar senha';
+  eyeToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    const isPassword = passwordInput.type === 'password';
+    passwordInput.type = isPassword ? 'text' : 'password';
+    eyeToggle.title = isPassword ? 'Esconder senha' : 'Mostrar senha';
+  });
+  passwordWrapper.appendChild(pwdIcon);
+  passwordWrapper.appendChild(passwordInput);
+  passwordWrapper.appendChild(eyeToggle);
 
+  // Confirmar senha com ícone + eye toggle
+  const confirmWrapper = document.createElement('div');
+  confirmWrapper.className = 'atenna-modal__input-wrapper';
   const confirmInput = document.createElement('input');
   confirmInput.type = 'password';
   confirmInput.className = 'atenna-modal__login-input';
   confirmInput.placeholder = 'Confirme a senha';
   confirmInput.autocomplete = 'new-password';
+  const confirmIcon = document.createElement('span');
+  confirmIcon.className = 'atenna-modal__input-icon-left';
+  confirmIcon.textContent = '⚿';
+  const eyeToggle2 = document.createElement('button');
+  eyeToggle2.className = 'atenna-modal__input-icon-right';
+  eyeToggle2.type = 'button';
+  eyeToggle2.textContent = '◯';
+  eyeToggle2.title = 'Mostrar senha';
+  eyeToggle2.addEventListener('click', (e) => {
+    e.preventDefault();
+    const isPassword = confirmInput.type === 'password';
+    confirmInput.type = isPassword ? 'text' : 'password';
+    eyeToggle2.title = isPassword ? 'Esconder senha' : 'Mostrar senha';
+  });
+  confirmWrapper.appendChild(confirmIcon);
+  confirmWrapper.appendChild(confirmInput);
+  confirmWrapper.appendChild(eyeToggle2);
 
   const btn = document.createElement('button');
   btn.className = 'atenna-modal__login-btn';
@@ -687,9 +679,9 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
     });
   });
 
-  inputGroup.appendChild(emailInput);
-  inputGroup.appendChild(passwordInput);
-  inputGroup.appendChild(confirmInput);
+  inputGroup.appendChild(emailWrapper);
+  inputGroup.appendChild(passwordWrapper);
+  inputGroup.appendChild(confirmWrapper);
   inputGroup.appendChild(btn);
   wrap.appendChild(backBtn);
   wrap.appendChild(title);
