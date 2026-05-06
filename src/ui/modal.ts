@@ -393,6 +393,20 @@ export function toggleModal(): void {
 async function openModal(): Promise<void> {
   void trackEvent('modal_opened');
 
+  // Track daily return (metrics)
+  const today = new Date().toISOString().split('T')[0];
+  const lastOpen = await new Promise<string | null>(resolve => {
+    try { chrome.storage.local.get('atenna_last_open_date', r => resolve(r['atenna_last_open_date'] as string | null)); }
+    catch { resolve(null); }
+  });
+  if (lastOpen && lastOpen !== today) {
+    void trackEvent('daily_return');
+  }
+  await new Promise(resolve => {
+    try { chrome.storage.local.set({ atenna_last_open_date: today }, resolve); }
+    catch { resolve(undefined); }
+  });
+
   const overlay = document.createElement('div');
   overlay.id = OVERLAY_ID;
   overlay.className = 'atenna-modal-overlay';
@@ -773,7 +787,7 @@ async function runFlow(
   }
 }
 
-// ─── Render: loading (premium skeleton) ────────────────────
+// ─── Render: loading (premium skeleton, adaptive states) ─────
 
 function renderLoading(container: HTMLElement): void {
   clearMsgInterval();
@@ -805,7 +819,7 @@ function renderLoading(container: HTMLElement): void {
     msg.textContent = LOADING_MESSAGES[i];
     msg.style.opacity = '0.5';
     setTimeout(() => { msg.style.opacity = '0.7'; }, 100);
-  }, 800);
+  }, 1200);
 }
 
 // ─── Render: success ───────────────────────────────────────
@@ -1443,7 +1457,7 @@ function buildCard(
 
   copyBtn.addEventListener('click', () => {
     const text = ta.value;
-    void trackEvent('prompt_copied', { prompt_type: v.prompt_type, origin, output_length: text.length });
+    void trackEvent('prompt_copied', { prompt_type: v.prompt_type, card_variant: v.variant, origin, output_length: text.length });
     try {
       Promise.resolve(navigator.clipboard?.writeText(text))
         .then(() => showToast('Copiado!'))
@@ -1455,7 +1469,7 @@ function buildCard(
   });
 
   useBtn.addEventListener('click', () => {
-    void track('prompt_used', { prompt_type: v.prompt_type, origin });
+    void track('prompt_used', { prompt_type: v.prompt_type, card_variant: v.variant, origin });
     if (platformInput) {
       setInputText(platformInput, ta.value);
       clearMsgInterval();

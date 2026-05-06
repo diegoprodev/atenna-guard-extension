@@ -357,16 +357,14 @@
 }
 
 .atenna-modal__card--primary {
-  padding: 16px 16px;
-  border: 1px solid rgba(34, 197, 94, 0.15);
+  padding: 16px;
+  border: 1px solid var(--at-border);
   background: var(--at-card-bg);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .atenna-modal--dark .atenna-modal__card--primary {
-  border-color: rgba(34, 197, 94, 0.08);
-  background: rgba(34, 197, 94, 0.02);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .atenna-modal__card--secondary,
@@ -1673,11 +1671,11 @@
   background: linear-gradient(
     90deg,
     var(--at-card-bg) 0%,
-    rgba(255, 255, 255, 0.8) 50%,
+    rgba(255, 255, 255, 0.4) 50%,
     var(--at-card-bg) 100%
   );
   background-size: 200% 100%;
-  animation: atenna-skeleton-shimmer 2s infinite;
+  animation: atenna-skeleton-shimmer 3.5s ease-in-out infinite;
   border: 1px solid var(--at-border);
 }
 
