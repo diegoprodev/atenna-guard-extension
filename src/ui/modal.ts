@@ -238,82 +238,94 @@ async function renderMeusPrompts(
 
 function renderUpgradeModal(onClose: () => void): HTMLElement {
   const overlay = document.createElement('div');
-  overlay.className = 'atenna-modal-overlay';
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) onClose();
-  });
+  overlay.className = 'atenna-upgrade-modal';
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) onClose(); });
 
-  const modal = document.createElement('div');
-  modal.className = 'atenna-modal';
+  const box = document.createElement('div');
+  box.className = 'atenna-upgrade-modal__box';
 
-  const close = document.createElement('button');
-  close.className = 'atenna-modal__close';
-  close.textContent = '×';
-  close.addEventListener('click', onClose);
+  // Hero
+  const hero = document.createElement('div');
+  hero.className = 'atenna-upgrade-modal__hero';
+
+  const heroClose = document.createElement('button');
+  heroClose.className = 'atenna-upgrade-modal__hero-close';
+  heroClose.textContent = '×';
+  heroClose.addEventListener('click', onClose);
+
+  const badge = document.createElement('div');
+  badge.className = 'atenna-upgrade-modal__badge';
+  badge.textContent = 'Atenna Pro';
 
   const title = document.createElement('h2');
-  title.className = 'atenna-modal__upgrade-title';
-  title.textContent = 'Desbloqueie o Atenna Pro';
+  title.className = 'atenna-upgrade-modal__title';
+  title.textContent = 'Crie prompts sem limites';
 
   const subtitle = document.createElement('p');
-  subtitle.className = 'atenna-modal__upgrade-subtitle';
-  subtitle.textContent = 'Limite mensal de 300 gerações com prioridade de processamento.';
+  subtitle.className = 'atenna-upgrade-modal__subtitle';
+  subtitle.textContent = 'Desbloqueie gerações ilimitadas e prioridade de processamento.';
 
-  const comparison = document.createElement('div');
-  comparison.className = 'atenna-modal__upgrade-comparison';
+  hero.appendChild(heroClose);
+  hero.appendChild(badge);
+  hero.appendChild(title);
+  hero.appendChild(subtitle);
 
-  const freeCol = document.createElement('div');
-  freeCol.className = 'atenna-modal__upgrade-col';
-  freeCol.innerHTML = `
-    <h3>Plano Free</h3>
-    <ul>
-      <li>5 gerações/dia</li>
-      <li>25 gerações/mês</li>
-      <li>3 tipos de prompt</li>
-      <li>Histórico limitado</li>
-      <li class="atenna-modal__upgrade-item--disabled">Prioridade ❌</li>
-      <li class="atenna-modal__upgrade-item--disabled">Suporte ❌</li>
-    </ul>
-  `;
+  // Body
+  const body = document.createElement('div');
+  body.className = 'atenna-upgrade-modal__body';
 
-  const proCol = document.createElement('div');
-  proCol.className = 'atenna-modal__upgrade-col atenna-modal__upgrade-col--highlight';
-  proCol.innerHTML = `
-    <h3>Plano Pro</h3>
-    <ul>
-      <li>Gerações ilimitadas</li>
-      <li>300 gerações/mês</li>
-      <li>3 tipos de prompt</li>
-      <li>Histórico completo</li>
-      <li class="atenna-modal__upgrade-item--enabled">Prioridade ✓</li>
-      <li class="atenna-modal__upgrade-item--enabled">Suporte ✓</li>
-    </ul>
-  `;
+  const features: Array<[string, string]> = [
+    ['Gerações ilimitadas por dia', 'Sem restrição diária ou mensal'],
+    ['Processamento prioritário', 'Respostas mais rápidas'],
+    ['Histórico completo', 'Acesse todos os prompts criados'],
+    ['Suporte dedicado', 'Atendimento prioritário'],
+  ];
 
-  comparison.appendChild(freeCol);
-  comparison.appendChild(proCol);
+  const ul = document.createElement('ul');
+  ul.className = 'atenna-upgrade-modal__features';
 
-  const ctaBtn = document.createElement('button');
-  ctaBtn.className = 'atenna-modal__upgrade-btn';
-  ctaBtn.textContent = 'Entrar na lista Pro';
-  ctaBtn.addEventListener('click', () => {
+  features.forEach(([main, sub]) => {
+    const li = document.createElement('li');
+    li.className = 'atenna-upgrade-modal__feature';
+
+    const check = document.createElement('div');
+    check.className = 'atenna-upgrade-modal__feature-check';
+    check.textContent = '✓';
+
+    const text = document.createElement('div');
+    text.className = 'atenna-upgrade-modal__feature-text';
+    text.innerHTML = `<strong>${main}</strong><small>${sub}</small>`;
+
+    li.appendChild(check);
+    li.appendChild(text);
+    ul.appendChild(li);
+  });
+
+  const hr = document.createElement('hr');
+  hr.className = 'atenna-upgrade-modal__divider';
+
+  const cta = document.createElement('button');
+  cta.className = 'atenna-upgrade-modal__cta';
+  cta.textContent = 'Quero o Atenna Pro →';
+  cta.addEventListener('click', () => {
     void trackEvent('upgrade_interest_registered');
-    showToast('Interesse registrado! Em breve.');
+    showToast('Interesse registrado! Entraremos em contato.');
     onClose();
   });
 
-  const dismissBtn = document.createElement('button');
-  dismissBtn.className = 'atenna-modal__upgrade-dismiss-btn';
-  dismissBtn.textContent = 'Agora não';
-  dismissBtn.addEventListener('click', onClose);
+  const dismiss = document.createElement('button');
+  dismiss.className = 'atenna-upgrade-modal__dismiss';
+  dismiss.textContent = 'Continuar no plano gratuito';
+  dismiss.addEventListener('click', onClose);
 
-  modal.appendChild(close);
-  modal.appendChild(title);
-  modal.appendChild(subtitle);
-  modal.appendChild(comparison);
-  modal.appendChild(ctaBtn);
-  modal.appendChild(dismissBtn);
-  overlay.appendChild(modal);
+  body.appendChild(ul);
+  body.appendChild(hr);
+  body.appendChild(cta);
+  body.appendChild(dismiss);
+
+  box.appendChild(hero);
+  box.appendChild(body);
+  overlay.appendChild(box);
 
   return overlay;
 }
@@ -477,8 +489,10 @@ async function openModal(): Promise<void> {
         <button class="atenna-modal__tab${promptsActive}" data-tab="prompts" role="tab" aria-selected="${promptsSelected}">Meus Prompts</button>
       </div>
       <div class="atenna-modal__header-right">
-        <span class="atenna-modal__usage" aria-label="Uso mensal">…</span>
-        <button class="atenna-modal__header-pro" data-pro style="display: none;">Pro</button>
+        <span class="atenna-modal__usage" aria-label="Uso diário">…</span>
+        <div class="atenna-modal__account">
+          <button class="atenna-modal__gear-btn" aria-label="Conta" data-gear>⚙</button>
+        </div>
         <button class="atenna-modal__close" aria-label="Fechar">×</button>
       </div>
     </div>
@@ -622,27 +636,68 @@ async function openModal(): Promise<void> {
   const [usage, pro, totalCount] = await Promise.all([getUsage(), isPro(), getTotalCount()]);
   await updateUsageBadge(usageBadge, usage.count, pro);
 
-  // Show/hide Pro button
-  const proBtn = modal.querySelector<HTMLButtonElement>('[data-pro]');
-  if (proBtn) {
-    if (!pro) {
-      proBtn.style.display = '';
-      proBtn.addEventListener('click', () => {
-        void trackEvent('upgrade_modal_shown');
-        const upgradeOverlay = renderUpgradeModal(() => {
-          void trackEvent('upgrade_modal_closed');
-          upgradeOverlay.remove();
-        });
-        document.body.appendChild(upgradeOverlay);
+  // Gear menu — account info + logout
+  const gearBtn = modal.querySelector<HTMLButtonElement>('[data-gear]');
+  const accountEl = modal.querySelector<HTMLElement>('.atenna-modal__account');
+  if (gearBtn && accountEl) {
+    gearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const existing = accountEl.querySelector('.atenna-modal__account-menu');
+      if (existing) { existing.remove(); return; }
+
+      const menu = document.createElement('div');
+      menu.className = 'atenna-modal__account-menu';
+
+      const emailEl = document.createElement('div');
+      emailEl.className = 'atenna-modal__account-email';
+      emailEl.textContent = session.email || 'Conta';
+
+      const logoutBtn = document.createElement('button');
+      logoutBtn.className = 'atenna-modal__account-logout';
+      logoutBtn.innerHTML = '⎋ &nbsp;Sair da conta';
+      logoutBtn.addEventListener('click', async () => {
+        void trackEvent('logout_clicked');
+        const { signOut } = await import('../core/auth');
+        await signOut();
+        overlay.remove();
+        window.location.reload();
       });
-    }
+
+      if (!pro) {
+        const upgradeBtn = document.createElement('button');
+        upgradeBtn.className = 'atenna-modal__account-logout';
+        upgradeBtn.style.color = '#16a34a';
+        upgradeBtn.innerHTML = '★ &nbsp;Upgrade para Pro';
+        upgradeBtn.addEventListener('click', () => {
+          menu.remove();
+          void trackEvent('upgrade_modal_shown');
+          const upgradeOverlay = renderUpgradeModal(() => {
+            void trackEvent('upgrade_modal_closed');
+            upgradeOverlay.remove();
+          });
+          document.body.appendChild(upgradeOverlay);
+        });
+        menu.appendChild(emailEl);
+        menu.appendChild(upgradeBtn);
+        menu.appendChild(logoutBtn);
+      } else {
+        menu.appendChild(emailEl);
+        menu.appendChild(logoutBtn);
+      }
+
+      accountEl.appendChild(menu);
+      const closeMenu = (ev: MouseEvent) => {
+        if (!menu.contains(ev.target as Node)) { menu.remove(); document.removeEventListener('click', closeMenu); }
+      };
+      setTimeout(() => document.addEventListener('click', closeMenu), 0);
+    });
   }
 
   if (cacheHit) {
     renderPrompts(promptsView, promptCache!.data, platformInput, overlay, 'manual');
   } else if (userText !== '') {
-    if (!cacheHit && userText !== '') renderLoading(promptsView);
-    const shouldShowSuggestion = (pro && isVagueInput(userText)) || (pro && shouldSuggestBuilder(userText));
+    renderLoading(promptsView);
+    const shouldShowSuggestion = pro && (isVagueInput(userText) || shouldSuggestBuilder(userText));
     if (shouldShowSuggestion) {
       void trackEvent('auto_suggestion_shown');
       renderSuggestion(
@@ -658,11 +713,12 @@ async function openModal(): Promise<void> {
     } else {
       void runFlow(promptsView, usageBadge, userText, platformInput, overlay, 'auto', pro);
     }
-  } else if (totalCount === 0) {
+  } else {
+    // Always show onboarding when no text — guides first-timers and returning users
+    switchTab('edit');
     renderOnboarding(promptsView, (example: string) => {
       editorEl.value = example;
       editorEl.focus();
-      switchTab('edit');
     });
   }
 
@@ -1383,7 +1439,7 @@ async function updateUsageBadge(badge: HTMLElement, dailyCount: number, pro = fa
     badge.className   = 'atenna-modal__usage atenna-modal__usage--pro';
     return;
   }
-  badge.textContent = `${dailyCount}/${DAILY_LIMIT}`;
+  badge.textContent = `Free  ${dailyCount}/${DAILY_LIMIT}`;
   badge.className   = 'atenna-modal__usage';
   if (dailyCount >= DAILY_LIMIT)           badge.classList.add('atenna-modal__usage--danger');
   else if (dailyCount >= DAILY_LIMIT - 2)  badge.classList.add('atenna-modal__usage--warning');
