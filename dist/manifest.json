@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Atenna Prompt",
-  "version": "1.1.0",
-  "description": "Gere prompts melhores com IA no ChatGPT, Claude e Gemini. Builder inteligente com 3 níveis de profundidade.",
+  "version": "1.2.0",
+  "description": "Gere prompts melhores com IA no ChatGPT, Claude e Gemini. Builder inteligente com análise completa.",
   "permissions": ["storage", "tabs"],
   "host_permissions": [
     "https://chat.openai.com/*",
