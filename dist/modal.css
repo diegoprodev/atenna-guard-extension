@@ -725,88 +725,115 @@
 .atenna-modal__login {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 32px 24px;
+  gap: 20px;
+  padding: 40px 32px;
   align-items: center;
   text-align: center;
+  justify-content: center;
+  min-height: 100%;
 }
 
 .atenna-modal__login-title {
-  font-size: 18px;
+  font-size: 32px;
   font-weight: 700;
   color: var(--at-text);
   margin: 0;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 
 .atenna-modal__login-subtitle {
-  font-size: 13px;
+  font-size: 16px;
   color: var(--at-text);
-  opacity: 0.7;
+  opacity: 0.65;
   margin: 0;
+  line-height: 1.5;
+  font-weight: 400;
 }
 
 .atenna-modal__login-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   width: 100%;
-  max-width: 300px;
+  max-width: 320px;
+  margin: 8px 0 0;
 }
 
 .atenna-modal__login-input {
-  padding: 10px 12px;
-  border: 1px solid var(--at-border);
-  border-radius: 7px;
-  font-size: 13px;
+  padding: 13px 15px;
+  border: 1.5px solid var(--at-border);
+  border-radius: 10px;
+  font-size: 15px;
   background: var(--at-bg);
   color: var(--at-text);
   font-family: inherit;
-  transition: border-color 150ms ease;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.atenna-modal__login-input::placeholder {
+  color: var(--at-text);
+  opacity: 0.45;
 }
 
 .atenna-modal__login-input:focus {
   outline: none;
   border-color: var(--at-green);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
 }
 
 .atenna-modal__login-input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  background: var(--at-card-bg);
 }
 
 .atenna-modal__login-btn {
-  padding: 10px 16px;
+  padding: 12px 20px;
   background: var(--at-green);
   color: #ffffff;
   border: none;
-  border-radius: 7px;
-  font-size: 13px;
+  border-radius: 10px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  transition: opacity 150ms ease;
+  transition: all 200ms ease;
+  letter-spacing: 0.02em;
+  margin-top: 4px;
 }
 
 .atenna-modal__login-btn:hover:not(:disabled) {
-  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(34, 197, 94, 0.3);
+}
+
+.atenna-modal__login-btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .atenna-modal__login-btn:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .atenna-modal__login-status {
-  font-size: 12px;
-  min-height: 18px;
+  font-size: 13px;
+  min-height: 20px;
   color: var(--at-text);
   opacity: 0;
-  transition: opacity 150ms ease;
+  transition: opacity 200ms ease;
+  line-height: 1.5;
 }
 
 .atenna-modal__login-status--success,
 .atenna-modal__login-status--error {
   opacity: 1;
+}
+
+.atenna-modal__login-status--success {
+  color: #22c55e;
 }
 
 .atenna-modal__login-status--error {
@@ -817,64 +844,87 @@
   color: #f59e0b;
 }
 
+.atenna-modal__login-status strong {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
 .atenna-modal__login-back {
   align-self: flex-start;
   background: none;
   border: none;
-  color: var(--at-green);
-  font-size: 13px;
-  font-weight: 600;
+  color: var(--at-text);
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  padding: 4px 0;
+  padding: 8px 0;
   font-family: inherit;
-  transition: opacity 150ms ease;
+  transition: color 150ms ease, opacity 150ms ease;
+  opacity: 0.7;
 }
 
 .atenna-modal__login-back:hover {
-  opacity: 0.8;
+  opacity: 1;
+  color: var(--at-green);
 }
 
 .atenna-modal__login-features {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  font-size: 12px;
+  gap: 10px;
+  font-size: 15px;
   color: var(--at-text);
-  opacity: 0.8;
+  opacity: 0.85;
   text-align: left;
   width: 100%;
-  padding: 12px;
+  padding: 16px;
   background: var(--at-card-bg);
-  border-radius: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--at-border);
 }
 
 .atenna-modal__feature {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.atenna-modal__feature::before {
+  content: '';
+  flex-shrink: 0;
+  width: 4px;
+  height: 4px;
+  background: var(--at-green);
+  border-radius: 50%;
 }
 
 .atenna-modal__login-links {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   justify-content: center;
   width: 100%;
-  margin-top: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
 }
 
 .atenna-modal__login-link {
   background: none;
   border: none;
-  color: var(--at-green);
-  font-size: 12px;
-  font-weight: 600;
+  color: var(--at-text);
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  padding: 0;
+  padding: 6px 0;
   font-family: inherit;
-  transition: opacity 150ms ease;
+  transition: color 150ms ease, opacity 150ms ease;
   text-decoration: none;
+  opacity: 0.7;
 }
 
 .atenna-modal__login-link:hover {
-  opacity: 0.8;
+  opacity: 1;
+  color: var(--at-green);
 }

@@ -501,18 +501,18 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
 
   const title = document.createElement('h2');
   title.className = 'atenna-modal__login-title';
-  title.textContent = '🚀 Comece a usar o Atenna';
+  title.textContent = 'A IA certa começa com o prompt certo';
 
   const subtitle = document.createElement('p');
   subtitle.className = 'atenna-modal__login-subtitle';
-  subtitle.textContent = 'Crie prompts inteligentes com IA em segundos';
+  subtitle.textContent = 'Crie prompts estruturados com precisão e clareza em segundos';
 
   const features = document.createElement('div');
   features.className = 'atenna-modal__login-features';
   features.innerHTML = `
-    <div class="atenna-modal__feature">✓ 5 usos gratuitos por dia</div>
-    <div class="atenna-modal__feature">✓ Geração automática estruturada</div>
-    <div class="atenna-modal__feature">✓ Melhoria inteligente de ideias</div>
+    <div class="atenna-modal__feature">5 gerações gratuitas por dia</div>
+    <div class="atenna-modal__feature">Estruturação inteligente automática</div>
+    <div class="atenna-modal__feature">Otimizado para IA moderna</div>
   `;
 
   const inputGroup = document.createElement('div');
@@ -534,7 +534,7 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
   const handleClick = async () => {
     const email = input.value.trim();
     if (!email) {
-      status.textContent = '⚠️ Informe seu email';
+      status.textContent = 'Informe seu email';
       status.classList.remove('atenna-modal__login-status--error', 'atenna-modal__login-status--success');
       status.classList.add('atenna-modal__login-status--warning');
       return;
@@ -546,13 +546,13 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
 
     const result = await signInWithMagicLink(email);
     if (result.error) {
-      status.textContent = `❌ ${result.error}`;
+      status.textContent = result.error;
       status.classList.remove('atenna-modal__login-status--success');
       status.classList.add('atenna-modal__login-status--error');
       btn.disabled = false;
       btn.textContent = 'Entrar';
     } else {
-      status.innerHTML = '✅ <strong>Verifique seu email!</strong><br>Clique no link de confirmação para entrar.';
+      status.innerHTML = '<strong>Verifique seu email!</strong><br>Clique no link de confirmação para entrar.';
       status.classList.remove('atenna-modal__login-status--error');
       status.classList.add('atenna-modal__login-status--success');
       input.disabled = true;
@@ -644,17 +644,17 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
     const confirm = confirmInput.value;
 
     if (!email) {
-      status.textContent = '⚠️ Informe seu email';
+      status.textContent = 'Informe seu email';
       status.classList.add('atenna-modal__login-status--warning');
       return;
     }
     if (pwd.length < 6) {
-      status.textContent = '⚠️ Senha deve ter no mínimo 6 caracteres';
+      status.textContent = 'Senha deve ter no mínimo 6 caracteres';
       status.classList.add('atenna-modal__login-status--warning');
       return;
     }
     if (pwd !== confirm) {
-      status.textContent = '⚠️ As senhas não conferem';
+      status.textContent = 'As senhas não conferem';
       status.classList.add('atenna-modal__login-status--warning');
       return;
     }
@@ -666,12 +666,12 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
 
     const result = await signUpWithPassword(email, pwd);
     if (result.error) {
-      status.textContent = `❌ ${result.error}`;
+      status.textContent = result.error;
       status.classList.add('atenna-modal__login-status--error');
       btn.disabled = false;
       btn.textContent = 'Criar conta';
     } else {
-      status.innerHTML = '✅ <strong>Conta criada!</strong><br>Verifique seu email e clique no link de confirmação.';
+      status.innerHTML = '<strong>Conta criada!</strong><br>Verifique seu email e clique no link de confirmação.';
       status.classList.add('atenna-modal__login-status--success');
       emailInput.disabled = true;
       passwordInput.disabled = true;
@@ -739,7 +739,7 @@ function renderResetView(container: HTMLElement, switchView: (view: string) => v
   const handleClick = async () => {
     const email = input.value.trim();
     if (!email) {
-      status.textContent = '⚠️ Informe seu email';
+      status.textContent = 'Informe seu email';
       status.classList.add('atenna-modal__login-status--warning');
       return;
     }
@@ -751,12 +751,12 @@ function renderResetView(container: HTMLElement, switchView: (view: string) => v
 
     const result = await resetPassword(email);
     if (result.error) {
-      status.textContent = `❌ ${result.error}`;
+      status.textContent = result.error;
       status.classList.add('atenna-modal__login-status--error');
       btn.disabled = false;
       btn.textContent = 'Enviar link';
     } else {
-      status.innerHTML = '✅ <strong>Link enviado!</strong><br>Verifique seu email para redefinir a senha.';
+      status.innerHTML = '<strong>Link enviado!</strong><br>Verifique seu email para redefinir a senha.';
       status.classList.add('atenna-modal__login-status--success');
       input.disabled = true;
       btn.style.display = 'none';
