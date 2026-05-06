@@ -11,34 +11,31 @@ const sizes = [16, 32, 48, 128];
 mkdirSync(resolve(projectRoot, 'public/icons'), { recursive: true });
 
 for (const size of sizes) {
-  const logoSize = Math.round(size * 0.68);
+  // Use 85% of the canvas so the owl has a small margin
+  const logoSize = Math.round(size * 0.85);
   const offset = Math.round((size - logoSize) / 2);
 
-  // Black circle background
-  const circle = Buffer.from(
-    `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="black"/>
-    </svg>`
-  );
-
-  // Trim transparent border first so the logo fills the available space
+  // Trim transparent border and resize
   const logoBuffer = await sharp(srcLogo)
     .trim({ threshold: 10 })
     .resize(logoSize, logoSize, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png()
     .toBuffer();
 
-  // Make logo white: create white canvas masked by logo's alpha (dest-in)
+  // White owl on transparent background — CSS provides the green circle
   const whiteLogo = await sharp({
-    create: { width: logoSize, height: logoSize, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
+    create: { width: size, height: size, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
   })
-    .composite([{ input: logoBuffer, blend: 'dest-in' }])
-    .png()
-    .toBuffer();
-
-  // Composite white logo centered on black circle
-  await sharp(circle)
-    .composite([{ input: whiteLogo, top: offset, left: offset }])
+    .composite([{
+      input: await sharp({
+        create: { width: logoSize, height: logoSize, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
+      })
+        .composite([{ input: logoBuffer, blend: 'dest-in' }])
+        .png()
+        .toBuffer(),
+      top: offset,
+      left: offset,
+    }])
     .png()
     .toFile(resolve(projectRoot, `public/icons/icon${size}.png`));
 
