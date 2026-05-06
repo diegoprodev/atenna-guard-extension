@@ -435,7 +435,6 @@ async function openModal(): Promise<void> {
   const session = await getActiveSession();
 
   if (!session) {
-    // No session: show ONLY login screen
     const logoUrl = getLogoUrl();
     const logoImg = logoUrl
       ? `<img src="${logoUrl}" width="22" height="22" alt="" aria-hidden="true"/>`
@@ -456,8 +455,15 @@ async function openModal(): Promise<void> {
       if (view === 'login') renderLoginView(loginView, switchAuthView);
       else if (view === 'signup') renderSignupView(loginView, switchAuthView);
       else if (view === 'reset') renderResetView(loginView, switchAuthView);
+      else if (view === 'onboarding') renderPreLoginOnboarding(loginView, switchAuthView);
     };
-    switchAuthView('login');
+
+    // First-ever click → show onboarding. Subsequent → go straight to login.
+    const seen = await new Promise<boolean>(resolve => {
+      try { chrome.storage.local.get('atenna_onboarding_seen', r => resolve(!!r['atenna_onboarding_seen'])); }
+      catch { resolve(true); }
+    });
+    switchAuthView(seen ? 'login' : 'onboarding');
 
     modal.querySelector('.atenna-modal__close')!.addEventListener('click', close);
     return;
@@ -860,6 +866,49 @@ function renderLimitReached(container: HTMLElement): void {
   wrap.appendChild(icon);
   wrap.appendChild(msg);
   wrap.appendChild(sub);
+  container.appendChild(wrap);
+}
+
+function renderPreLoginOnboarding(container: HTMLElement, switchView: (view: string) => void): void {
+  void trackEvent('onboarding_shown');
+  chrome.storage.local.set({ atenna_onboarding_seen: true });
+  clearMsgInterval();
+  container.innerHTML = '';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'atenna-modal__onboarding';
+
+  wrap.innerHTML = `
+    <div class="atenna-modal__onb-hero">
+      <div class="atenna-modal__onb-headline">Prompts melhores.<br>Resultados melhores.</div>
+      <p class="atenna-modal__onb-sub">Transforme qualquer ideia em prompts estruturados para ChatGPT, Claude e Gemini — em segundos.</p>
+    </div>
+    <ul class="atenna-modal__onb-features">
+      <li><span class="atenna-modal__onb-icon">⚡</span><div><strong>3 versões otimizadas</strong><span>Direto, técnico e estruturado</span></div></li>
+      <li><span class="atenna-modal__onb-icon">🎯</span><div><strong>Builder inteligente</strong><span>Preencha objetivo, contexto e formato</span></div></li>
+      <li><span class="atenna-modal__onb-icon">📋</span><div><strong>Histórico de prompts</strong><span>Acesse e reutilize o que funcionou</span></div></li>
+    </ul>
+    <div class="atenna-modal__onb-free-tag">✓ Grátis · 5 gerações por dia · Sem cartão</div>
+  `;
+
+  const ctaBtn = document.createElement('button');
+  ctaBtn.className = 'atenna-modal__onb-cta';
+  ctaBtn.textContent = 'Criar conta grátis';
+  ctaBtn.addEventListener('click', () => {
+    void trackEvent('onboarding_cta_clicked');
+    switchView('signup');
+  });
+
+  const loginLink = document.createElement('button');
+  loginLink.className = 'atenna-modal__onb-login';
+  loginLink.textContent = 'Já tenho conta →';
+  loginLink.addEventListener('click', () => {
+    void trackEvent('onboarding_login_clicked');
+    switchView('login');
+  });
+
+  wrap.appendChild(ctaBtn);
+  wrap.appendChild(loginLink);
   container.appendChild(wrap);
 }
 
