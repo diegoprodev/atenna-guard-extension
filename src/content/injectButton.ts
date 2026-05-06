@@ -34,14 +34,13 @@ function findVisualContainer(from: HTMLElement): HTMLElement {
 function applyDefaultPosition(btn: HTMLButtonElement, input: HTMLElement): void {
   if (rafId !== undefined) cancelAnimationFrame(rafId);
   rafId = requestAnimationFrame(() => {
-    const container = findVisualContainer(input);
-    const cRect = container.getBoundingClientRect();
-    if (cRect.width === 0 || cRect.height === 0) return;
-    const btnH = btn.getBoundingClientRect().height || 34;
-    // Default: top-right — vertically centered on the top edge of the container.
-    // Anchoring to cRect.top keeps the badge stable as the input grows downward.
-    btn.style.top   = `${cRect.top - btnH / 2}px`;
-    btn.style.right = `${window.innerWidth - cRect.right + BADGE_RIGHT_OFFSET}px`;
+    const iRect = input.getBoundingClientRect();
+    if (iRect.width === 0 || iRect.height === 0) return;
+    const btnH = btn.getBoundingClientRect().height || 42;
+    // Always ABOVE the input — never overlaps text the user is typing.
+    // Gap of 8px between badge bottom and input top edge.
+    btn.style.top   = `${iRect.top - btnH - 8}px`;
+    btn.style.right = `${window.innerWidth - iRect.right + BADGE_RIGHT_OFFSET}px`;
     btn.style.left  = 'auto';
   });
 }
@@ -198,6 +197,7 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   let ro: ResizeObserver | undefined;
   if (typeof ResizeObserver !== 'undefined') {
     ro = new ResizeObserver(update);
+    ro.observe(input); // track textarea/div growth directly
     ro.observe(findVisualContainer(input));
     ro.observe(document.documentElement);
   }
