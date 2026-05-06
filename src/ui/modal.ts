@@ -10,9 +10,9 @@ const OVERLAY_ID  = 'atenna-modal-overlay';
 const SUCCESS_MS  = 500;
 
 const LOADING_MESSAGES = [
-  'Analisando seu prompt...',
-  'Estruturando a resposta...',
-  'Refinando os detalhes...',
+  'Estruturando intenção...',
+  'Refinando instruções...',
+  'Preparando versões...',
 ];
 
 // Static SVGs — never contain user content, safe for innerHTML
@@ -62,44 +62,27 @@ function shouldSuggestBuilder(text: string): boolean {
 
 function renderOnboarding(
   container: HTMLElement,
-  onChipClick: (suggestion: string) => void,
+  _onChipClick: (suggestion: string) => void,
 ): void {
   container.innerHTML = '';
   const wrap = document.createElement('div');
-  wrap.className = 'atenna-modal__empty-state';
+  wrap.className = 'atenna-modal__onboarding-minimal';
 
-  const title = document.createElement('h3');
-  title.className = 'atenna-modal__empty-title';
-  title.textContent = 'Comece com uma ideia simples.';
+  const title = document.createElement('h2');
+  title.className = 'atenna-modal__onb-title';
+  title.textContent = 'Atenna';
 
   const subtitle = document.createElement('p');
-  subtitle.className = 'atenna-modal__empty-subtitle';
-  subtitle.textContent = 'Escolha um exemplo ou escreva algo. Vamos transformar em um prompt estruturado.';
+  subtitle.className = 'atenna-modal__onb-subtitle';
+  subtitle.textContent = 'Ideias estruturadas geram respostas melhores.';
 
-  const chipsContainer = document.createElement('div');
-  chipsContainer.className = 'atenna-modal__empty-chips';
-
-  const examples = [
-    'Criar guia de estudo',
-    'Post para LinkedIn',
-    'Explicação técnica',
-    'Proposta comercial',
-    'Roteiro de aula',
-    'Email profissional',
-  ];
-
-  examples.forEach(example => {
-    const chip = document.createElement('button');
-    chip.className = 'atenna-modal__empty-chip';
-    chip.textContent = example;
-    chip.type = 'button';
-    chip.addEventListener('click', () => onChipClick(example));
-    chipsContainer.appendChild(chip);
-  });
+  const description = document.createElement('p');
+  description.className = 'atenna-modal__onb-description';
+  description.textContent = 'Refine solicitações para IA em segundos.';
 
   wrap.appendChild(title);
   wrap.appendChild(subtitle);
-  wrap.appendChild(chipsContainer);
+  wrap.appendChild(description);
   container.appendChild(wrap);
 }
 
@@ -790,24 +773,29 @@ async function runFlow(
   }
 }
 
-// ─── Render: loading ───────────────────────────────────────
+// ─── Render: loading (premium skeleton) ────────────────────
 
 function renderLoading(container: HTMLElement): void {
   clearMsgInterval();
   container.innerHTML = '';
 
-  const wrap    = document.createElement('div');
-  wrap.className = 'atenna-modal__loading';
-
-  const spinner = document.createElement('div');
-  spinner.className = 'atenna-modal__spinner';
+  const wrap = document.createElement('div');
+  wrap.className = 'atenna-skeleton-loading';
 
   const msg = document.createElement('p');
-  msg.className = 'atenna-modal__loading-msg';
+  msg.className = 'atenna-skeleton-loading__msg';
+  msg.setAttribute('data-loading-msg', '');
   msg.textContent = LOADING_MESSAGES[0];
 
-  wrap.appendChild(spinner);
   wrap.appendChild(msg);
+
+  // 3 skeleton cards
+  for (let j = 0; j < 3; j++) {
+    const skeleton = document.createElement('div');
+    skeleton.className = 'atenna-skeleton-card';
+    wrap.appendChild(skeleton);
+  }
+
   container.appendChild(wrap);
 
   let i = 0;
@@ -815,7 +803,9 @@ function renderLoading(container: HTMLElement): void {
     if (!msg.isConnected) { clearMsgInterval(); return; }
     i = (i + 1) % LOADING_MESSAGES.length;
     msg.textContent = LOADING_MESSAGES[i];
-  }, 1500);
+    msg.style.opacity = '0.5';
+    setTimeout(() => { msg.style.opacity = '0.7'; }, 100);
+  }, 800);
 }
 
 // ─── Render: success ───────────────────────────────────────
@@ -849,23 +839,27 @@ function renderLimitReached(container: HTMLElement): void {
   container.innerHTML = '';
 
   const wrap = document.createElement('div');
-  wrap.className = 'atenna-modal__loading';
-
-  const icon = document.createElement('div');
-  icon.className = 'atenna-modal__limit-icon';
-  icon.textContent = '⊘';
+  wrap.className = 'atenna-modal__limit-reached';
 
   const msg = document.createElement('p');
-  msg.className = 'atenna-modal__loading-msg';
-  msg.textContent = 'Limite mensal atingido';
+  msg.className = 'atenna-modal__limit-msg';
+  msg.textContent = 'Você já refinou 5 solicitações hoje.';
 
   const sub = document.createElement('p');
-  sub.className = 'atenna-modal__loading-sub';
-  sub.textContent = `Você atingiu o limite de ${DAILY_LIMIT} gerações/dia ou ${MONTHLY_LIMIT}/mês. O contador diário reseta à meia-noite.`;
+  sub.className = 'atenna-modal__limit-sub';
+  sub.textContent = 'Volte amanhã para novas gerações ou continue refinando sem limites.';
 
-  wrap.appendChild(icon);
+  const btn = document.createElement('button');
+  btn.className = 'atenna-modal__limit-btn';
+  btn.textContent = 'Conhecer Pro';
+  btn.addEventListener('click', () => {
+    void trackEvent('upgrade_from_limit');
+    showToast('Em breve! 🚀');
+  });
+
   wrap.appendChild(msg);
   wrap.appendChild(sub);
+  wrap.appendChild(btn);
   container.appendChild(wrap);
 }
 
@@ -1321,33 +1315,27 @@ function renderResetView(container: HTMLElement, switchView: (view: string) => v
 
 function renderUpgradeTrigger(): HTMLElement {
   const card = document.createElement('div');
-  card.className = 'atenna-modal__upgrade';
-
-  const icon = document.createElement('span');
-  icon.className   = 'atenna-modal__upgrade-icon';
-  icon.textContent = '↑';
+  card.className = 'atenna-modal__upgrade-trigger';
 
   const msg = document.createElement('p');
-  msg.className   = 'atenna-modal__upgrade-msg';
-  msg.textContent = 'Você está criando prompts melhores que 90% das pessoas. Quer desbloquear o modo completo?';
+  msg.className = 'atenna-modal__upgrade-trigger-msg';
+  msg.textContent = 'Você já criou 3 prompts.';
+
+  const sub = document.createElement('p');
+  sub.className = 'atenna-modal__upgrade-trigger-sub';
+  sub.textContent = 'Usuários Pro refinam sem limite de iterações.';
 
   const btn = document.createElement('button');
-  btn.className   = 'atenna-modal__upgrade-btn';
-  btn.textContent = 'Desbloquear Pro';
+  btn.className = 'atenna-modal__upgrade-trigger-btn';
+  btn.textContent = 'Ver Pro';
   btn.addEventListener('click', () => {
-    void track('upgrade_clicked');
+    void trackEvent('upgrade_from_trigger');
     showToast('Em breve! 🚀');
   });
 
-  const dismiss = document.createElement('button');
-  dismiss.className   = 'atenna-modal__upgrade-dismiss';
-  dismiss.textContent = 'Agora não';
-  dismiss.addEventListener('click', () => card.remove());
-
-  card.appendChild(icon);
   card.appendChild(msg);
+  card.appendChild(sub);
   card.appendChild(btn);
-  card.appendChild(dismiss);
   return card;
 }
 
@@ -1364,10 +1352,10 @@ function renderPrompts(
   clearMsgInterval();
   container.innerHTML = '';
 
-  const entries: Array<{ emoji: string; label: string; speed: string; description: string; text: string; preview?: string; prompt_type: PromptType }> = [
-    { emoji: '●', label: 'Direto',      speed: 'Rápido',      description: 'Claro e objetivo',      text: data.direct,     preview: data.direct_preview,     prompt_type: 'direct' },
-    { emoji: '●', label: 'Estruturado', speed: 'Equilibrado',  description: 'Organizado em seções',  text: data.structured, preview: data.structured_preview, prompt_type: 'structured' },
-    { emoji: '●', label: 'Técnico',     speed: 'Profundo',     description: 'Aprofundado e preciso', text: data.technical,  preview: data.technical_preview,  prompt_type: 'technical' },
+  const entries: Array<{ emoji: string; label: string; speed: string; description: string; text: string; preview?: string; prompt_type: PromptType; variant: 'primary' | 'secondary' | 'tertiary' }> = [
+    { emoji: '●', label: 'Refinado',      speed: 'Rápido',       description: 'Claro e objetivo',      text: data.structured, preview: data.structured_preview, prompt_type: 'structured', variant: 'primary' },
+    { emoji: '●', label: 'Estruturado',   speed: 'Equilibrado',   description: 'Organizado em seções', text: data.direct,     preview: data.direct_preview,     prompt_type: 'direct',     variant: 'secondary' },
+    { emoji: '●', label: 'Estratégico',   speed: 'Profundo',      description: 'Aprofundado e preciso',text: data.technical,  preview: data.technical_preview,  prompt_type: 'technical',  variant: 'tertiary' },
   ];
 
   const cards = document.createElement('div');
@@ -1383,15 +1371,16 @@ function renderPrompts(
 }
 
 function buildCard(
-  v:             { emoji: string; label: string; speed: string; description: string; text: string; preview?: string; prompt_type: PromptType },
+  v:             { emoji: string; label: string; speed: string; description: string; text: string; preview?: string; prompt_type: PromptType; variant: 'primary' | 'secondary' | 'tertiary' },
   index:         number,
   platformInput: HTMLElement | null,
   overlay:       HTMLElement,
   origin:        PromptOrigin,
 ): HTMLElement {
   const card = document.createElement('div');
-  card.className = 'atenna-modal__card';
+  card.className = `atenna-modal__card atenna-modal__card--${v.variant}`;
   card.dataset.card = String(index);
+  card.style.animationDelay = `${index * 100}ms`;
 
   const header  = document.createElement('div');
   header.className = 'atenna-modal__card-header';
@@ -1488,10 +1477,10 @@ async function updateUsageBadge(badge: HTMLElement, dailyCount: number, pro = fa
     badge.className   = 'atenna-modal__usage atenna-modal__usage--pro';
     return;
   }
-  badge.textContent = `Free  ${dailyCount}/${DAILY_LIMIT}`;
+  const remaining = Math.max(0, DAILY_LIMIT - dailyCount);
+  badge.textContent = `${remaining} gerações restantes`;
   badge.className   = 'atenna-modal__usage';
-  if (dailyCount >= DAILY_LIMIT)           badge.classList.add('atenna-modal__usage--danger');
-  else if (dailyCount >= DAILY_LIMIT - 2)  badge.classList.add('atenna-modal__usage--warning');
+  if (dailyCount >= DAILY_LIMIT) badge.classList.add('atenna-modal__usage--danger');
 }
 
 // ─── Backend fetch (via background worker to bypass CORS) ──
