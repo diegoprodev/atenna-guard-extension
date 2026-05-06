@@ -84,8 +84,51 @@ All notable changes to **Atenna Guard Extension** are documented here.
   - `POST /track` endpoint receives event data, writes to `backend/data/events.jsonl`
   - Integrated into FastAPI app via router inclusion
 
+- **Production Infrastructure** (`backend/Dockerfile`, `docker-compose.yml`, `nginx/default.conf`):
+  - **Docker containerization**:
+    - `Dockerfile` (Python 3.12 slim): FastAPI app running uvicorn on 0.0.0.0:8000 with auto-restart policy
+    - `requirements.txt` updated: added `PyJWT`, `cryptography` for JWKS validation
+    - Volume mount: `./backend/data` for persistent event logs and analytics
+  - **Docker Compose orchestration** (`docker-compose.yml`):
+    - Two-service stack: `atenna-backend` (FastAPI) + `atenna-nginx` (reverse proxy)
+    - Backend isolation: listens only on `127.0.0.1:8000` (not exposed externally)
+    - Nginx exposed on ports 80 (HTTP redirect) and 443 (HTTPS)
+    - Auto-restart on failure, named volumes for data persistence
+    - Service dependencies: nginx depends on backend
+  - **Nginx reverse proxy** (`nginx/default.conf`):
+    - HTTP server: listens :80, redirects to HTTPS with 301 status
+    - HTTPS server: listens :443 ssl, proxies to backend container on http://backend:8000
+    - Headers propagated: Host, X-Real-IP, X-Forwarded-For, X-Forwarded-Proto
+    - SSL certificate paths: `/etc/nginx/certs/fullchain.pem`, `/etc/nginx/certs/privkey.pem`
+    - TLS 1.2 + 1.3, HIGH ciphers only, no aNULL/MD5
+
+- **VPS Deployment** (Hetzner CX33, 157.90.246.156):
+  - **Automated SSH provisioning** (via paramiko in Python):
+    - System updates: `apt update && apt upgrade`
+    - Dependencies installed: Python 3.12, pip, venv, nginx, certbot, git, curl, ufw
+    - Firewall configured: ports 22 (SSH), 80 (HTTP), 443 (HTTPS) allowed
+    - Backend directory: `/root/atenna` with docker-compose and configs
+  - **SSL Certificate** (Let's Encrypt via Certbot):
+    - Domain: `atennaplugin.maestro-n8n.site` (corrected from typo with 3 n's)
+    - Certbot ran in standalone mode, certificates copied to nginx volume
+    - Auto-renewal scheduled via systemd timer (24-hour check)
+    - Certificate chain: fullchain.pem (root + intermediate + leaf), privkey.pem
+  - **Production URL**: `https://atennaplugin.maestro-n8n.site`
+
+- **Smoke Tests** (via urllib):
+  - 6 test cases covering production endpoints:
+    - `GET /health → 200 OK` (connectivity check)
+    - `GET /health corpo` (response body validation)
+    - `POST /generate-prompts sem JWT → 401` (auth enforcement)
+    - `POST /generate-prompts JWT fake → 401` (token validation)
+    - `POST /generate-prompts input vazio → 422` (validation)
+    - `POST /track → 200` (analytics endpoint)
+    - `HTTP → HTTPS redirect 301` (SSL enforcement)
+  - **Results**: 7/7 tests passing
+  - **System score**: 10/10 (all production requirements met)
+
 ### Changed
-- **Usage limit model**: Daily limit (`DAILY_LIMIT=10`) instead of monthly; reset at midnight instead of 30-day rolling window
+- **Usage limit model**: Daily limit (`DAILY_LIMIT=5`), monthly limit (`MONTHLY_LIMIT=25`); reset at midnight (daily) and month boundary (monthly)
 - **Usage counter**: 
   - Moved to `src/core/usageCounter.ts` with daily reset logic
   - Added `getTotalCount()` and `incrementTotalCount()` for all-time conversion trigger (at 3 generations, show upgrade card)
