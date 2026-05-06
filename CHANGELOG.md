@@ -2,6 +2,13 @@
 
 All notable changes to **Atenna Guard Extension** are documented here.
 
+## [2.4.1] — 2026-05-06 (Fix Auth Callback Hash Fragment)
+
+### Fixed
+- **`backend/routes/auth.py`** — Auth callback agora lê `access_token` do hash fragment (`window.location.hash`) via JavaScript, em vez de query params. Supabase envia o token como `#access_token=...` após confirmação de email; o servidor nunca recebe o hash — a página HTML extrai o token client-side com `new URLSearchParams(window.location.hash.substring(1))` e então faz `postMessage` para a extensão.
+
+---
+
 ## [2.4.0] — 2026-05-06 (VPS Deploy + E2E Verified)
 
 ### Infrastructure
