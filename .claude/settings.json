@@ -19,7 +19,14 @@
       "Bash(curl -H \"Host: atennplugin.maestro-n8n.site\" http://157.90.246.156/health)",
       "Bash(curl -k -H \"Host: atennplugin.maestro-n8n.site\" https://157.90.246.156/health)",
       "Bash(curl -k -H 'Host: atennplugin.maestro-n8n.site' -H 'Content-Type: application/json' -d '{\"input\":\"Como criar um chatbot?\"}' https://157.90.246.156/generate-prompts)",
-      "Bash(curl -k -H 'Host: atennplugin.maestro-n8n.site' -H 'Content-Type: application/json' -d '{\"event\":\"test_event\",\"user_id\":\"test_user\",\"timestamp\":1234567890,\"session_id\":\"sess_123\",\"extension_version\":\"1.2.0\",\"plan\":\"free\"}' https://157.90.246.156/track)"
+      "Bash(curl -k -H 'Host: atennplugin.maestro-n8n.site' -H 'Content-Type: application/json' -d '{\"event\":\"test_event\",\"user_id\":\"test_user\",\"timestamp\":1234567890,\"session_id\":\"sess_123\",\"extension_version\":\"1.2.0\",\"plan\":\"free\"}' https://157.90.246.156/track)",
+      "Bash(command -v sshpass)",
+      "Bash(apt-get update *)",
+      "PowerShell(claude mcp add playwright npx @playwright/mcp@latest 2>&1)",
+      "PowerShell(cd \"c:\\\\projetos\\\\atenna-guard-extension\"; $env:PYTHONIOENCODING=\"utf-8\"; python test-production.py 2>&1)",
+      "PowerShell(npx --yes @anthropic-ai/claude-code mcp list 2>&1)",
+      "PowerShell(pip install playwright -q 2>&1)",
+      "PowerShell(python -m playwright install chromium 2>&1)"
     ],
     "additionalDirectories": [
       "C:\\Users\\dgapc\\.claude\\plans",

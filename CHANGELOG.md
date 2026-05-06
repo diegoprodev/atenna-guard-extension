@@ -2,6 +2,114 @@
 
 All notable changes to **Atenna Guard Extension** are documented here.
 
+## [2.4.0] — 2026-05-06 (VPS Deploy + E2E Verified)
+
+### Infrastructure
+- **VPS Hetzner CX33 configurada do zero via SSH + Paramiko** (`setup-vps.py`):
+  - Docker Engine v29.4.2 + Docker Compose plugin v5.1.3
+  - Nginx alpine como reverse proxy (80 → 443)
+  - SSL Let's Encrypt para `atennaplugin.maestro-n8n.site` (válido até 08/2026)
+  - UFW firewall: portas 22, 80, 443 abertas; tudo mais bloqueado
+  - fail2ban: proteção SSH (max 5 tentativas, ban 1h)
+  - Healthcheck automático no container a cada 30s
+  - Auto-restart com `restart: always`
+- **Deploy automatizado** (`fix-deploy.py`):
+  - Upload de arquivos via SFTP (paramiko)
+  - `docker-compose.yml` criado via SFTP (sem problemas de escaping)
+  - `nginx/default.conf` com HTTPS, HSTS, X-Frame-Options, X-Content-Type-Options
+  - Containers backend + nginx em rede Docker isolada `atenna`
+- **Chave SSH configurada** (`gen-ssh-key.py`):
+  - Gerada `~/.ssh/atenna-vps` (ed25519)
+  - Adicionada ao `~/.ssh/authorized_keys` na VPS
+  - Adicionada à Hetzner Cloud como `atennaplugin-deploy`
+- **Playwright MCP instalado** (`claude mcp add playwright`):
+  - Adicionado ao `.claude.json` do projeto
+  - Testes E2E rodando contra produção
+
+### Added
+- **`setup-vps.py`** — Script completo de provisioning da VPS via SSH
+- **`fix-deploy.py`** — Script de deploy focado (docker-compose + nginx + SSL)
+- **`gen-ssh-key.py`** — Geração de chave SSH ed25519 sem interação
+- **`deploy-hetzner-api.py`** — Deploy via Hetzner Cloud API + SSH key
+- **`test-production.py`** — 8 smoke tests de produção (urllib)
+- **`test-playwright-e2e.py`** — 10 testes E2E com Playwright headless
+
+### Removed
+- **`deploy-vps.ps1`** — Substituído por scripts Python com paramiko
+- **`deploy.py`** — Versão antiga substituída por `setup-vps.py` + `fix-deploy.py`
+
+### Verified (10/10 E2E testes passando em produção)
+- `GET /health` → `{"status":"ok"}`
+- `GET /auth/callback` (sem token) → HTML de erro amigável
+- `GET /auth/callback?access_token=...` → HTML sucesso + countdown
+- `POST /generate-prompts` vazio → 422
+- `POST /generate-prompts` → retorna `direct`, `technical`, `structured`
+- `POST /track` → `{"ok":true}`
+- SSL válido (HTTPS sem erros)
+- `/docs` → Swagger UI disponível
+
+## [2.3.0] — 2026-05-06 (Production Auth + Premium UX)
+
+### Fixed
+- **Magic link removed entirely** — Causa confusão (email confirmation em vez de login imediato)
+  - Removido `signInWithMagicLink()` de `src/core/auth.ts`
+  - Implementado `signInWithPassword(email, password)` usando Supabase `/auth/v1/token?grant_type=password`
+  - Login agora funciona com email + senha, sem confirmação intermediária
+  - User feedback: "já disse pra remover essa merda"
+- **Domain name typo fixed** — URLs tinham "atennnaplugin" (3 n's) em vez de "atennaplugin" (2 n's)
+  - Corrigido em: `src/background/background.ts` (BACKEND_URL, ANALYTICS_URL)
+  - Corrigido em: `src/core/auth.ts` (getCallbackUrl)
+  - Corrigido em: `backend/main.py` (CORS allow_origins)
+  - Production domain agora correto: `https://atennaplugin.maestro-n8n.site`
+- **Scrollbar persisted despite overflow: hidden** — Modal body overflow compactado agressivamente
+  - Reduzido padding de login: 16px → 12px
+  - Reduzido gaps: 12px → 8px
+  - Reduzido title: 24px → 20px, subtitle: 13px → 12px
+  - Reduzido input padding: 13px 15px → 10px 12px
+  - Reduzido button padding: 12px 20px → 10px 18px
+  - Features box: padding 16px → 10px 12px, font 15px → 12px
+  - Mobile (480px): ainda mais agressivo — padding 10px 10px, title 16px, gap 6px
+  - Result: zero scrollbars, conteúdo cabe perfeitamente
+
+### Added
+- **Monthly usage limits** (`src/core/usageCounter.ts`):
+  - `MONTHLY_LIMIT = 25` prompts/mês (alterado de daily limit)
+  - `getMonthlyUsage()` com auto-reset baseado em YYYY-MM
+  - `incrementMonthlyUsage()` retorna novo count
+  - `isAtMonthlyLimit()` para enforcement
+  - Auto-reset ao mudar de mês
+- **Prompt history** (`src/core/history.ts`):
+  - `PromptEntry` interface: id, text, type, date, favorited, origin
+  - `getHistory()`, `addToHistory()`, `toggleFavorite()`, `clearHistory()`
+  - Persisted em chrome.storage.local, máximo 20 prompts
+  - Timeline de uso para análise comportamental
+- **Expanded analytics** (`src/core/analytics.ts`):
+  - 45+ event types: auth (login, signup, logout), builder (opened, suggested), quota (limit_reached), retention (history_viewed, favorite_added), performance (page_load)
+  - `trackEvent()` como função principal com plan detection automático
+  - Session ID generation para correlação de eventos
+  - Metadata: session_id, extension_version (1.2.0), plan (free/pro)
+  - EventPayload com optional fields para flexibilidade
+
+### Changed
+- **Authentication flow**: Magic link → Email/Password (mais direto, sem confirmação intermediária)
+- **Session handling**: Agora inclui email validado em Session interface
+- **Login form**: Entrada de senha adicionada, UX simplificada
+- **Modal responsiveness**: Media queries agressivas para 768px (tablets) e 480px (mobile)
+  - Header padding: 13px/16px → 10px/12px
+  - Login section compactado em todas as telas
+  - Font sizes reduzidas progressivamente
+- **CSS vars**: Dark theme --at-bg #0f0f0f → #1f1f1f (melhor contraste), --at-text #f1f1f1 → #e8e8e8
+- **Backend CORS**: URL corrigida de atennnaplugin (errado) para atennaplugin (correto)
+
+### Tests
+- Todos os 92 testes passando com novos stubs para monthly usage
+- Analytics tests atualizados para 45+ event types
+
+### Build
+- npm run build executado — ambos content.js e background.js regenerados
+- dist/ atualizado com todas as mudanças CSS e auth
+- Versão manifest atualizada: 1.2.0
+
 ## [2.2.0] — 2026-05-06 (Auth UX Overhaul)
 
 ### Fixed

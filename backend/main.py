@@ -16,7 +16,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://atennnaplugin.maestro-n8n.site",
+        "https://atennaplugin.maestro-n8n.site",
         "https://kezbssjmgwtrunqeoyir.supabase.co",
         "https://chat.openai.com",
         "https://chatgpt.com",
