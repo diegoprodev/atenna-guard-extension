@@ -9,10 +9,9 @@ const OVERLAY_ID  = 'atenna-modal-overlay';
 const SUCCESS_MS  = 500;
 
 const LOADING_MESSAGES = [
-  'Gerando seus prompts com engenharia de IA...',
-  'Analisando seu contexto...',
-  'Refinando estrutura...',
-  'Só um momento...',
+  'Analisando seu prompt...',
+  'Estruturando a resposta...',
+  'Refinando os detalhes...',
 ];
 
 // Static SVGs — never contain user content, safe for innerHTML
@@ -50,6 +49,49 @@ export function clearPromptCache(): void { promptCache = null; upgradeShown = fa
 function isVagueInput(text: string): boolean {
   const words = text.trim().split(/\s+/).filter(Boolean);
   return words.length === 1;
+}
+
+function renderEmptyState(
+  container: HTMLElement,
+  onChipClick: (suggestion: string) => void,
+): void {
+  container.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'atenna-modal__empty-state';
+
+  const title = document.createElement('h3');
+  title.className = 'atenna-modal__empty-title';
+  title.textContent = 'O que você quer criar hoje?';
+
+  const subtitle = document.createElement('p');
+  subtitle.className = 'atenna-modal__empty-subtitle';
+  subtitle.textContent = 'Escolha um ponto de partida ou escreva sua própria ideia.';
+
+  const chipsContainer = document.createElement('div');
+  chipsContainer.className = 'atenna-modal__empty-chips';
+
+  const suggestions = [
+    'Plano de estudos',
+    'Conteúdo para redes sociais',
+    'Explicação técnica',
+    'Estratégia de vendas',
+    'Aula ou treinamento',
+    'Documento profissional',
+  ];
+
+  suggestions.forEach(suggestion => {
+    const chip = document.createElement('button');
+    chip.className = 'atenna-modal__empty-chip';
+    chip.textContent = suggestion;
+    chip.type = 'button';
+    chip.addEventListener('click', () => onChipClick(suggestion));
+    chipsContainer.appendChild(chip);
+  });
+
+  wrap.appendChild(title);
+  wrap.appendChild(subtitle);
+  wrap.appendChild(chipsContainer);
+  container.appendChild(wrap);
 }
 
 function renderSuggestion(

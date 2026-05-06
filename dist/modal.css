@@ -50,6 +50,11 @@
   --at-card-bg:    #f7f7f7;
   --at-header-bg:  #ffffff;
 
+  --at-transition-fast:   150ms;
+  --at-transition-base:   200ms;
+  --at-ease-out:          cubic-bezier(0.4, 0, 0.2, 1);
+  --at-ease-spring:       cubic-bezier(0.34, 1.56, 0.64, 1);
+
   width: 520px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 64px);
@@ -148,14 +153,17 @@
 }
 
 .atenna-modal__usage {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--at-green);
-  letter-spacing: 0.03em;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--at-text);
+  letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
   font-family: inherit;
-  opacity: 0.9;
-  transition: color 250ms ease;
+  opacity: 0.8;
+  transition: all var(--at-transition-fast) var(--at-ease-out);
+  padding: 4px 12px;
+  background: var(--at-card-bg);
+  border-radius: 20px;
 }
 
 .atenna-modal__usage--warning { color: #f59e0b; }
@@ -853,7 +861,7 @@
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  transition: all 200ms ease;
+  transition: all var(--at-transition-base) var(--at-ease-out);
   letter-spacing: 0.02em;
   margin-top: 4px;
 }
@@ -981,4 +989,63 @@
 .atenna-modal__login-link:hover {
   opacity: 1;
   color: var(--at-green);
+}
+
+/* ── Empty State ──────────────────────────────────────── */
+
+.atenna-modal__empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 24px;
+  gap: 20px;
+}
+
+.atenna-modal__empty-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--at-text);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.atenna-modal__empty-subtitle {
+  font-size: 15px;
+  color: var(--at-text);
+  opacity: 0.65;
+  margin: 0;
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.atenna-modal__empty-chips {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.atenna-modal__empty-chip {
+  padding: 12px 16px;
+  background: var(--at-card-bg);
+  border: 1px solid var(--at-border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--at-text);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--at-transition-fast) var(--at-ease-out);
+}
+
+.atenna-modal__empty-chip:hover {
+  border-color: var(--at-green);
+  background: var(--at-bg);
+  color: var(--at-green);
+}
+
+.atenna-modal__empty-chip:active {
+  transform: scale(0.98);
 }
