@@ -63,7 +63,7 @@ function renderSuggestion(
 
   const icon = document.createElement('span');
   icon.className = 'atenna-modal__suggest-icon';
-  icon.textContent = '💡';
+  icon.textContent = '→';
 
   const msg = document.createElement('p');
   msg.className = 'atenna-modal__suggest-text';
@@ -233,11 +233,11 @@ async function openModal(): Promise<void> {
             <div class="atenna-modal__builder-field">
               <label class="atenna-modal__builder-label">Qual o objetivo?</label>
               <div class="atenna-modal__chips" data-group="objetivo">
-                <button type="button" class="atenna-modal__chip" data-value="Aprender">📚 Aprender</button>
-                <button type="button" class="atenna-modal__chip" data-value="Resolver problema">⚙️ Resolver</button>
-                <button type="button" class="atenna-modal__chip" data-value="Entender profundamente">🧠 Entender</button>
-                <button type="button" class="atenna-modal__chip" data-value="Criar algo novo">🚀 Criar</button>
-                <button type="button" class="atenna-modal__chip" data-value="Analisar">📊 Analisar</button>
+                <button type="button" class="atenna-modal__chip" data-value="Aprender">Aprender</button>
+                <button type="button" class="atenna-modal__chip" data-value="Resolver problema">Resolver</button>
+                <button type="button" class="atenna-modal__chip" data-value="Entender profundamente">Entender</button>
+                <button type="button" class="atenna-modal__chip" data-value="Criar algo novo">Criar</button>
+                <button type="button" class="atenna-modal__chip" data-value="Analisar">Analisar</button>
               </div>
               <textarea class="atenna-modal__builder-q" rows="1" placeholder="Outro objetivo (opcional)"></textarea>
             </div>
@@ -247,11 +247,11 @@ async function openModal(): Promise<void> {
             <div class="atenna-modal__builder-field">
               <label class="atenna-modal__builder-label">Para quem? Qual o contexto?</label>
               <div class="atenna-modal__chips" data-group="contexto">
-                <button type="button" class="atenna-modal__chip" data-value="Iniciante">🟢 Iniciante</button>
-                <button type="button" class="atenna-modal__chip" data-value="Intermediário">🟡 Intermediário</button>
-                <button type="button" class="atenna-modal__chip" data-value="Avançado">🔴 Avançado</button>
-                <button type="button" class="atenna-modal__chip" data-value="Profissional">🏢 Profissional</button>
-                <button type="button" class="atenna-modal__chip" data-value="Caso específico">🎯 Específico</button>
+                <button type="button" class="atenna-modal__chip" data-value="Iniciante">Iniciante</button>
+                <button type="button" class="atenna-modal__chip" data-value="Intermediário">Intermediário</button>
+                <button type="button" class="atenna-modal__chip" data-value="Avançado">Avançado</button>
+                <button type="button" class="atenna-modal__chip" data-value="Profissional">Profissional</button>
+                <button type="button" class="atenna-modal__chip" data-value="Caso específico">Específico</button>
               </div>
               <textarea class="atenna-modal__builder-q" rows="1" placeholder="Contexto adicional (opcional)"></textarea>
             </div>
@@ -261,11 +261,11 @@ async function openModal(): Promise<void> {
             <div class="atenna-modal__builder-field">
               <label class="atenna-modal__builder-label">Formato e nível de detalhe?</label>
               <div class="atenna-modal__chips" data-group="formato">
-                <button type="button" class="atenna-modal__chip" data-value="Explicação simples">📄 Simples</button>
-                <button type="button" class="atenna-modal__chip" data-value="Passo a passo">📋 Passo a passo</button>
-                <button type="button" class="atenna-modal__chip" data-value="Estruturado em seções">🧩 Estruturado</button>
-                <button type="button" class="atenna-modal__chip" data-value="Profissional">💼 Profissional</button>
-                <button type="button" class="atenna-modal__chip" data-value="Técnico profundo">🔬 Técnico</button>
+                <button type="button" class="atenna-modal__chip" data-value="Explicação simples">Simples</button>
+                <button type="button" class="atenna-modal__chip" data-value="Passo a passo">Passo a passo</button>
+                <button type="button" class="atenna-modal__chip" data-value="Estruturado em seções">Estruturado</button>
+                <button type="button" class="atenna-modal__chip" data-value="Profissional">Profissional</button>
+                <button type="button" class="atenna-modal__chip" data-value="Técnico profundo">Técnico</button>
               </div>
               <textarea class="atenna-modal__builder-q" rows="1" placeholder="Formato personalizado (opcional)"></textarea>
             </div>
@@ -476,7 +476,7 @@ function renderLimitReached(container: HTMLElement): void {
 
   const icon = document.createElement('div');
   icon.className = 'atenna-modal__limit-icon';
-  icon.textContent = '🔒';
+  icon.textContent = '⊘';
 
   const msg = document.createElement('p');
   msg.className = 'atenna-modal__loading-msg';
@@ -788,7 +788,7 @@ function renderUpgradeTrigger(): HTMLElement {
 
   const icon = document.createElement('span');
   icon.className   = 'atenna-modal__upgrade-icon';
-  icon.textContent = '🚀';
+  icon.textContent = '↑';
 
   const msg = document.createElement('p');
   msg.className   = 'atenna-modal__upgrade-msg';
@@ -796,7 +796,7 @@ function renderUpgradeTrigger(): HTMLElement {
 
   const btn = document.createElement('button');
   btn.className   = 'atenna-modal__upgrade-btn';
-  btn.textContent = '🔓 Desbloquear Pro';
+  btn.textContent = 'Desbloquear Pro';
   btn.addEventListener('click', () => {
     void track('upgrade_clicked');
     showToast('Em breve! 🚀');
@@ -828,9 +828,9 @@ function renderPrompts(
   container.innerHTML = '';
 
   const entries: Array<{ emoji: string; label: string; speed: string; description: string; text: string; preview?: string; prompt_type: PromptType }> = [
-    { emoji: '🟢', label: 'Direto',      speed: '⚡ Rápido',      description: 'Claro e objetivo',      text: data.direct,     preview: data.direct_preview,     prompt_type: 'direct' },
-    { emoji: '🟡', label: 'Estruturado', speed: '⚖️ Equilibrado',  description: 'Organizado em seções',  text: data.structured, preview: data.structured_preview, prompt_type: 'structured' },
-    { emoji: '🔴', label: 'Técnico',     speed: '🚀 Profundo',     description: 'Aprofundado e preciso', text: data.technical,  preview: data.technical_preview,  prompt_type: 'technical' },
+    { emoji: '●', label: 'Direto',      speed: 'Rápido',      description: 'Claro e objetivo',      text: data.direct,     preview: data.direct_preview,     prompt_type: 'direct' },
+    { emoji: '●', label: 'Estruturado', speed: 'Equilibrado',  description: 'Organizado em seções',  text: data.structured, preview: data.structured_preview, prompt_type: 'structured' },
+    { emoji: '●', label: 'Técnico',     speed: 'Profundo',     description: 'Aprofundado e preciso', text: data.technical,  preview: data.technical_preview,  prompt_type: 'technical' },
   ];
 
   const cards = document.createElement('div');
