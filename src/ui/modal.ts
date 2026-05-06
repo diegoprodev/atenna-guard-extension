@@ -8,6 +8,7 @@ import type { PromptOrigin, PromptType } from '../core/analytics';
 import { scan } from '../dlp/detector';
 import { buildAdvisory } from '../dlp/advisory';
 import type { Advisory } from '../dlp/types';
+import { updateBadgeDotRisk } from '../content/injectButton';
 
 const OVERLAY_ID  = 'atenna-modal-overlay';
 const SUCCESS_MS  = 500;
@@ -639,6 +640,7 @@ async function openModal(): Promise<void> {
     // Layer 1 — local DLP scan (<50ms, non-blocking)
     const scanResult = scan(text);
     const advisory   = buildAdvisory(scanResult);
+    updateBadgeDotRisk(scanResult.riskLevel);
 
     if (advisory.riskLevel !== 'NONE') {
       void trackEvent('dlp_warning_shown', { risk_level: advisory.riskLevel } as Parameters<typeof trackEvent>[1]);

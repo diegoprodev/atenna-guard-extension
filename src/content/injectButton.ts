@@ -168,12 +168,7 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   name.className = 'atenna-btn__name';
   name.textContent = 'ATENNA';
 
-  const sub = document.createElement('span');
-  sub.className = 'atenna-btn__sub';
-  sub.textContent = 'Secure Engine';
-
   label.appendChild(name);
-  label.appendChild(sub);
 
   btn.appendChild(iconWrap);
   btn.appendChild(label);
@@ -187,6 +182,19 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   window.addEventListener('scroll', update, { passive: true });
   window.addEventListener('resize', update, { passive: true });
 
+  // Typing detection — turns dot green neon while user is writing
+  let typingTimer: ReturnType<typeof setTimeout> | undefined;
+  const onInput = () => {
+    const d = dot as HTMLElement;
+    d.classList.remove('atenna-btn__dot--medium', 'atenna-btn__dot--high');
+    d.classList.add('atenna-btn__dot--typing');
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+      d.classList.remove('atenna-btn__dot--typing');
+    }, 1500);
+  };
+  input.addEventListener('input', onInput);
+
   let ro: ResizeObserver | undefined;
   if (typeof ResizeObserver !== 'undefined') {
     ro = new ResizeObserver(update);
@@ -197,8 +205,19 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   currentCleanup = () => {
     window.removeEventListener('scroll', update);
     window.removeEventListener('resize', update);
+    input.removeEventListener('input', onInput);
+    clearTimeout(typingTimer);
     ro?.disconnect();
   };
+}
+
+export function updateBadgeDotRisk(level: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH'): void {
+  const dot = document.querySelector('#atenna-guard-btn .atenna-btn__dot') as HTMLElement | null;
+  if (!dot) return;
+  dot.classList.remove('atenna-btn__dot--typing', 'atenna-btn__dot--medium', 'atenna-btn__dot--high');
+  if (level === 'HIGH')        dot.classList.add('atenna-btn__dot--high');
+  else if (level === 'MEDIUM') dot.classList.add('atenna-btn__dot--medium');
+  // NONE/LOW: idle animation (no extra class)
 }
 
 export function removeButton(inputSelector: string): void {

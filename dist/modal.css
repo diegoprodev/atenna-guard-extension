@@ -90,6 +90,7 @@
   justify-content: space-between;
   padding: 10px 12px;
   border-bottom: 1px solid var(--at-border);
+  border-radius: 14px 14px 0 0;
   gap: 8px;
 }
 
@@ -154,21 +155,97 @@
 }
 
 .atenna-modal__usage {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--at-text);
-  letter-spacing: 0.02em;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
   font-variant-numeric: tabular-nums;
   font-family: inherit;
-  opacity: 0.8;
   transition: all var(--at-transition-fast) var(--at-ease-out);
-  padding: 4px 12px;
-  background: var(--at-card-bg);
+  padding: 3px 10px;
   border-radius: 20px;
+  background: rgba(249, 115, 22, 0.10);
+  color: #ea580c;
+  border: 1px solid rgba(249, 115, 22, 0.20);
 }
 
-.atenna-modal__usage--warning { color: #f59e0b; }
-.atenna-modal__usage--danger  { color: #ef4444; }
+.atenna-modal__usage--pro {
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.atenna-modal__usage--warning { color: #dc2626; background: rgba(220,38,38,0.08); border-color: rgba(220,38,38,0.2); }
+.atenna-modal__usage--danger  { color: #dc2626; background: rgba(220,38,38,0.12); border-color: rgba(220,38,38,0.25); }
+
+/* ── Account menu (gear) ─────────────────────────────────── */
+
+.atenna-modal__account {
+  position: relative;
+}
+
+.atenna-modal__gear-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  color: var(--at-text);
+  opacity: 0.45;
+  transition: opacity 150ms ease, background 150ms ease;
+  font-size: 15px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.atenna-modal__gear-btn:hover {
+  opacity: 0.85;
+  background: var(--at-card-bg);
+}
+
+.atenna-modal__account-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--at-bg);
+  border: 1px solid var(--at-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+  min-width: 200px;
+  z-index: 100;
+  overflow: hidden;
+  animation: atenna-modal-scale-in 150ms cubic-bezier(0.34,1.2,0.64,1);
+}
+
+.atenna-modal__account-email {
+  padding: 10px 14px;
+  font-size: 11px;
+  color: var(--at-text);
+  opacity: 0.55;
+  border-bottom: 1px solid var(--at-border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atenna-modal__account-logout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ef4444;
+  cursor: pointer;
+  text-align: left;
+  transition: background 150ms ease;
+}
+
+.atenna-modal__account-logout:hover { background: rgba(239,68,68,0.07); }
 
 .atenna-modal__close {
   background: none;
@@ -272,6 +349,40 @@
 }
 
 .atenna-modal__card:hover { border-color: var(--at-green); }
+
+/* Card hierarchy — primary (dominant), secondary/tertiary (smaller) */
+.atenna-modal__card {
+  animation: atenna-card-fade-in 0.3s ease-out forwards;
+  opacity: 0;
+}
+
+.atenna-modal__card--primary {
+  padding: 16px;
+  border: 1px solid var(--at-border);
+  background: var(--at-card-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.atenna-modal--dark .atenna-modal__card--primary {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.atenna-modal__card--secondary,
+.atenna-modal__card--tertiary {
+  padding: 12px 14px;
+  opacity: 0.95;
+}
+
+@keyframes atenna-card-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 .atenna-modal__card-header {
   display: flex;
@@ -666,30 +777,21 @@
 
 .atenna-modal__suggest-btn--primary:hover { filter: brightness(1.08); border-color: var(--at-green); }
 
-/* ── Pro badge ───────────────────────────────────────────── */
-
-.atenna-modal__usage--pro {
-  color: var(--at-green);
-  font-weight: 800;
-  letter-spacing: 0.04em;
-}
-
-/* ── Upgrade trigger card ────────────────────────────────── */
+/* ── Upgrade trigger card (inline) ──────────────────────── */
 
 .atenna-modal__upgrade {
-  border: 1px solid var(--at-green);
+  border: 1px solid rgba(34,197,94,0.2);
   border-radius: 10px;
-  padding: 16px 14px 12px;
-  background: var(--at-card-bg);
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(34,197,94,0.05) 0%, transparent 100%);
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  text-align: center;
   margin-top: 2px;
 }
 
-.atenna-modal__upgrade-icon { font-size: 26px; }
+.atenna-modal__upgrade-icon { font-size: 18px; }
 
 .atenna-modal__upgrade-msg {
   font-size: 12px;
@@ -698,13 +800,12 @@
   margin: 0;
   font-family: inherit;
   line-height: 1.5;
-  max-width: 320px;
 }
 
 .atenna-modal__upgrade-btn {
   display: inline-flex;
   align-items: center;
-  padding: 7px 18px;
+  padding: 6px 16px;
   border-radius: 20px;
   border: none;
   background: var(--at-green);
@@ -713,7 +814,6 @@
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  letter-spacing: 0.02em;
   transition: filter 150ms ease;
 }
 
@@ -725,13 +825,180 @@
   font-family: inherit;
   font-size: 11px;
   color: var(--at-text);
-  opacity: 0.3;
+  opacity: 0.35;
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 0;
   transition: opacity 150ms ease;
 }
 
 .atenna-modal__upgrade-dismiss:hover { opacity: 0.7; }
+
+/* ── Upgrade modal (full redesign) ──────────────────────── */
+
+.atenna-upgrade-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: atenna-modal-fade-in 150ms ease;
+}
+
+.atenna-upgrade-modal__box {
+  background: var(--at-bg, #fff);
+  color: var(--at-text, #111);
+  border-radius: 18px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.22);
+  animation: atenna-modal-scale-in 220ms cubic-bezier(0.34,1.2,0.64,1);
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.atenna-upgrade-modal__hero {
+  background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
+  padding: 26px 22px 20px;
+  text-align: center;
+  position: relative;
+}
+
+.atenna-upgrade-modal__hero-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: rgba(255,255,255,0.18);
+  border: none;
+  color: #fff;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 150ms ease;
+  line-height: 1;
+}
+
+.atenna-upgrade-modal__hero-close:hover { background: rgba(255,255,255,0.32); }
+
+.atenna-upgrade-modal__badge {
+  display: inline-block;
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-bottom: 10px;
+}
+
+.atenna-upgrade-modal__title {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0 0 6px;
+  line-height: 1.2;
+}
+
+.atenna-upgrade-modal__subtitle {
+  color: rgba(255,255,255,0.8);
+  font-size: 12px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.atenna-upgrade-modal__body {
+  padding: 18px 22px 22px;
+}
+
+.atenna-upgrade-modal__features {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.atenna-upgrade-modal__feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.atenna-upgrade-modal__feature-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(34,197,94,0.12);
+  color: #16a34a;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.atenna-upgrade-modal__feature-text strong {
+  font-weight: 600;
+  display: block;
+}
+
+.atenna-upgrade-modal__feature-text small {
+  font-size: 11px;
+  opacity: 0.5;
+}
+
+.atenna-upgrade-modal__divider {
+  border: none;
+  border-top: 1px solid var(--at-border, rgba(0,0,0,0.08));
+  margin: 0 0 16px;
+}
+
+.atenna-upgrade-modal__cta {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 150ms ease, transform 150ms ease;
+  letter-spacing: 0.02em;
+  margin-bottom: 10px;
+}
+
+.atenna-upgrade-modal__cta:hover { filter: brightness(1.07); transform: translateY(-1px); }
+.atenna-upgrade-modal__cta:active { transform: translateY(0); }
+
+.atenna-upgrade-modal__dismiss {
+  width: 100%;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--at-text, #111);
+  opacity: 0.38;
+  cursor: pointer;
+  padding: 4px;
+  transition: opacity 150ms ease;
+}
+
+.atenna-upgrade-modal__dismiss:hover { opacity: 0.65; }
 
 /* ── Login view ──────────────────────────────────────────── */
 
@@ -830,7 +1097,7 @@
 .atenna-modal__login-input {
   padding: 10px 12px;
   border: 1.5px solid var(--at-border);
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   background: var(--at-bg);
   color: var(--at-text);
@@ -861,7 +1128,7 @@
   background: var(--at-green);
   color: #ffffff;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -895,7 +1162,8 @@
 }
 
 .atenna-modal__login-status--success,
-.atenna-modal__login-status--error {
+.atenna-modal__login-status--error,
+.atenna-modal__login-status--warning {
   opacity: 1;
 }
 
@@ -909,6 +1177,7 @@
 
 .atenna-modal__login-status--warning {
   color: #f59e0b;
+  font-weight: 500;
 }
 
 .atenna-modal__login-status strong {
@@ -1216,4 +1485,445 @@
     padding: 10px 12px;
     font-size: 12px;
   }
+}
+
+/* ── Pre-login onboarding ────────────────────────────────── */
+
+.atenna-modal__onboarding {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 20px 24px;
+  gap: 0;
+}
+
+.atenna-modal__onb-hero {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.atenna-modal__onb-headline {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--at-text);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.atenna-modal__onb-sub {
+  font-size: 13px;
+  color: var(--at-text);
+  opacity: 0.6;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 320px;
+}
+
+.atenna-modal__onb-features {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.atenna-modal__onb-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.atenna-modal__onb-icon {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.atenna-modal__onb-features strong {
+  display: block;
+  font-weight: 600;
+  color: var(--at-text);
+  font-size: 13px;
+}
+
+.atenna-modal__onb-features span {
+  font-size: 11px;
+  color: var(--at-text);
+  opacity: 0.5;
+}
+
+.atenna-modal__onb-free-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #16a34a;
+  background: rgba(34,197,94,0.09);
+  border: 1px solid rgba(34,197,94,0.2);
+  border-radius: 20px;
+  padding: 4px 14px;
+  margin-bottom: 16px;
+  letter-spacing: 0.02em;
+}
+
+.atenna-modal__onb-cta {
+  width: 100%;
+  max-width: 320px;
+  padding: 13px;
+  background: var(--at-green);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: filter 150ms ease, transform 150ms ease;
+  letter-spacing: 0.01em;
+}
+
+.atenna-modal__onb-cta:hover { filter: brightness(1.07); transform: translateY(-1px); }
+.atenna-modal__onb-cta:active { transform: translateY(0); }
+
+.atenna-modal__onb-login {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--at-text);
+  opacity: 0.5;
+  cursor: pointer;
+  padding: 4px;
+  transition: opacity 150ms ease;
+}
+
+.atenna-modal__onb-login:hover { opacity: 0.85; }
+
+/* ── DLP Advisory (LAYER 3 UX) ──────────────────────────── */
+
+.atenna-dlp-advisory {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  animation: atenna-card-fade-in 0.25s ease-out both;
+}
+
+/* HIGH — visible but never alarming */
+.atenna-dlp-advisory--high {
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.18);
+}
+
+/* MEDIUM — discrete */
+.atenna-dlp-advisory--medium {
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+}
+
+/* LOW — almost invisible */
+.atenna-dlp-advisory--low {
+  background: rgba(107, 114, 128, 0.04);
+  border: 1px solid rgba(107, 114, 128, 0.12);
+}
+
+.atenna-modal--dark .atenna-dlp-advisory--high {
+  background: rgba(239, 68, 68, 0.07);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.atenna-modal--dark .atenna-dlp-advisory--medium {
+  background: rgba(245, 158, 11, 0.06);
+  border-color: rgba(245, 158, 11, 0.12);
+}
+
+.atenna-modal--dark .atenna-dlp-advisory--low {
+  background: rgba(255,255,255,0.03);
+  border-color: rgba(255,255,255,0.08);
+}
+
+.atenna-dlp-advisory__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.atenna-dlp-advisory__icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.atenna-dlp-advisory__msg {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--at-text);
+  margin: 0;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.atenna-dlp-advisory--high   .atenna-dlp-advisory__msg { opacity: 1; }
+.atenna-dlp-advisory--medium .atenna-dlp-advisory__msg { opacity: 0.9; }
+
+.atenna-dlp-advisory__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.atenna-dlp-advisory__btn-primary {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  background: var(--at-green);
+  color: #fff;
+  transition: background 180ms ease;
+  font-family: inherit;
+}
+
+.atenna-dlp-advisory__btn-primary:hover { background: #16a34a; }
+
+.atenna-dlp-advisory__btn-secondary {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--at-border);
+  cursor: pointer;
+  background: transparent;
+  color: var(--at-text);
+  opacity: 0.65;
+  transition: opacity 180ms ease;
+  font-family: inherit;
+}
+
+.atenna-dlp-advisory__btn-secondary:hover { opacity: 0.9; }
+
+/* LOW: only a small inline icon, no actions */
+.atenna-dlp-advisory--low .atenna-dlp-advisory__actions { display: none; }
+
+/* Entity pill (optional — shows what was detected) */
+.atenna-dlp-advisory__entities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.atenna-dlp-advisory__pill {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.05);
+  color: var(--at-text);
+  opacity: 0.6;
+  text-transform: uppercase;
+}
+
+.atenna-modal--dark .atenna-dlp-advisory__pill {
+  background: rgba(255,255,255,0.07);
+}
+
+/* ── Onboarding Minimalista (FASE 1) ─────────────────────── */
+
+.atenna-modal__onboarding-minimal {
+  padding: 48px 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+}
+
+.atenna-modal__onb-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--at-text);
+  margin: 0;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.atenna-modal__onb-subtitle {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--at-text);
+  margin: 0;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.atenna-modal__onb-description {
+  font-size: 14px;
+  color: var(--at-text);
+  margin: 0;
+  line-height: 1.6;
+  opacity: 0.65;
+  max-width: 320px;
+}
+
+/* ── Skeleton Loading (FASE 1) ──────────────────────────── */
+
+.atenna-skeleton-loading {
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.atenna-skeleton-loading__msg {
+  font-size: 13px;
+  color: var(--at-text);
+  font-weight: 500;
+  margin: 0 0 8px 0;
+  opacity: 0.7;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.atenna-skeleton-card {
+  height: 128px;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    var(--at-card-bg) 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    var(--at-card-bg) 100%
+  );
+  background-size: 200% 100%;
+  animation: atenna-skeleton-shimmer 3.5s ease-in-out infinite;
+  border: 1px solid var(--at-border);
+}
+
+@keyframes atenna-skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.atenna-modal--dark .atenna-skeleton-card {
+  background: linear-gradient(
+    90deg,
+    rgba(42, 42, 42, 1) 0%,
+    rgba(60, 60, 60, 1) 50%,
+    rgba(42, 42, 42, 1) 100%
+  );
+}
+
+/* ── Limit Reached (FASE 1) ─────────────────────────────── */
+
+.atenna-modal__limit-reached {
+  padding: 36px 28px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+}
+
+.atenna-modal__limit-msg {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--at-text);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.atenna-modal__limit-sub {
+  font-size: 13px;
+  color: var(--at-text);
+  margin: 0;
+  line-height: 1.6;
+  opacity: 0.65;
+  max-width: 300px;
+}
+
+.atenna-modal__limit-btn {
+  margin-top: 8px;
+  padding: 11px 22px;
+  background: var(--at-green);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 200ms ease;
+  font-family: inherit;
+}
+
+.atenna-modal__limit-btn:hover {
+  background: #16a34a;
+}
+
+/* ── Upgrade Trigger (FASE 1) ───────────────────────────── */
+
+.atenna-modal__upgrade-trigger {
+  padding: 20px 16px;
+  border: 1px solid rgba(34, 197, 94, 0.15);
+  border-radius: 8px;
+  background: rgba(34, 197, 94, 0.04);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.atenna-modal--dark .atenna-modal__upgrade-trigger {
+  border-color: rgba(34, 197, 94, 0.08);
+  background: rgba(34, 197, 94, 0.02);
+}
+
+.atenna-modal__upgrade-trigger-msg {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--at-text);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.atenna-modal__upgrade-trigger-sub {
+  font-size: 12px;
+  color: var(--at-text);
+  margin: 0;
+  opacity: 0.65;
+  line-height: 1.5;
+}
+
+.atenna-modal__upgrade-trigger-btn {
+  padding: 8px 16px;
+  background: var(--at-green);
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 200ms ease;
+  font-family: inherit;
+  margin-top: 4px;
+}
+
+.atenna-modal__upgrade-trigger-btn:hover {
+  background: #16a34a;
 }

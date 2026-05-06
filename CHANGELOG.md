@@ -4,6 +4,41 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.7.0] — 2026-05-06 (Badge Visual Overhaul + DLP-Reactive Dot)
+
+### Changed — Badge (`src/ui/styles.css`, `src/content/injectButton.ts`)
+
+**Fundo verde sólido**
+- Badge colapsado: `background: transparent` → `#22c55e` (círculo verde sólido)
+- Badge expandido: `rgba(10,16,24,0.92)` (preto — quebrava tema claro) → `#16a34a` (verde escuro, contraste adequado em qualquer fundo)
+- `mix-blend-mode: lighten` removido; substituído por `mix-blend-mode: screen` que faz o fundo preto da logo desaparecer sem afetar a coruja
+
+**Coruja maior, sem fundo**
+- Tamanho: 34px → 44px (quase preenche o círculo)
+- `filter: brightness(1.3) contrast(1.1)` para a coruja aparecer nítida sobre verde
+- `brightness(0) invert(1)` removido (causava fundo branco)
+
+**Badge expandido compacto**
+- Largura hover: 186px → 128px (redução ~31%)
+- Removido subtítulo "Secure Engine" — hover exibe apenas **"ATENNA"**
+
+**Dot DLP-reativo com ripple visível**
+- Idle: pulso branco lento com ripple `box-shadow` (2.4s) — visível sobre fundo verde
+- Digitando: verde neon automático (1.2s), detectado via `input` event listener
+- DLP MEDIUM: laranja ripple (1.5s)
+- DLP HIGH: vermelho ripple rápido (0.9s)
+- Dot retorna ao idle 1.5s após o usuário parar de digitar
+
+### Added — `injectButton.ts`
+- `updateBadgeDotRisk(level)` — exportado; chamado por `modal.ts` após cada DLP scan
+- Input listener de digitação: ativa `--typing` (verde neon) em tempo real; limpa após 1500ms de inatividade
+- Cleanup correto do listener no `currentCleanup`
+
+### Changed — `modal.ts`
+- Importa e chama `updateBadgeDotRisk(scanResult.riskLevel)` após cada scan DLP
+
+---
+
 ## [2.6.0] — 2026-05-06 (DLP Architecture + Badge Premium + Phase 1 UX Refinement)
 
 ### Added — DLP Architecture (3-Layer Hybrid)
