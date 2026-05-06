@@ -1,7 +1,9 @@
 const STORAGE_KEY = 'atenna_usage';
 const TOTAL_KEY   = 'atenna_total_count';
+const MONTHLY_KEY = 'atenna_monthly_usage';
 
 export const DAILY_LIMIT = 10;
+export const MONTHLY_LIMIT = 25;
 
 export interface UsageData {
   count:     number;
@@ -80,4 +82,49 @@ export async function incrementTotalCount(): Promise<number> {
       chrome.storage.local.set({ [TOTAL_KEY]: next }, () => resolve(next));
     } catch { resolve(next); }
   });
+}
+
+// ─── Monthly usage (resets on 1st of month) ──
+
+interface MonthlyData {
+  count: number;
+  resetMonth: string; // YYYY-MM format
+}
+
+function getCurrentMonth(): string {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return `${d.getFullYear()}-${m}`;
+}
+
+export async function getMonthlyUsage(): Promise<number> {
+  return new Promise(resolve => {
+    try {
+      chrome.storage.local.get(MONTHLY_KEY, r => {
+        const data = r[MONTHLY_KEY] as MonthlyData | undefined;
+        const currentMonth = getCurrentMonth();
+        if (!data || data.resetMonth !== currentMonth) {
+          chrome.storage.local.set({ [MONTHLY_KEY]: { count: 0, resetMonth: currentMonth } }, () => resolve(0));
+          return;
+        }
+        resolve(data.count);
+      });
+    } catch { resolve(0); }
+  });
+}
+
+export async function incrementMonthlyUsage(): Promise<number> {
+  const current = await getMonthlyUsage();
+  const next = current + 1;
+  const currentMonth = getCurrentMonth();
+  return new Promise(resolve => {
+    try {
+      chrome.storage.local.set({ [MONTHLY_KEY]: { count: next, resetMonth: currentMonth } }, () => resolve(next));
+    } catch { resolve(next); }
+  });
+}
+
+export async function isAtMonthlyLimit(): Promise<boolean> {
+  const usage = await getMonthlyUsage();
+  return usage >= MONTHLY_LIMIT;
 }

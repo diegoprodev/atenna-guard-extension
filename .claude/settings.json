@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(python C:\\\\tmp\\\\setup_secrets_vps.py)"
+      "PowerShell(python C:\\\\tmp\\\\setup_secrets_vps.py)",
+      "mcp__claude_ai_Supabase__list_tables",
+      "mcp__claude_ai_Supabase__apply_migration"
     ],
     "additionalDirectories": [
       "C:\\Users\\dgapc\\.claude\\plans"

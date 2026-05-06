@@ -2,7 +2,7 @@ import { getCurrentInput, getInputText, setInputText } from '../core/inputHandle
 import { getUsage, incrementUsage, isAtLimit, DAILY_LIMIT, getTotalCount, incrementTotalCount } from '../core/usageCounter';
 import { isPro, syncPlanFromSupabase } from '../core/planManager';
 import { getActiveSession, signInWithMagicLink, signUpWithPassword, resetPassword } from '../core/auth';
-import { track } from '../core/analytics';
+import { track, trackEvent } from '../core/analytics';
 import type { PromptOrigin, PromptType } from '../core/analytics';
 
 const OVERLAY_ID  = 'atenna-modal-overlay';
@@ -172,6 +172,8 @@ export function toggleModal(): void {
 // ─── Build modal skeleton ──────────────────────────────────
 
 async function openModal(): Promise<void> {
+  void trackEvent('modal_opened');
+
   const overlay = document.createElement('div');
   overlay.id = OVERLAY_ID;
   overlay.className = 'atenna-modal-overlay';
@@ -385,6 +387,7 @@ async function openModal(): Promise<void> {
       text = baseText;
     }
     const origin: PromptOrigin = isBuilderOpen ? 'builder' : 'manual';
+    void trackEvent('prompt_generate_clicked', { input_length: text.length, origin });
     switchTab('prompts');
     void isPro().then(pro => runFlow(promptsView, usageBadge, text, platformInput, overlay, origin, pro));
   });
@@ -434,25 +437,33 @@ async function runFlow(
   updateUsageBadge(usageBadge, usage.count, pro);
 
   if (!pro && isAtLimit(usage)) {
+    void trackEvent('quota_limit_reached', { origin });
     renderLimitReached(container);
     return;
   }
 
-  const data = await fetchPrompts(userText);
+  try {
+    const data = await fetchPrompts(userText);
 
-  if (!document.getElementById(OVERLAY_ID)) return;
+    if (!document.getElementById(OVERLAY_ID)) return;
 
-  await renderSuccess(container);
+    await renderSuccess(container);
 
-  if (!document.getElementById(OVERLAY_ID)) return;
+    if (!document.getElementById(OVERLAY_ID)) return;
 
-  const [newUsage, totalCount] = await Promise.all([incrementUsage(), incrementTotalCount()]);
-  updateUsageBadge(usageBadge, newUsage.count, pro);
-  void track('prompt_generated', { origin });
+    const [newUsage, totalCount] = await Promise.all([incrementUsage(), incrementTotalCount()]);
+    updateUsageBadge(usageBadge, newUsage.count, pro);
+    void trackEvent('prompt_generate_success', { input_length: userText.length, output_length: JSON.stringify(data).length, origin });
 
-  promptCache = { forText: userText, data };
+    promptCache = { forText: userText, data };
 
-  renderPrompts(container, data, platformInput, overlay, origin, totalCount);
+    renderPrompts(container, data, platformInput, overlay, origin, totalCount);
+  } catch (error) {
+    void trackEvent('prompt_generate_error', { origin, error: String(error) });
+    if (document.getElementById(OVERLAY_ID)) {
+      container.innerHTML = '<div style="padding: 20px; text-align: center;">Erro ao gerar prompts. Tente novamente.</div>';
+    }
+  }
 }
 
 // ─── Render: loading ───────────────────────────────────────
@@ -535,6 +546,7 @@ function renderLimitReached(container: HTMLElement): void {
 }
 
 function renderLoginView(container: HTMLElement, switchView: (view: string) => void): void {
+  void trackEvent('login_view_shown');
   clearMsgInterval();
   container.innerHTML = '';
 
@@ -624,18 +636,22 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
       return;
     }
 
+    void trackEvent('login_email_submitted', { input_length: email.length });
+
     btn.disabled = true;
     btn.textContent = 'Entrando…';
     status.textContent = '';
 
     const result = await signInWithMagicLink(email);
     if (result.error) {
+      void trackEvent('login_error', { error: result.error });
       status.textContent = result.error;
       status.classList.remove('atenna-modal__login-status--success');
       status.classList.add('atenna-modal__login-status--error');
       btn.disabled = false;
       btn.textContent = 'Entrar';
     } else {
+      void trackEvent('login_success');
       status.innerHTML = '<strong>Verifique seu email!</strong><br>Clique no link de confirmação para entrar.';
       status.classList.remove('atenna-modal__login-status--error');
       status.classList.add('atenna-modal__login-status--success');
@@ -684,6 +700,7 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
 }
 
 function renderSignupView(container: HTMLElement, switchView: (view: string) => void): void {
+  void trackEvent('signup_clicked');
   clearMsgInterval();
   container.innerHTML = '';
 
@@ -796,6 +813,8 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
       return;
     }
 
+    void trackEvent('signup_submitted', { input_length: email.length });
+
     btn.disabled = true;
     btn.textContent = 'Criando…';
     status.textContent = '';
@@ -803,11 +822,13 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
 
     const result = await signUpWithPassword(email, pwd);
     if (result.error) {
+      void trackEvent('signup_error', { error: result.error });
       status.textContent = result.error;
       status.classList.add('atenna-modal__login-status--error');
       btn.disabled = false;
       btn.textContent = 'Criar conta';
     } else {
+      void trackEvent('signup_success');
       status.innerHTML = '<strong>Conta criada!</strong><br>Verifique seu email e clique no link de confirmação.';
       status.classList.add('atenna-modal__login-status--success');
       emailInput.disabled = true;
@@ -838,6 +859,7 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
 }
 
 function renderResetView(container: HTMLElement, switchView: (view: string) => void): void {
+  void trackEvent('reset_clicked');
   clearMsgInterval();
   container.innerHTML = '';
 
@@ -881,6 +903,8 @@ function renderResetView(container: HTMLElement, switchView: (view: string) => v
       return;
     }
 
+    void trackEvent('reset_submitted', { input_length: email.length });
+
     btn.disabled = true;
     btn.textContent = 'Enviando…';
     status.textContent = '';
@@ -888,11 +912,13 @@ function renderResetView(container: HTMLElement, switchView: (view: string) => v
 
     const result = await resetPassword(email);
     if (result.error) {
+      void trackEvent('reset_error', { error: result.error });
       status.textContent = result.error;
       status.classList.add('atenna-modal__login-status--error');
       btn.disabled = false;
       btn.textContent = 'Enviar link';
     } else {
+      void trackEvent('reset_success');
       status.innerHTML = '<strong>Link enviado!</strong><br>Verifique seu email para redefinir a senha.';
       status.classList.add('atenna-modal__login-status--success');
       input.disabled = true;
@@ -1054,6 +1080,7 @@ function buildCard(
 
   copyBtn.addEventListener('click', () => {
     const text = ta.value;
+    void trackEvent('prompt_copied', { prompt_type: v.prompt_type, origin, output_length: text.length });
     try {
       Promise.resolve(navigator.clipboard?.writeText(text))
         .then(() => showToast('Copiado!'))
