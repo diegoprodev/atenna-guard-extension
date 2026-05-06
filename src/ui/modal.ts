@@ -1,7 +1,7 @@
 import { getCurrentInput, getInputText, setInputText } from '../core/inputHandler';
 import { getUsage, incrementUsage, isAtLimit, DAILY_LIMIT, getTotalCount, incrementTotalCount } from '../core/usageCounter';
 import { isPro, syncPlanFromSupabase } from '../core/planManager';
-import { getActiveSession, signInWithMagicLink } from '../core/auth';
+import { getActiveSession, signInWithMagicLink, signUpWithPassword, resetPassword } from '../core/auth';
 import { track } from '../core/analytics';
 import type { PromptOrigin, PromptType } from '../core/analytics';
 
@@ -321,9 +321,14 @@ function openModal(): void {
   void (async () => {
     const session = await getActiveSession();
 
-    // No session: show login view
+    // No session: show login view with auth flow
     if (!session) {
-      renderLoginView(promptsView);
+      const switchAuthView = (view: string) => {
+        if (view === 'login') renderLoginView(promptsView, switchAuthView);
+        else if (view === 'signup') renderSignupView(promptsView, switchAuthView);
+        else if (view === 'reset') renderResetView(promptsView, switchAuthView);
+      };
+      switchAuthView('login');
       return;
     }
 
@@ -475,7 +480,7 @@ function renderLimitReached(container: HTMLElement): void {
   container.appendChild(wrap);
 }
 
-function renderLoginView(container: HTMLElement): void {
+function renderLoginView(container: HTMLElement, switchView: (view: string) => void): void {
   clearMsgInterval();
   container.innerHTML = '';
 
@@ -484,11 +489,224 @@ function renderLoginView(container: HTMLElement): void {
 
   const title = document.createElement('h2');
   title.className = 'atenna-modal__login-title';
-  title.textContent = 'Entrar no Atenna';
+  title.textContent = '🚀 Comece a usar o Atenna';
 
   const subtitle = document.createElement('p');
   subtitle.className = 'atenna-modal__login-subtitle';
-  subtitle.textContent = 'Enviaremos um link de acesso para seu email';
+  subtitle.textContent = 'Crie prompts inteligentes com IA em segundos';
+
+  const features = document.createElement('div');
+  features.className = 'atenna-modal__login-features';
+  features.innerHTML = `
+    <div class="atenna-modal__feature">✓ 5 usos gratuitos por dia</div>
+    <div class="atenna-modal__feature">✓ Geração automática estruturada</div>
+    <div class="atenna-modal__feature">✓ Melhoria inteligente de ideias</div>
+  `;
+
+  const inputGroup = document.createElement('div');
+  inputGroup.className = 'atenna-modal__login-group';
+
+  const input = document.createElement('input');
+  input.type = 'email';
+  input.className = 'atenna-modal__login-input';
+  input.placeholder = 'seu@email.com';
+  input.autocomplete = 'email';
+
+  const btn = document.createElement('button');
+  btn.className = 'atenna-modal__login-btn';
+  btn.textContent = 'Entrar';
+
+  const status = document.createElement('div');
+  status.className = 'atenna-modal__login-status';
+
+  const handleClick = async () => {
+    const email = input.value.trim();
+    if (!email) {
+      status.textContent = '⚠️ Informe seu email';
+      status.classList.remove('atenna-modal__login-status--error', 'atenna-modal__login-status--success');
+      status.classList.add('atenna-modal__login-status--warning');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+    status.textContent = '';
+
+    const result = await signInWithMagicLink(email);
+    if (result.error) {
+      status.textContent = `❌ ${result.error}`;
+      status.classList.remove('atenna-modal__login-status--success');
+      status.classList.add('atenna-modal__login-status--error');
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+    } else {
+      status.innerHTML = '✅ <strong>Verifique seu email!</strong><br>Clique no link de confirmação para entrar.';
+      status.classList.remove('atenna-modal__login-status--error');
+      status.classList.add('atenna-modal__login-status--success');
+      input.disabled = true;
+      btn.style.display = 'none';
+    }
+  };
+
+  btn.addEventListener('click', handleClick);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') void handleClick();
+  });
+
+  const linksDiv = document.createElement('div');
+  linksDiv.className = 'atenna-modal__login-links';
+
+  const signupLink = document.createElement('button');
+  signupLink.className = 'atenna-modal__login-link';
+  signupLink.textContent = 'Criar conta';
+  signupLink.addEventListener('click', () => switchView('signup'));
+
+  const resetLink = document.createElement('button');
+  resetLink.className = 'atenna-modal__login-link';
+  resetLink.textContent = 'Esqueci minha senha';
+  resetLink.addEventListener('click', () => switchView('reset'));
+
+  linksDiv.appendChild(signupLink);
+  linksDiv.appendChild(resetLink);
+
+  inputGroup.appendChild(input);
+  inputGroup.appendChild(btn);
+  wrap.appendChild(title);
+  wrap.appendChild(subtitle);
+  wrap.appendChild(features);
+  wrap.appendChild(inputGroup);
+  wrap.appendChild(status);
+  wrap.appendChild(linksDiv);
+  container.appendChild(wrap);
+
+  input.focus();
+}
+
+function renderSignupView(container: HTMLElement, switchView: (view: string) => void): void {
+  clearMsgInterval();
+  container.innerHTML = '';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'atenna-modal__login';
+
+  const backBtn = document.createElement('button');
+  backBtn.className = 'atenna-modal__login-back';
+  backBtn.textContent = '← Voltar';
+  backBtn.addEventListener('click', () => switchView('login'));
+
+  const title = document.createElement('h2');
+  title.className = 'atenna-modal__login-title';
+  title.textContent = 'Criar conta';
+
+  const inputGroup = document.createElement('div');
+  inputGroup.className = 'atenna-modal__login-group';
+
+  const emailInput = document.createElement('input');
+  emailInput.type = 'email';
+  emailInput.className = 'atenna-modal__login-input';
+  emailInput.placeholder = 'seu@email.com';
+  emailInput.autocomplete = 'email';
+
+  const passwordInput = document.createElement('input');
+  passwordInput.type = 'password';
+  passwordInput.className = 'atenna-modal__login-input';
+  passwordInput.placeholder = 'Senha (mín. 6 caracteres)';
+  passwordInput.autocomplete = 'new-password';
+
+  const confirmInput = document.createElement('input');
+  confirmInput.type = 'password';
+  confirmInput.className = 'atenna-modal__login-input';
+  confirmInput.placeholder = 'Confirme a senha';
+  confirmInput.autocomplete = 'new-password';
+
+  const btn = document.createElement('button');
+  btn.className = 'atenna-modal__login-btn';
+  btn.textContent = 'Criar conta';
+
+  const status = document.createElement('div');
+  status.className = 'atenna-modal__login-status';
+
+  const handleClick = async () => {
+    const email = emailInput.value.trim();
+    const pwd = passwordInput.value;
+    const confirm = confirmInput.value;
+
+    if (!email) {
+      status.textContent = '⚠️ Informe seu email';
+      status.classList.add('atenna-modal__login-status--warning');
+      return;
+    }
+    if (pwd.length < 6) {
+      status.textContent = '⚠️ Senha deve ter no mínimo 6 caracteres';
+      status.classList.add('atenna-modal__login-status--warning');
+      return;
+    }
+    if (pwd !== confirm) {
+      status.textContent = '⚠️ As senhas não conferem';
+      status.classList.add('atenna-modal__login-status--warning');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Criando…';
+    status.textContent = '';
+    status.classList.remove('atenna-modal__login-status--error', 'atenna-modal__login-status--warning');
+
+    const result = await signUpWithPassword(email, pwd);
+    if (result.error) {
+      status.textContent = `❌ ${result.error}`;
+      status.classList.add('atenna-modal__login-status--error');
+      btn.disabled = false;
+      btn.textContent = 'Criar conta';
+    } else {
+      status.innerHTML = '✅ <strong>Conta criada!</strong><br>Verifique seu email e clique no link de confirmação.';
+      status.classList.add('atenna-modal__login-status--success');
+      emailInput.disabled = true;
+      passwordInput.disabled = true;
+      confirmInput.disabled = true;
+      btn.style.display = 'none';
+    }
+  };
+
+  btn.addEventListener('click', handleClick);
+  [emailInput, passwordInput, confirmInput].forEach(input => {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') void handleClick();
+    });
+  });
+
+  inputGroup.appendChild(emailInput);
+  inputGroup.appendChild(passwordInput);
+  inputGroup.appendChild(confirmInput);
+  inputGroup.appendChild(btn);
+  wrap.appendChild(backBtn);
+  wrap.appendChild(title);
+  wrap.appendChild(inputGroup);
+  wrap.appendChild(status);
+  container.appendChild(wrap);
+
+  emailInput.focus();
+}
+
+function renderResetView(container: HTMLElement, switchView: (view: string) => void): void {
+  clearMsgInterval();
+  container.innerHTML = '';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'atenna-modal__login';
+
+  const backBtn = document.createElement('button');
+  backBtn.className = 'atenna-modal__login-back';
+  backBtn.textContent = '← Voltar';
+  backBtn.addEventListener('click', () => switchView('login'));
+
+  const title = document.createElement('h2');
+  title.className = 'atenna-modal__login-title';
+  title.textContent = 'Recuperar senha';
+
+  const subtitle = document.createElement('p');
+  subtitle.className = 'atenna-modal__login-subtitle';
+  subtitle.textContent = 'Enviaremos um link para redefinir sua senha';
 
   const inputGroup = document.createElement('div');
   inputGroup.className = 'atenna-modal__login-group';
@@ -508,19 +726,25 @@ function renderLoginView(container: HTMLElement): void {
 
   const handleClick = async () => {
     const email = input.value.trim();
-    if (!email) return;
+    if (!email) {
+      status.textContent = '⚠️ Informe seu email';
+      status.classList.add('atenna-modal__login-status--warning');
+      return;
+    }
 
     btn.disabled = true;
     btn.textContent = 'Enviando…';
+    status.textContent = '';
+    status.classList.remove('atenna-modal__login-status--error', 'atenna-modal__login-status--warning');
 
-    const result = await signInWithMagicLink(email);
+    const result = await resetPassword(email);
     if (result.error) {
-      status.textContent = `Erro: ${result.error}`;
+      status.textContent = `❌ ${result.error}`;
       status.classList.add('atenna-modal__login-status--error');
       btn.disabled = false;
       btn.textContent = 'Enviar link';
     } else {
-      status.textContent = '✅ Verifique seu email';
+      status.innerHTML = '✅ <strong>Link enviado!</strong><br>Verifique seu email para redefinir a senha.';
       status.classList.add('atenna-modal__login-status--success');
       input.disabled = true;
       btn.style.display = 'none';
@@ -534,6 +758,7 @@ function renderLoginView(container: HTMLElement): void {
 
   inputGroup.appendChild(input);
   inputGroup.appendChild(btn);
+  wrap.appendChild(backBtn);
   wrap.appendChild(title);
   wrap.appendChild(subtitle);
   wrap.appendChild(inputGroup);

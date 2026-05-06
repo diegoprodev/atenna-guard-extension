@@ -46,12 +46,14 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["icons/icon128.png", "icons/icon48.png"],
+      "resources": ["icons/icon128.png", "icons/icon48.png", "auth-callback.html"],
       "matches": [
         "https://chat.openai.com/*",
         "https://chatgpt.com/*",
         "https://claude.ai/*",
-        "https://gemini.google.com/*"
+        "https://gemini.google.com/*",
+        "http://localhost/*",
+        "https://*.supabase.co/*"
       ]
     }
   ]

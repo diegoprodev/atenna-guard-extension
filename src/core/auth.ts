@@ -67,10 +67,62 @@ export async function signInWithMagicLink(email: string): Promise<{ error?: stri
       headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
       body:    JSON.stringify({ email }),
     });
-    if (!res.ok) return { error: `HTTP ${res.status}` };
+    if (res.status === 400) return { error: 'Email inválido. Verifique e tente novamente.' };
+    if (res.status === 422) return { error: 'Email em formato inválido.' };
+    if (!res.ok) return { error: 'Erro ao enviar. Tente novamente em alguns segundos.' };
     return {};
   } catch (e) {
-    return { error: String(e) };
+    return { error: 'Sem conexão. Verifique sua internet e tente novamente.' };
+  }
+}
+
+export async function signUpWithPassword(email: string, password: string): Promise<{ error?: string }> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+      body:    JSON.stringify({ email, password, options: { emailRedirectTo: getCallbackUrl() } }),
+    });
+    if (res.status === 400) {
+      try {
+        const body = await res.json() as Record<string, unknown>;
+        const msg = (body.msg as string) || (body.message as string) || '';
+        if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('user already exists')) return { error: 'Este email já está registrado.' };
+        if (msg.toLowerCase().includes('password')) return { error: 'Senha deve ter no mínimo 6 caracteres.' };
+      } catch {
+        return { error: 'Email ou senha inválidos.' };
+      }
+      return { error: 'Email ou senha inválidos.' };
+    }
+    if (res.status === 422) return { error: 'Email em formato inválido.' };
+    if (!res.ok) return { error: 'Erro ao criar conta. Tente novamente em alguns segundos.' };
+    return {};
+  } catch (e) {
+    return { error: 'Sem conexão. Verifique sua internet e tente novamente.' };
+  }
+}
+
+export async function resetPassword(email: string): Promise<{ error?: string }> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+      body:    JSON.stringify({ email, redirectTo: getCallbackUrl() }),
+    });
+    if (res.status === 400) return { error: 'Email não encontrado ou inválido.' };
+    if (res.status === 422) return { error: 'Email em formato inválido.' };
+    if (!res.ok) return { error: 'Erro ao enviar. Tente novamente em alguns segundos.' };
+    return {};
+  } catch (e) {
+    return { error: 'Sem conexão. Verifique sua internet e tente novamente.' };
+  }
+}
+
+function getCallbackUrl(): string {
+  try {
+    return chrome.runtime.getURL('auth-callback.html');
+  } catch {
+    return `${SUPABASE_URL}/auth/v1/callback`;
   }
 }
 
