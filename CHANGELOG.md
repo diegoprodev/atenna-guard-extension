@@ -2,6 +2,58 @@
 
 All notable changes to **Atenna Guard Extension** are documented here.
 
+## [2.2.0] — 2026-05-06 (Auth UX Overhaul)
+
+### Fixed
+- **Mensagens de erro técnicas removidas** — Anteriormente mostravam "HTTP 400". Agora mensagens amigáveis em português:
+  - "Email inválido. Verifique e tente novamente."
+  - "Este email já está registrado."
+  - "Senha deve ter no mínimo 6 caracteres."
+- **Fluxo de email confirmation melhorado**:
+  - Link do email não era acessível (ERR_BLOCKED_BY_CLIENT)
+  - Novo `auth-callback.html` com UI clara e spinner
+  - Extrai JWT automaticamente do hash da URL
+  - Salva sessão sem feedback técnico
+  - Countdown visual antes de fechar
+- **UX confusa do login** — Usuário não sabia que precisava verificar email
+  - Status message agora diz explicitamente: "✅ Verifique seu email!"
+  - Features listadas (5 usos/dia, etc) para motivar signup
+
+### Added
+- **Auth views melhoradas** (`src/ui/modal.ts`):
+  - `renderLoginView()` — magic link com features listadas
+  - `renderSignupView()` — email + password + confirmação
+  - `renderResetView()` — recuperar senha
+  - Navegação entre views com botão "Voltar"
+- **Auth functions com erro handling** (`src/core/auth.ts`):
+  - `signUpWithPassword(email, password)` — cria conta com validação
+  - `resetPassword(email)` — envia link de recovery
+  - `getCallbackUrl()` — usa chrome.runtime.getURL() ou fallback
+  - Error responses amigáveis (nunca expõem HTTP status codes)
+- **Email callback handler** (`src/auth-callback.html`):
+  - Interface limpa com spinner e countdown
+  - Extrai `access_token`, `expires_in` do hash
+  - Decoda JWT e extrai email
+  - Salva em `chrome.storage.local`
+  - Mostra sucesso/erro com timing apropriado
+- **Estilos de auth** (`src/ui/modal.css`):
+  - `.atenna-modal__login-back` — botão voltar
+  - `.atenna-modal__login-features` — lista de benefícios
+  - `.atenna-modal__login-links` — links Criar conta, Esqueci senha
+  - `.atenna-modal__login-status--warning` — avisos (amarelo)
+- **Manifest & build updates**:
+  - `auth-callback.html` em `web_accessible_resources`
+  - Supabase URLs permitidas
+  - `vite.config.ts` copia callback HTML para dist/
+
+### Changed
+- **Authentication flow**: Agora suporta magic link + email/password
+- **Error messages**: Todos os erros em português claro, sem jargão técnico
+- **Session storage**: Agora inclui `refresh_token` (para futuro)
+
+### Tests
+- Todos os 92 testes passando (sem novos testes ainda para callbacks)
+
 ## [2.1.0] — 2026-05-05
 
 ### Added
