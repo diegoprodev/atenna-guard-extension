@@ -2,6 +2,79 @@
 
 All notable changes to **Atenna Guard Extension** are documented here.
 
+---
+
+## [2.6.0] — 2026-05-06 (DLP Architecture + Badge Premium + Phase 1 UX Refinement)
+
+### Added — DLP Architecture (3-Layer Hybrid)
+
+**Layer 1 — Client-Side Detection (`src/dlp/`)**
+- `types.ts` — `RiskLevel` enum (NONE/LOW/MEDIUM/HIGH), `DetectedEntity`, `ScanResult`, `Advisory`
+- `patterns.ts` — 9 pattern detectors: CPF, CNPJ, EMAIL, PHONE, API_KEY, TOKEN, PASSWORD, CREDIT_CARD, ADDRESS com confidence ponderado (0.65–0.99)
+- `semantic.ts` — 7 semantic hints por keyword (IS_REAL_DATA, IS_TECHNICAL_QUESTION, IS_EXAMPLE_REQUEST, IS_MEDICAL_CONTEXT...); `isLowRiskIntent()` / `isHighRiskIntent()` para redução inteligente de falsos positivos
+- `scorer.ts` — score 0–100 com multiplicadores de intenção: contexto técnico → 0.10x (reduz drasticamente), dados reais → 1.30x (amplifica)
+- `detector.ts` — orquestrador do pipeline local; target < 50ms
+- `advisory.ts` — traduz ScanResult em UX Advisory (mensagem, CTAs, `show` flag)
+
+**Layer 2 — Backend DLP (`backend/dlp/`)**
+- `analyzer.py` — Presidio AnalyzerEngine + spaCy; `CPFRecognizer` com validação real do dígito verificador; `CNPJRecognizer`, `BRPhoneRecognizer`, `APIKeyRecognizer`
+- `scoring.py` — blend 60% backend + 40% client pre-scan
+- `advisory.py` — mensagem final por nível de risco
+- `telemetry.py` — eventos JSON para stdout: `dlp_scan_started`, `dlp_entity_detected`, `dlp_high_risk`, `dlp_scan_complete`
+- `pipeline.py` — orquestrador; nunca falha (retorna NONE em erro)
+- `entities.py` — schemas Pydantic: `ScanRequest`, `ScanResponse`, `DetectedEntity`
+- `routes/dlp.py` — `POST /dlp/scan` (enriquecimento assíncrono), `GET /dlp/health`
+
+**Layer 3 — UX Decision Engine (`modal.ts` + `modal.css`)**
+- `showDlpAdvisory()` — Promise<boolean> não-bloqueante; exibe advisory acima do conteúdo antes de gerar
+- HIGH: fundo vermelho tênue (opacity 0.06) + pills de entidade + 2 CTAs ("Revisar" / "Enviar mesmo assim")
+- MEDIUM: fundo âmbar (opacity 0.05) + mesmos CTAs
+- LOW: mensagem discreta sem ações
+- NONE: resolve imediatamente, zero UI
+- Analytics: eventos `dlp_warning_shown`, `dlp_send_override`
+
+**Test cases (per spec):**
+- `"meu cpf é 123.456.789-09"` → CPF + IS_REAL_DATA → **HIGH**
+- `"regex validar cpf javascript"` → IS_TECHNICAL_QUESTION → **NONE**
+- `"paciente com diabetes"` → IS_MEDICAL_CONTEXT → **MEDIUM**
+- `"api_key=sk_live_abc123"` → API_KEY confidence 0.95 → **HIGH**
+- `"como proteger dados médicos"` → IS_PROTECTION_QUERY → **LOW**
+
+### Added — Badge Retráctil Premium
+
+- **Comportamento retráctil**: Estado normal = apenas coruja circular pulsando, sem pill verde; Hover = expande lateralmente para a **esquerda** revelando "ATENNA" + "Secure Engine"
+- **Pulse ring**: Anel verde animado ao redor da coruja (opacity 0.5–0.9, scale 1–1.08), `2.8s ease-in-out infinite`
+- **Status dot**: Ponto verde (`#22c55e`) com glow no canto inferior direito do ícone
+- **Stagger animation na expansão**: label (250ms delay) → name (300ms) → sub (360ms) — cada elemento entra independentemente
+- **Hover**: Pill dark `rgba(10,16,24,0.92)` + `backdrop-filter: blur(14px)` + glow verde sutil; coruja faz `scale(1.05) rotate(3deg)` + glow aumentado
+- **Fechamento mais rápido** que abertura — `transition` padrão 700ms na abertura, reverse imediato
+- HTML reestruturado: `.atenna-btn__icon-wrap` (ícone + dot) + `.atenna-btn__label` (name + sub)
+
+### Changed — Phase 1 UX Refinement (Minimalismo + Hierarquia)
+
+- **Loading premium**: Spinner removido → skeleton cards com shimmer suave (`3.5s ease-in-out`) + 3 estados de texto progressivos (`1200ms` interval)
+- **Hierarquia de cards**: Refinado (primary) → Estruturado (secondary) → Estratégico (tertiary) com fade-in em cascata (0ms, 100ms, 200ms delay)
+- **Usage badge**: `"Free 3/5"` → `"2 gerações restantes"` (elegante, não técnico)
+- **Copy de loading**: `"Analisando..."` → `"Estruturando intenção..."` / `"Refinando instruções..."` / `"Preparando versões..."`
+- **Onboarding**: 6 chips removidos → 3 linhas minimalistas sem exemplos
+- **renderLimitReached**: `"Você já refinou 5 solicitações hoje"` (contextual, sem símbolo ⊘)
+- **renderUpgradeTrigger**: Removida pseudo-profundidade ("melhor que 90%")
+- **Card primary**: Verde removido da border/background — hierarquia via spacing (16px vs 12px) + sombra subtil (1px 3px)
+- **Shimmer**: `2s linear` → `3.5s ease-in-out` com opacidade reduzida (0.4) — quase imperceptível
+
+### Changed — Métricas Essenciais
+
+- `card_variant` nos eventos `prompt_copied` / `prompt_used` — rastreia qual versão (primary/secondary/tertiary) foi utilizada
+- `daily_return` — detecta retorno no dia seguinte; armazena `atenna_last_open_date` em `chrome.storage.local`
+
+### Build
+- `content.js`: 49.24 kB → 55.43 kB (+6.2 kB pelo DLP engine)
+- `background.js`: 1.60 kB (inalterado)
+- TypeScript: zero erros
+- Módulos transformados: 11 → 16 (adição dos módulos DLP)
+
+---
+
 ## [2.4.1] — 2026-05-06 (Fix Auth Callback Hash Fragment)
 
 ### Fixed

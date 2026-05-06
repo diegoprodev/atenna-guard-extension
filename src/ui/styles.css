@@ -41,51 +41,52 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Button badge (Premium edition) ─────────────────── */
+/* ── Button badge — Retractable pill ─────────────────── */
 
 .atenna-btn {
   position: fixed;
   /* top + right set dynamically by injectButton.ts */
   border: none;
-  border-radius: 24px;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 5px 12px 5px 4px;
   cursor: pointer;
   z-index: 999999;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  white-space: nowrap;
-  line-height: 1.4;
-  letter-spacing: 0.02em;
-  color: #ffffff;
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+
+  /* Collapsed: circular icon only */
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  overflow: visible;
-  box-shadow:
-    0 4px 12px rgba(34, 197, 94, 0.35),
-    0 0 0 0px rgba(34, 197, 94, 0);
+  justify-content: flex-end;
+  flex-direction: row-reverse; /* icon on the right, label expands left */
+
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  box-shadow: none;
+
+  /* Expand transition — opening slower than closing */
   transition:
-    box-shadow 800ms cubic-bezier(0.4, 0, 0.2, 1),
-    transform 800ms cubic-bezier(0.4, 0, 0.2, 1),
-    filter 1000ms cubic-bezier(0.4, 0, 0.2, 1),
-    background 1000ms cubic-bezier(0.4, 0, 0.2, 1);
+    width      700ms cubic-bezier(0.4, 0, 0.2, 1),
+    height     700ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-radius 700ms cubic-bezier(0.4, 0, 0.2, 1),
+    background 700ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 700ms cubic-bezier(0.4, 0, 0.2, 1);
+
   animation: atenna-badge-in 900ms cubic-bezier(0.34, 1.2, 0.64, 1) both;
-  backdrop-filter: blur(2px);
 }
 
 .atenna-btn:hover {
-  filter: brightness(1.12) saturate(1.1);
+  width: 186px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(10, 16, 24, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   box-shadow:
-    0 8px 24px rgba(34, 197, 94, 0.45),
-    0 0 20px rgba(34, 197, 94, 0.2);
-  transform: translateY(-2px);
-}
-
-.atenna-btn:active {
-  transform: translateY(0);
-  filter: brightness(1.08) saturate(1.05);
+    0 8px 28px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 0 20px rgba(34, 197, 94, 0.12);
 }
 
 .atenna-btn:focus-visible {
@@ -93,46 +94,134 @@
   outline-offset: 2px;
 }
 
-.atenna-btn[data-active='true'] {
-  filter: brightness(0.92);
-  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+.atenna-btn[data-active='true'] .atenna-btn__icon-wrap {
+  filter: brightness(0.88);
 }
 
-/* Stagger animations for premium feel */
-.atenna-btn__logo-wrapper {
-  display: inline-flex;
-  align-items: center;
-  animation: atenna-logo-enter 800ms cubic-bezier(0.34, 1.2, 0.64, 1) 0ms both;
-}
+/* ── Icon wrapper (always visible, circular) ─────────── */
 
-.atenna-btn__text-wrapper {
-  display: inline-block;
-  animation: atenna-text-enter 800ms cubic-bezier(0.34, 1.2, 0.64, 1) 100ms both;
-}
-
-.atenna-btn__status-wrapper {
-  display: inline-block;
-  font-size: 10px;
-  opacity: 0.92;
-  animation: atenna-status-enter 800ms cubic-bezier(0.34, 1.2, 0.64, 1) 200ms both;
-}
-
-.atenna-btn:hover .atenna-btn__logo-wrapper {
-  animation: atenna-icon-pulse 600ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-/* Logo icon — 30px on ~28px badge = premium "floating" effect */
-.atenna-btn__icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  object-fit: contain;
+.atenna-btn__icon-wrap {
+  position: relative;
   flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Coruja — sem fundo verde, mistura com qualquer fundo */
+.atenna-btn__icon {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
   display: block;
+  flex-shrink: 0;
   mix-blend-mode: lighten;
-  filter: drop-shadow(0 0 2px rgba(255,255,255,0.3));
-  animation: atenna-icon-shine 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  transition: filter 800ms cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 0 4px rgba(34,197,94,0.35));
+  animation: atenna-icon-shine 3.5s ease-in-out infinite;
+  transition: transform 600ms cubic-bezier(0.34, 1.2, 0.64, 1),
+              filter 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.atenna-btn:hover .atenna-btn__icon {
+  transform: scale(1.05) rotate(3deg);
+  filter: drop-shadow(0 0 8px rgba(34,197,94,0.6));
+}
+
+/* Pulse ring — coruja "respira" no estado recolhido */
+.atenna-btn__icon-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(34, 197, 94, 0.35);
+  animation: atenna-ring-pulse 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes atenna-ring-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%       { opacity: 0.9; transform: scale(1.08); }
+}
+
+/* Status dot (bottom-right of icon) */
+.atenna-btn__dot {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  border: 1.5px solid rgba(10, 16, 24, 0.9);
+  box-shadow: 0 0 6px rgba(34,197,94,0.7);
+}
+
+/* ── Expandable label (hidden → revealed on hover) ───── */
+
+.atenna-btn__label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1px;
+  padding-left: 4px;
+  /* Hidden when collapsed */
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(-8px);
+  transition:
+    opacity    300ms cubic-bezier(0.4, 0, 0.2, 1) 250ms,
+    transform  400ms cubic-bezier(0.34, 1.2, 0.64, 1) 200ms;
+  pointer-events: none;
+}
+
+.atenna-btn:hover .atenna-btn__label {
+  width: auto;
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.atenna-btn__name {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #ffffff;
+  white-space: nowrap;
+  display: block;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity   280ms ease 300ms,
+    transform 400ms cubic-bezier(0.34, 1.2, 0.64, 1) 280ms;
+}
+
+.atenna-btn:hover .atenna-btn__name {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.atenna-btn__sub {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+  display: block;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity   280ms ease 360ms,
+    transform 400ms cubic-bezier(0.34, 1.2, 0.64, 1) 340ms;
+}
+
+.atenna-btn:hover .atenna-btn__sub {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* ── Panel ──────────────────────────────────────────────── */

@@ -140,32 +140,43 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   btn.className = BTN_CLASS;
   btn.setAttribute('aria-label', 'Atenna Prompt');
 
-  // ── Premium badge structure with stagger animation ──
-  const logoWrapper = document.createElement('span');
-  logoWrapper.className = 'atenna-btn__logo-wrapper';
+  // ── Retractable badge: icon (always visible) + label (hover only) ──
+  const iconWrap = document.createElement('span');
+  iconWrap.className = 'atenna-btn__icon-wrap';
 
   if (logoUrl) {
     const img = document.createElement('img');
     img.className = 'atenna-btn__icon';
     img.src    = logoUrl;
-    img.width  = 26;
-    img.height = 26;
+    img.width  = 34;
+    img.height = 34;
     img.alt    = '';
     img.setAttribute('aria-hidden', 'true');
-    logoWrapper.appendChild(img);
+    iconWrap.appendChild(img);
   }
 
-  const textWrapper = document.createElement('span');
-  textWrapper.className = 'atenna-btn__text-wrapper';
-  textWrapper.appendChild(document.createTextNode('Atenna'));
+  // Status dot
+  const dot = document.createElement('span');
+  dot.className = 'atenna-btn__dot';
+  iconWrap.appendChild(dot);
 
-  const statusWrapper = document.createElement('span');
-  statusWrapper.className = 'atenna-btn__status-wrapper';
-  statusWrapper.appendChild(document.createTextNode('Prompt'));
+  // Expandable label (hidden by default, revealed on hover)
+  const label = document.createElement('span');
+  label.className = 'atenna-btn__label';
 
-  btn.appendChild(logoWrapper);
-  btn.appendChild(textWrapper);
-  btn.appendChild(statusWrapper);
+  const name = document.createElement('span');
+  name.className = 'atenna-btn__name';
+  name.textContent = 'ATENNA';
+
+  const sub = document.createElement('span');
+  sub.className = 'atenna-btn__sub';
+  sub.textContent = 'Secure Engine';
+
+  label.appendChild(name);
+  label.appendChild(sub);
+
+  btn.appendChild(iconWrap);
+  btn.appendChild(label);
   addDragBehavior(btn, onToggle);
 
   document.body.appendChild(btn);
