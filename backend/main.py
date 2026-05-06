@@ -15,17 +15,10 @@ app = FastAPI(
 # CORS enterprise — apenas origens autorizadas
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://atennaplugin.maestro-n8n.site",
-        "https://kezbssjmgwtrunqeoyir.supabase.co",
-        "https://chat.openai.com",
-        "https://chatgpt.com",
-        "https://claude.ai",
-        "https://gemini.google.com",
-    ],
+    allow_origins=["*"],
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "apikey"],
-    allow_credentials=True,
+    allow_credentials=False,
     max_age=86400,
 )
 
