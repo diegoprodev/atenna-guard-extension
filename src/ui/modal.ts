@@ -1,5 +1,5 @@
 import { getCurrentInput, getInputText, setInputText } from '../core/inputHandler';
-import { getUsage, incrementUsage, isAtLimit, DAILY_LIMIT, getTotalCount, incrementTotalCount, getMonthlyUsage, MONTHLY_LIMIT } from '../core/usageCounter';
+import { getUsage, incrementUsage, isAtLimit, isAtAnyLimit, DAILY_LIMIT, getTotalCount, incrementTotalCount, getMonthlyUsage, MONTHLY_LIMIT, incrementMonthlyUsage } from '../core/usageCounter';
 import { isPro, syncPlanFromSupabase } from '../core/planManager';
 import { getActiveSession, signInWithPassword, signUpWithPassword, resetPassword } from '../core/auth';
 import { track, trackEvent } from '../core/analytics';
@@ -267,7 +267,7 @@ function renderUpgradeModal(onClose: () => void): HTMLElement {
   freeCol.innerHTML = `
     <h3>Plano Free</h3>
     <ul>
-      <li>10 gerações/dia</li>
+      <li>5 gerações/dia</li>
       <li>25 gerações/mês</li>
       <li>3 tipos de prompt</li>
       <li>Histórico limitado</li>
@@ -688,7 +688,7 @@ async function runFlow(
   const usage = await getUsage();
   await updateUsageBadge(usageBadge, usage.count, pro);
 
-  if (!pro && isAtLimit(usage)) {
+  if (!pro && await isAtAnyLimit(usage)) {
     void trackEvent('quota_limit_reached', { origin });
     renderLimitReached(container);
     return;
@@ -703,7 +703,7 @@ async function runFlow(
 
     if (!document.getElementById(OVERLAY_ID)) return;
 
-    const [newUsage, newTotalCount] = await Promise.all([incrementUsage(), incrementTotalCount()]);
+    const [newUsage, newTotalCount] = await Promise.all([incrementUsage(), incrementTotalCount(), incrementMonthlyUsage()]) as [Awaited<ReturnType<typeof incrementUsage>>, number, number];
     await updateUsageBadge(usageBadge, newUsage.count, pro);
     void trackEvent('prompt_generate_success', { input_length: userText.length, output_length: JSON.stringify(data).length, origin });
 
@@ -802,7 +802,7 @@ function renderLimitReached(container: HTMLElement): void {
 
   const sub = document.createElement('p');
   sub.className = 'atenna-modal__loading-sub';
-  sub.textContent = `Você atingiu ${DAILY_LIMIT} gerações hoje. O contador reseta à meia-noite.`;
+  sub.textContent = `Você atingiu o limite de ${DAILY_LIMIT} gerações/dia ou ${MONTHLY_LIMIT}/mês. O contador diário reseta à meia-noite.`;
 
   wrap.appendChild(icon);
   wrap.appendChild(msg);
@@ -1380,11 +1380,10 @@ async function updateUsageBadge(badge: HTMLElement, dailyCount: number, pro = fa
     badge.className   = 'atenna-modal__usage atenna-modal__usage--pro';
     return;
   }
-  const monthlyCount = await getMonthlyUsage();
-  badge.textContent = `${dailyCount}/${DAILY_LIMIT} | ${monthlyCount}/${MONTHLY_LIMIT}`;
+  badge.textContent = `${dailyCount}/${DAILY_LIMIT}`;
   badge.className   = 'atenna-modal__usage';
   if (dailyCount >= DAILY_LIMIT)           badge.classList.add('atenna-modal__usage--danger');
-  else if (dailyCount >= DAILY_LIMIT - 3)  badge.classList.add('atenna-modal__usage--warning');
+  else if (dailyCount >= DAILY_LIMIT - 2)  badge.classList.add('atenna-modal__usage--warning');
 }
 
 // ─── Backend fetch (via background worker to bypass CORS) ──

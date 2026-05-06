@@ -2,7 +2,7 @@ const STORAGE_KEY = 'atenna_usage';
 const TOTAL_KEY   = 'atenna_total_count';
 const MONTHLY_KEY = 'atenna_monthly_usage';
 
-export const DAILY_LIMIT = 10;
+export const DAILY_LIMIT = 5;
 export const MONTHLY_LIMIT = 25;
 
 export interface UsageData {
@@ -60,6 +60,12 @@ export async function incrementUsage(): Promise<UsageData> {
 
 export function isAtLimit(usage: UsageData): boolean {
   return usage.count >= DAILY_LIMIT;
+}
+
+export async function isAtAnyLimit(usage: UsageData): Promise<boolean> {
+  if (usage.count >= DAILY_LIMIT) return true;
+  const monthly = await getMonthlyUsage();
+  return monthly >= MONTHLY_LIMIT;
 }
 
 // ─── All-time total (never resets — used for conversion triggers) ──

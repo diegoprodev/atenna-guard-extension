@@ -44,7 +44,25 @@ export function isSessionValid(session: Session): boolean {
 export async function getActiveSession(): Promise<Session | null> {
   const session = await getStoredSession();
   if (!session) return null;
-  return isSessionValid(session) ? session : null;
+  if (!isSessionValid(session)) { await clearSession(); return null; }
+
+  // Verify user still exists in Supabase (catches deleted accounts)
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        'apikey':        SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+    });
+    if (res.status === 401 || res.status === 403) {
+      await clearSession();
+      return null;
+    }
+  } catch {
+    // Offline — trust cached session to avoid locking out users without internet
+  }
+
+  return session;
 }
 
 export function decodeJwtPayload(token: string): Record<string, unknown> {
