@@ -419,9 +419,6 @@ async function openModal(): Promise<void> {
   };
   document.addEventListener('keydown', onKey);
 
-  // Show loading state
-  renderLoading(modal);
-
   // ── Auth Gate: Check session FIRST ───────────────────
   const session = await getActiveSession();
 
