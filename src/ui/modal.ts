@@ -3,6 +3,7 @@ import { getUsage, incrementUsage, isAtLimit, DAILY_LIMIT, getTotalCount, increm
 import { isPro, syncPlanFromSupabase } from '../core/planManager';
 import { getActiveSession, signInWithMagicLink, signUpWithPassword, resetPassword } from '../core/auth';
 import { track, trackEvent } from '../core/analytics';
+import { getHistory, addToHistory, toggleFavorite } from '../core/history';
 import type { PromptOrigin, PromptType } from '../core/analytics';
 
 const OVERLAY_ID  = 'atenna-modal-overlay';
@@ -44,11 +45,62 @@ const UPGRADE_TRIGGER = 3; // show upgrade banner after this many total generati
 
 export function clearPromptCache(): void { promptCache = null; upgradeShown = false; }
 
-// ─── Vague input detection (V3) ───────────────────────────
+// ─── Input analysis ──────────────────────────────────────
 
 function isVagueInput(text: string): boolean {
   const words = text.trim().split(/\s+/).filter(Boolean);
   return words.length === 1;
+}
+
+function shouldSuggestBuilder(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length >= 80) return false;
+  if (trimmed.includes('?')) return false;
+  const actionVerbs = ['crie', 'explique', 'descreva', 'analise', 'gere', 'faça', 'escreva', 'organize', 'estruture'];
+  return !actionVerbs.some(verb => trimmed.toLowerCase().includes(verb));
+}
+
+function renderOnboarding(
+  container: HTMLElement,
+  onChipClick: (suggestion: string) => void,
+): void {
+  container.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'atenna-modal__empty-state';
+
+  const title = document.createElement('h3');
+  title.className = 'atenna-modal__empty-title';
+  title.textContent = 'Comece com uma ideia simples.';
+
+  const subtitle = document.createElement('p');
+  subtitle.className = 'atenna-modal__empty-subtitle';
+  subtitle.textContent = 'Escolha um exemplo ou escreva algo. Vamos transformar em um prompt estruturado.';
+
+  const chipsContainer = document.createElement('div');
+  chipsContainer.className = 'atenna-modal__empty-chips';
+
+  const examples = [
+    'Criar guia de estudo',
+    'Post para LinkedIn',
+    'Explicação técnica',
+    'Proposta comercial',
+    'Roteiro de aula',
+    'Email profissional',
+  ];
+
+  examples.forEach(example => {
+    const chip = document.createElement('button');
+    chip.className = 'atenna-modal__empty-chip';
+    chip.textContent = example;
+    chip.type = 'button';
+    chip.addEventListener('click', () => onChipClick(example));
+    chipsContainer.appendChild(chip);
+  });
+
+  wrap.appendChild(title);
+  wrap.appendChild(subtitle);
+  wrap.appendChild(chipsContainer);
+  container.appendChild(wrap);
 }
 
 function renderEmptyState(
@@ -91,6 +143,96 @@ function renderEmptyState(
   wrap.appendChild(title);
   wrap.appendChild(subtitle);
   wrap.appendChild(chipsContainer);
+  container.appendChild(wrap);
+}
+
+async function renderMeusPrompts(
+  container: HTMLElement,
+  platformInput: HTMLElement | null,
+  overlay: HTMLElement,
+): Promise<void> {
+  container.innerHTML = '';
+  const entries = await getHistory();
+
+  if (entries.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'atenna-modal__empty-state';
+    empty.innerHTML = `
+      <h3 class="atenna-modal__empty-title">Histórico vazio</h3>
+      <p class="atenna-modal__empty-subtitle">Seus prompts salvos aparecerão aqui.</p>
+    `;
+    container.appendChild(empty);
+    return;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'atenna-modal__history';
+
+  entries.forEach(entry => {
+    const card = document.createElement('div');
+    card.className = 'atenna-modal__history-card';
+
+    const header = document.createElement('div');
+    header.className = 'atenna-modal__history-header';
+
+    const badge = document.createElement('span');
+    badge.className = 'atenna-modal__history-badge';
+    badge.textContent = entry.type === 'direct' ? 'Direto' : entry.type === 'structured' ? 'Estruturado' : 'Técnico';
+
+    const date = document.createElement('span');
+    date.className = 'atenna-modal__history-date';
+    const d = new Date(entry.date);
+    date.textContent = d.toLocaleDateString('pt-BR');
+
+    const actions = document.createElement('div');
+    actions.className = 'atenna-modal__history-actions';
+
+    const starBtn = document.createElement('button');
+    starBtn.className = entry.favorited ? 'atenna-modal__history-star atenna-modal__history-star--active' : 'atenna-modal__history-star';
+    starBtn.textContent = entry.favorited ? '★' : '☆';
+    starBtn.title = entry.favorited ? 'Remover favorito' : 'Adicionar favorito';
+    starBtn.addEventListener('click', async () => {
+      await toggleFavorite(entry.id);
+      await renderMeusPrompts(container, platformInput, overlay);
+    });
+
+    const useBtn = document.createElement('button');
+    useBtn.className = 'atenna-modal__history-use';
+    useBtn.textContent = 'Usar';
+    useBtn.addEventListener('click', () => {
+      if (platformInput) {
+        setInputText(platformInput, entry.text);
+        overlay.remove();
+        showToast('Prompt aplicado ✓');
+      } else {
+        showToast('Input não encontrado');
+      }
+    });
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'atenna-modal__history-copy';
+    copyBtn.textContent = 'Copiar';
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard?.writeText(entry.text).then(() => showToast('Copiado!'));
+    });
+
+    actions.appendChild(starBtn);
+    actions.appendChild(useBtn);
+    actions.appendChild(copyBtn);
+
+    header.appendChild(badge);
+    header.appendChild(date);
+    header.appendChild(actions);
+
+    const preview = document.createElement('p');
+    preview.className = 'atenna-modal__history-preview';
+    preview.textContent = entry.text.substring(0, 100) + (entry.text.length > 100 ? '…' : '');
+
+    card.appendChild(header);
+    card.appendChild(preview);
+    wrap.appendChild(card);
+  });
+
   container.appendChild(wrap);
 }
 
@@ -343,7 +485,11 @@ async function openModal(): Promise<void> {
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       switchTab(tab.dataset.tab!);
-      if (tab.dataset.tab === 'edit') editorEl.focus();
+      if (tab.dataset.tab === 'edit') {
+        editorEl.focus();
+      } else if (tab.dataset.tab === 'prompts') {
+        void renderMeusPrompts(promptsView, platformInput, overlay);
+      }
     });
   });
 
@@ -393,19 +539,20 @@ async function openModal(): Promise<void> {
   });
 
   // ── Auto-generate / show cache / idle ─────────────────
-  const [usage, pro] = await Promise.all([getUsage(), isPro()]);
+  const [usage, pro, totalCount] = await Promise.all([getUsage(), isPro(), getTotalCount()]);
   updateUsageBadge(usageBadge, usage.count, pro);
 
   if (cacheHit) {
     renderPrompts(promptsView, promptCache!.data, platformInput, overlay, 'manual');
   } else if (userText !== '') {
     if (!cacheHit && userText !== '') renderLoading(promptsView);
-    if (pro && isVagueInput(userText)) {
-      void track('auto_suggestion_shown');
+    const shouldShowSuggestion = (pro && isVagueInput(userText)) || (pro && shouldSuggestBuilder(userText));
+    if (shouldShowSuggestion) {
+      void trackEvent('auto_suggestion_shown');
       renderSuggestion(
         promptsView,
         () => {
-          void track('auto_suggestion_accepted');
+          void trackEvent('auto_suggestion_accepted');
           switchTab('edit');
           builderEl.classList.add('atenna-modal__builder--open');
           builderToggleEl.classList.add('atenna-modal__builder-toggle--open');
@@ -415,6 +562,12 @@ async function openModal(): Promise<void> {
     } else {
       void runFlow(promptsView, usageBadge, userText, platformInput, overlay, 'auto', pro);
     }
+  } else if (totalCount === 0) {
+    renderOnboarding(promptsView, (example: string) => {
+      editorEl.value = example;
+      editorEl.focus();
+      switchTab('edit');
+    });
   }
 
   (modal.querySelector('.atenna-modal__close') as HTMLButtonElement).focus();
@@ -451,13 +604,26 @@ async function runFlow(
 
     if (!document.getElementById(OVERLAY_ID)) return;
 
-    const [newUsage, totalCount] = await Promise.all([incrementUsage(), incrementTotalCount()]);
+    const [newUsage, newTotalCount] = await Promise.all([incrementUsage(), incrementTotalCount()]);
     updateUsageBadge(usageBadge, newUsage.count, pro);
     void trackEvent('prompt_generate_success', { input_length: userText.length, output_length: JSON.stringify(data).length, origin });
 
+    // Save to history (direct as primary)
+    void addToHistory(data.direct, 'direct', origin);
+
+    // Milestone tracking
+    if (newTotalCount === 1) {
+      void trackEvent('first_prompt_generated');
+      showToast('🎉 Primeiro prompt criado!');
+    } else if (newTotalCount === 3) {
+      void trackEvent('third_prompt_generated');
+    } else if (newTotalCount === 5) {
+      void trackEvent('fifth_prompt_generated');
+    }
+
     promptCache = { forText: userText, data };
 
-    renderPrompts(container, data, platformInput, overlay, origin, totalCount);
+    renderPrompts(container, data, platformInput, overlay, origin, newTotalCount);
   } catch (error) {
     void trackEvent('prompt_generate_error', { origin, error: String(error) });
     if (document.getElementById(OVERLAY_ID)) {
