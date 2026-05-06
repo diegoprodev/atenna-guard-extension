@@ -5,6 +5,9 @@ import { getActiveSession, signInWithPassword, signUpWithPassword, resetPassword
 import { track, trackEvent } from '../core/analytics';
 import { getHistory, addToHistory, toggleFavorite } from '../core/history';
 import type { PromptOrigin, PromptType } from '../core/analytics';
+import { scan } from '../dlp/detector';
+import { buildAdvisory } from '../dlp/advisory';
+import type { Advisory } from '../dlp/types';
 
 const OVERLAY_ID  = 'atenna-modal-overlay';
 const SUCCESS_MS  = 500;
@@ -632,7 +635,20 @@ async function openModal(): Promise<void> {
     const origin: PromptOrigin = isBuilderOpen ? 'builder' : 'manual';
     void trackEvent('prompt_generate_clicked', { input_length: text.length, origin });
     switchTab('prompts');
-    void isPro().then(pro => runFlow(promptsView, usageBadge, text, platformInput, overlay, origin, pro));
+
+    // Layer 1 — local DLP scan (<50ms, non-blocking)
+    const scanResult = scan(text);
+    const advisory   = buildAdvisory(scanResult);
+
+    if (advisory.riskLevel !== 'NONE') {
+      void trackEvent('dlp_warning_shown', { risk_level: advisory.riskLevel } as Parameters<typeof trackEvent>[1]);
+    }
+
+    // Layer 3 — UX decision: show advisory if needed, then proceed
+    void showDlpAdvisory(advisory, promptsView).then(proceed => {
+      if (!proceed) return;
+      void isPro().then(pro => runFlow(promptsView, usageBadge, text, platformInput, overlay, origin, pro));
+    });
   });
 
   // ── Auto-generate / show cache / idle ─────────────────
@@ -785,6 +801,91 @@ async function runFlow(
       container.innerHTML = '<div style="padding: 20px; text-align: center;">Erro ao gerar prompts. Tente novamente.</div>';
     }
   }
+}
+
+// ─── DLP Advisory (Layer 3 UX) ────────────────────────────────
+
+const SHIELD_SVG = `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <path d="M8 1L2 3.5V8C2 11.3 4.7 14.3 8 15C11.3 14.3 14 11.3 14 8V3.5L8 1Z"
+    stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" fill="none"/>
+</svg>`;
+
+/**
+ * Shows DLP advisory above the content area.
+ * Returns a Promise that resolves true (proceed) or false (user wants to review).
+ * For LOW/NONE resolves immediately without showing UI.
+ */
+function showDlpAdvisory(
+  advisory:  Advisory,
+  container: HTMLElement,
+): Promise<boolean> {
+  return new Promise(resolve => {
+    if (!advisory.show) { resolve(true); return; }
+
+    const el = document.createElement('div');
+    el.className = `atenna-dlp-advisory atenna-dlp-advisory--${advisory.riskLevel.toLowerCase()}`;
+
+    const header = document.createElement('div');
+    header.className = 'atenna-dlp-advisory__header';
+
+    const icon = document.createElement('span');
+    icon.className = 'atenna-dlp-advisory__icon';
+    icon.innerHTML = SHIELD_SVG;
+
+    const msg = document.createElement('p');
+    msg.className = 'atenna-dlp-advisory__msg';
+    msg.textContent = advisory.message;
+
+    header.appendChild(icon);
+    header.appendChild(msg);
+    el.appendChild(header);
+
+    // Entity pills
+    if (advisory.entities.length > 0 && advisory.riskLevel !== 'LOW') {
+      const pills = document.createElement('div');
+      pills.className = 'atenna-dlp-advisory__entities';
+      const seen = new Set<string>();
+      advisory.entities.forEach(e => {
+        if (!seen.has(e.type)) {
+          seen.add(e.type);
+          const pill = document.createElement('span');
+          pill.className = 'atenna-dlp-advisory__pill';
+          pill.textContent = e.type.replace('_', ' ');
+          pills.appendChild(pill);
+        }
+      });
+      el.appendChild(pills);
+    }
+
+    // Action buttons
+    if (advisory.primaryCta) {
+      const actions = document.createElement('div');
+      actions.className = 'atenna-dlp-advisory__actions';
+
+      const primary = document.createElement('button');
+      primary.className = 'atenna-dlp-advisory__btn-primary';
+      primary.textContent = advisory.primaryCta;
+      primary.addEventListener('click', () => { el.remove(); resolve(true); });
+
+      actions.appendChild(primary);
+
+      if (advisory.secondaryCta) {
+        const secondary = document.createElement('button');
+        secondary.className = 'atenna-dlp-advisory__btn-secondary';
+        secondary.textContent = advisory.secondaryCta;
+        secondary.addEventListener('click', () => {
+          void trackEvent('dlp_send_override');
+          el.remove();
+          resolve(true);
+        });
+        actions.appendChild(secondary);
+      }
+
+      el.appendChild(actions);
+    }
+
+    container.prepend(el);
+  });
 }
 
 // ─── Render: loading (premium skeleton, adaptive states) ─────

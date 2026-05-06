@@ -1604,6 +1604,140 @@
 
 .atenna-modal__onb-login:hover { opacity: 0.85; }
 
+/* ── DLP Advisory (LAYER 3 UX) ──────────────────────────── */
+
+.atenna-dlp-advisory {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  animation: atenna-card-fade-in 0.25s ease-out both;
+}
+
+/* HIGH — visible but never alarming */
+.atenna-dlp-advisory--high {
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.18);
+}
+
+/* MEDIUM — discrete */
+.atenna-dlp-advisory--medium {
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+}
+
+/* LOW — almost invisible */
+.atenna-dlp-advisory--low {
+  background: rgba(107, 114, 128, 0.04);
+  border: 1px solid rgba(107, 114, 128, 0.12);
+}
+
+.atenna-modal--dark .atenna-dlp-advisory--high {
+  background: rgba(239, 68, 68, 0.07);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.atenna-modal--dark .atenna-dlp-advisory--medium {
+  background: rgba(245, 158, 11, 0.06);
+  border-color: rgba(245, 158, 11, 0.12);
+}
+
+.atenna-modal--dark .atenna-dlp-advisory--low {
+  background: rgba(255,255,255,0.03);
+  border-color: rgba(255,255,255,0.08);
+}
+
+.atenna-dlp-advisory__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.atenna-dlp-advisory__icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.atenna-dlp-advisory__msg {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--at-text);
+  margin: 0;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.atenna-dlp-advisory--high   .atenna-dlp-advisory__msg { opacity: 1; }
+.atenna-dlp-advisory--medium .atenna-dlp-advisory__msg { opacity: 0.9; }
+
+.atenna-dlp-advisory__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.atenna-dlp-advisory__btn-primary {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  background: var(--at-green);
+  color: #fff;
+  transition: background 180ms ease;
+  font-family: inherit;
+}
+
+.atenna-dlp-advisory__btn-primary:hover { background: #16a34a; }
+
+.atenna-dlp-advisory__btn-secondary {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--at-border);
+  cursor: pointer;
+  background: transparent;
+  color: var(--at-text);
+  opacity: 0.65;
+  transition: opacity 180ms ease;
+  font-family: inherit;
+}
+
+.atenna-dlp-advisory__btn-secondary:hover { opacity: 0.9; }
+
+/* LOW: only a small inline icon, no actions */
+.atenna-dlp-advisory--low .atenna-dlp-advisory__actions { display: none; }
+
+/* Entity pill (optional — shows what was detected) */
+.atenna-dlp-advisory__entities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.atenna-dlp-advisory__pill {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.05);
+  color: var(--at-text);
+  opacity: 0.6;
+  text-transform: uppercase;
+}
+
+.atenna-modal--dark .atenna-dlp-advisory__pill {
+  background: rgba(255,255,255,0.07);
+}
+
 /* ── Onboarding Minimalista (FASE 1) ─────────────────────── */
 
 .atenna-modal__onboarding-minimal {

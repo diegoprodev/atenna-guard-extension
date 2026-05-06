@@ -2,3 +2,6 @@ fastapi
 uvicorn
 httpx
 python-dotenv
+presidio-analyzer
+presidio-anonymizer
+spacy

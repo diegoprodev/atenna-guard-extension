@@ -5,6 +5,7 @@ from schemas.prompt_schema import PromptRequest, PromptResponse
 from services.gemini_service import generate_prompts
 from routes.analytics import router as analytics_router
 from routes.auth import router as auth_router
+from routes.dlp import router as dlp_router
 
 app = FastAPI(
     title="Atenna Guard Prompt — Backend",
@@ -24,6 +25,7 @@ app.add_middleware(
 
 app.include_router(analytics_router)
 app.include_router(auth_router)
+app.include_router(dlp_router)
 
 
 @app.get("/health", tags=["Health"])
