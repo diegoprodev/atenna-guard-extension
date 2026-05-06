@@ -3,10 +3,27 @@
     "allow": [
       "PowerShell(python C:\\\\tmp\\\\setup_secrets_vps.py)",
       "mcp__claude_ai_Supabase__list_tables",
-      "mcp__claude_ai_Supabase__apply_migration"
+      "mcp__claude_ai_Supabase__apply_migration",
+      "Bash(sshpass -p '4dkcmxntwiwFsxNipCpd' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null raiz@157.90.246.156 'apt update && apt upgrade -y && apt install -y python3 python3-pip python3-venv nginx certbot python3-certbot-nginx git ufw curl')",
+      "Bash(apt-get install *)",
+      "PowerShell(choco install sshpass -y)",
+      "Bash(python3)",
+      "Bash(pip3 install *)",
+      "Bash(timeout 5 bash -c 'echo > /dev/tcp/157.90.246.156/22')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" https://atennnaplugin.maestro-n8n.site/health)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://157.90.246.156/health)",
+      "Bash(curl -sL -o /dev/null -w \"%{http_code}\" https://157.90.246.156/health)",
+      "Bash(curl -k -v https://atennnaplugin.maestro-n8n.site/health)",
+      "Bash(nslookup atennnaplugin.maestro-n8n.site)",
+      "Bash(curl -k https://atennplugin.maestro-n8n.site/health)",
+      "Bash(curl -H \"Host: atennplugin.maestro-n8n.site\" http://157.90.246.156/health)",
+      "Bash(curl -k -H \"Host: atennplugin.maestro-n8n.site\" https://157.90.246.156/health)",
+      "Bash(curl -k -H 'Host: atennplugin.maestro-n8n.site' -H 'Content-Type: application/json' -d '{\"input\":\"Como criar um chatbot?\"}' https://157.90.246.156/generate-prompts)",
+      "Bash(curl -k -H 'Host: atennplugin.maestro-n8n.site' -H 'Content-Type: application/json' -d '{\"event\":\"test_event\",\"user_id\":\"test_user\",\"timestamp\":1234567890,\"session_id\":\"sess_123\",\"extension_version\":\"1.2.0\",\"plan\":\"free\"}' https://157.90.246.156/track)"
     ],
     "additionalDirectories": [
-      "C:\\Users\\dgapc\\.claude\\plans"
+      "C:\\Users\\dgapc\\.claude\\plans",
+      "\\tmp"
     ]
   }
 }
