@@ -12,12 +12,21 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS liberado para extensão Chrome e localhost durante desenvolvimento
+# CORS enterprise — apenas origens autorizadas
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # em produção, restringir para a origem da extensão
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
+    allow_origins=[
+        "https://atennnaplugin.maestro-n8n.site",
+        "https://kezbssjmgwtrunqeoyir.supabase.co",
+        "https://chat.openai.com",
+        "https://chatgpt.com",
+        "https://claude.ai",
+        "https://gemini.google.com",
+    ],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "apikey"],
+    allow_credentials=True,
+    max_age=86400,
 )
 
 app.include_router(analytics_router)
