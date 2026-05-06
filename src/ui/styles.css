@@ -1,8 +1,18 @@
 /* Atenna Guard Prompt — all classes prefixed atenna- to avoid host page collisions */
 
 @keyframes atenna-icon-shine {
-  0%, 100% { filter: brightness(1) drop-shadow(0 0 0px rgba(255,255,255,0)); }
-  50%       { filter: brightness(1.35) drop-shadow(0 0 6px rgba(255,255,255,0.55)); }
+  0%, 100% {
+    filter: brightness(1) drop-shadow(0 0 0px rgba(255,255,255,0)) drop-shadow(0 0 0px rgba(34,197,94,0));
+  }
+  50% {
+    filter: brightness(1.2) drop-shadow(0 0 8px rgba(255,255,255,0.4)) drop-shadow(0 0 12px rgba(34,197,94,0.3));
+  }
+}
+
+@keyframes atenna-icon-pulse {
+  0% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.08) rotate(2deg); }
+  100% { transform: scale(1) rotate(0deg); }
 }
 
 @keyframes atenna-slide-in {
@@ -11,21 +21,36 @@
 }
 
 @keyframes atenna-badge-in {
-  0%   { opacity: 0; transform: scale(0.55); }
-  70%  { transform: scale(1.08); }
-  100% { opacity: 1; transform: scale(1); }
+  0%   { opacity: 0; transform: scale(0.8) translateY(8px); }
+  65%  { transform: scale(1.06) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* ── Button badge ─────────────────────────────────────── */
+@keyframes atenna-logo-enter {
+  from { opacity: 0; transform: scale(0.5) rotate(-8deg); }
+  to { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+@keyframes atenna-text-enter {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes atenna-status-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Button badge (Premium edition) ─────────────────── */
 
 .atenna-btn {
   position: fixed;
   /* top + right set dynamically by injectButton.ts */
   border: none;
-  border-radius: 20px;
+  border-radius: 24px;
   font-size: 11px;
   font-weight: 600;
-  padding: 3px 10px 3px 2px;
+  padding: 5px 12px 5px 4px;
   cursor: pointer;
   z-index: 999999;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -33,19 +58,34 @@
   line-height: 1.4;
   letter-spacing: 0.02em;
   color: #ffffff;
-  background: #22c55e;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 5px;
   overflow: visible;
-  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.30);
-  transition: box-shadow 200ms ease, filter 200ms ease;
-  animation: atenna-badge-in 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  box-shadow:
+    0 4px 12px rgba(34, 197, 94, 0.35),
+    0 0 0 0px rgba(34, 197, 94, 0);
+  transition:
+    box-shadow 800ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 800ms cubic-bezier(0.4, 0, 0.2, 1),
+    filter 1000ms cubic-bezier(0.4, 0, 0.2, 1),
+    background 1000ms cubic-bezier(0.4, 0, 0.2, 1);
+  animation: atenna-badge-in 900ms cubic-bezier(0.34, 1.2, 0.64, 1) both;
+  backdrop-filter: blur(2px);
 }
 
 .atenna-btn:hover {
-  filter: brightness(1.08);
-  box-shadow: 0 3px 14px rgba(34, 197, 94, 0.50);
+  filter: brightness(1.12) saturate(1.1);
+  box-shadow:
+    0 8px 24px rgba(34, 197, 94, 0.45),
+    0 0 20px rgba(34, 197, 94, 0.2);
+  transform: translateY(-2px);
+}
+
+.atenna-btn:active {
+  transform: translateY(0);
+  filter: brightness(1.08) saturate(1.05);
 }
 
 .atenna-btn:focus-visible {
@@ -54,21 +94,45 @@
 }
 
 .atenna-btn[data-active='true'] {
-  filter: brightness(0.88);
+  filter: brightness(0.92);
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
 }
 
-/* Logo icon — 30px on ~21px badge = ~4.5px overflow top/bottom ("stamp" effect)
-   mix-blend-mode: lighten removes the black circle: black < green so it shows green,
-   white > green so it stays white → white logo on green badge, no black background */
+/* Stagger animations for premium feel */
+.atenna-btn__logo-wrapper {
+  display: inline-flex;
+  align-items: center;
+  animation: atenna-logo-enter 800ms cubic-bezier(0.34, 1.2, 0.64, 1) 0ms both;
+}
+
+.atenna-btn__text-wrapper {
+  display: inline-block;
+  animation: atenna-text-enter 800ms cubic-bezier(0.34, 1.2, 0.64, 1) 100ms both;
+}
+
+.atenna-btn__status-wrapper {
+  display: inline-block;
+  font-size: 10px;
+  opacity: 0.92;
+  animation: atenna-status-enter 800ms cubic-bezier(0.34, 1.2, 0.64, 1) 200ms both;
+}
+
+.atenna-btn:hover .atenna-btn__logo-wrapper {
+  animation: atenna-icon-pulse 600ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Logo icon — 30px on ~28px badge = premium "floating" effect */
 .atenna-btn__icon {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   object-fit: contain;
   flex-shrink: 0;
   display: block;
   mix-blend-mode: lighten;
-  animation: atenna-icon-shine 2.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 2px rgba(255,255,255,0.3));
+  animation: atenna-icon-shine 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transition: filter 800ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ── Panel ──────────────────────────────────────────────── */

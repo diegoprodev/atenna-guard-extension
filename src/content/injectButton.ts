@@ -140,6 +140,10 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   btn.className = BTN_CLASS;
   btn.setAttribute('aria-label', 'Atenna Prompt');
 
+  // ── Premium badge structure with stagger animation ──
+  const logoWrapper = document.createElement('span');
+  logoWrapper.className = 'atenna-btn__logo-wrapper';
+
   if (logoUrl) {
     const img = document.createElement('img');
     img.className = 'atenna-btn__icon';
@@ -148,10 +152,20 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
     img.height = 26;
     img.alt    = '';
     img.setAttribute('aria-hidden', 'true');
-    btn.appendChild(img);
+    logoWrapper.appendChild(img);
   }
 
-  btn.appendChild(document.createTextNode('Atenna Prompt'));
+  const textWrapper = document.createElement('span');
+  textWrapper.className = 'atenna-btn__text-wrapper';
+  textWrapper.appendChild(document.createTextNode('Atenna'));
+
+  const statusWrapper = document.createElement('span');
+  statusWrapper.className = 'atenna-btn__status-wrapper';
+  statusWrapper.appendChild(document.createTextNode('Prompt'));
+
+  btn.appendChild(logoWrapper);
+  btn.appendChild(textWrapper);
+  btn.appendChild(statusWrapper);
   addDragBehavior(btn, onToggle);
 
   document.body.appendChild(btn);
