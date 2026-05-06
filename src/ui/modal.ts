@@ -515,6 +515,101 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
     <div class="atenna-modal__feature">Otimizado para IA moderna</div>
   `;
 
+  const inputGroup = document.createElement('div');
+  inputGroup.className = 'atenna-modal__login-group';
+
+  // Email com ícone
+  const emailWrapper = document.createElement('div');
+  emailWrapper.className = 'atenna-modal__input-wrapper';
+  const emailInput = document.createElement('input');
+  emailInput.type = 'email';
+  emailInput.className = 'atenna-modal__login-input';
+  emailInput.placeholder = 'seu@email.com';
+  emailInput.autocomplete = 'email';
+  const emailIcon = document.createElement('span');
+  emailIcon.className = 'atenna-modal__input-icon-left';
+  emailIcon.textContent = '✉';
+  emailWrapper.appendChild(emailIcon);
+  emailWrapper.appendChild(emailInput);
+
+  // Senha com ícone + eye toggle
+  const passwordWrapper = document.createElement('div');
+  passwordWrapper.className = 'atenna-modal__input-wrapper';
+  const passwordInput = document.createElement('input');
+  passwordInput.type = 'password';
+  passwordInput.className = 'atenna-modal__login-input';
+  passwordInput.placeholder = 'Sua senha';
+  passwordInput.autocomplete = 'current-password';
+  const pwdIcon = document.createElement('span');
+  pwdIcon.className = 'atenna-modal__input-icon-left';
+  pwdIcon.textContent = '⚿';
+  const eyeToggle = document.createElement('button');
+  eyeToggle.className = 'atenna-modal__input-icon-right';
+  eyeToggle.type = 'button';
+  eyeToggle.textContent = '○';
+  eyeToggle.title = 'Mostrar senha';
+  eyeToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    const isPassword = passwordInput.type === 'password';
+    passwordInput.type = isPassword ? 'text' : 'password';
+    eyeToggle.title = isPassword ? 'Esconder senha' : 'Mostrar senha';
+  });
+  passwordWrapper.appendChild(pwdIcon);
+  passwordWrapper.appendChild(passwordInput);
+  passwordWrapper.appendChild(eyeToggle);
+
+  const btn = document.createElement('button');
+  btn.className = 'atenna-modal__login-btn';
+  btn.textContent = 'Entrar';
+
+  const status = document.createElement('div');
+  status.className = 'atenna-modal__login-status';
+
+  const handleClick = async () => {
+    const email = emailInput.value.trim();
+    const pwd = passwordInput.value;
+
+    if (!email) {
+      status.textContent = 'Informe seu email';
+      status.classList.remove('atenna-modal__login-status--error', 'atenna-modal__login-status--success');
+      status.classList.add('atenna-modal__login-status--warning');
+      return;
+    }
+    if (!pwd) {
+      status.textContent = 'Informe sua senha';
+      status.classList.remove('atenna-modal__login-status--error', 'atenna-modal__login-status--success');
+      status.classList.add('atenna-modal__login-status--warning');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Entrando…';
+    status.textContent = '';
+
+    const result = await signInWithMagicLink(email);
+    if (result.error) {
+      status.textContent = result.error;
+      status.classList.remove('atenna-modal__login-status--success');
+      status.classList.add('atenna-modal__login-status--error');
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+    } else {
+      status.innerHTML = '<strong>Verifique seu email!</strong><br>Clique no link de confirmação para entrar.';
+      status.classList.remove('atenna-modal__login-status--error');
+      status.classList.add('atenna-modal__login-status--success');
+      emailInput.disabled = true;
+      passwordInput.disabled = true;
+      btn.style.display = 'none';
+    }
+  };
+
+  btn.addEventListener('click', handleClick);
+  [emailInput, passwordInput].forEach(input => {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') void handleClick();
+    });
+  });
+
   const linksDiv = document.createElement('div');
   linksDiv.className = 'atenna-modal__login-links';
 
@@ -531,11 +626,19 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
   linksDiv.appendChild(signupLink);
   linksDiv.appendChild(resetLink);
 
+  inputGroup.appendChild(emailWrapper);
+  inputGroup.appendChild(passwordWrapper);
+  inputGroup.appendChild(btn);
+
   wrap.appendChild(title);
   wrap.appendChild(subtitle);
   wrap.appendChild(features);
+  wrap.appendChild(inputGroup);
+  wrap.appendChild(status);
   wrap.appendChild(linksDiv);
   container.appendChild(wrap);
+
+  emailInput.focus();
 }
 
 function renderSignupView(container: HTMLElement, switchView: (view: string) => void): void {

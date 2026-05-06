@@ -763,12 +763,15 @@
 .atenna-modal__input-wrapper {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: stretch;
+  width: 100%;
 }
 
 .atenna-modal__input-icon-left {
   position: absolute;
   left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--at-text);
   opacity: 0.5;
   font-size: 16px;
@@ -777,25 +780,38 @@
 }
 
 .atenna-modal__input-wrapper .atenna-modal__login-input {
+  width: 100%;
   padding-left: 40px;
+  padding-right: 40px;
 }
 
 .atenna-modal__input-icon-right {
   position: absolute;
-  right: 12px;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 40px;
   background: none;
   border: none;
   color: var(--at-text);
   opacity: 0.5;
   font-size: 16px;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 0;
   transition: opacity 150ms ease;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .atenna-modal__input-icon-right:hover {
   opacity: 0.8;
+}
+
+.atenna-modal__input-icon-right:focus {
+  outline: none;
+  opacity: 1;
 }
 
 .atenna-modal__login-input {

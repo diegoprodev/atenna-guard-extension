@@ -1,5 +1,5 @@
-const BACKEND_URL   = 'http://localhost:8000/generate-prompts';
-const ANALYTICS_URL = 'http://localhost:8000/track';
+const BACKEND_URL   = 'https://atennnaplugin.maestro-n8n.site/generate-prompts';
+const ANALYTICS_URL = 'https://atennnaplugin.maestro-n8n.site/track';
 const JWT_KEY       = 'atenna_jwt';
 
 function decodeJwtPayload(token: string): Record<string, unknown> {
