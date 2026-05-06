@@ -119,11 +119,7 @@ export async function resetPassword(email: string): Promise<{ error?: string }> 
 }
 
 function getCallbackUrl(): string {
-  try {
-    return chrome.runtime.getURL('auth-callback.html');
-  } catch {
-    return `${SUPABASE_URL}/auth/v1/callback`;
-  }
+  return 'https://atennnaplugin.maestro-n8n.site/auth/callback';
 }
 
 export async function signOut(): Promise<void> {

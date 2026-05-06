@@ -124,19 +124,12 @@ function isDark(): boolean {
 export function toggleModal(): void {
   const existing = document.getElementById(OVERLAY_ID);
   if (existing) { clearMsgInterval(); existing.remove(); return; }
-  openModal();
+  void openModal();
 }
 
 // ─── Build modal skeleton ──────────────────────────────────
 
-function openModal(): void {
-  const platformInput = getCurrentInput();
-  const userText      = platformInput ? getInputText(platformInput).trim() : '';
-  const cacheHit      = promptCache !== null && promptCache.forText === userText && userText !== '';
-  // 'edit'    = "Criar Prompt" tab (user writes/edits text + clicks Gerar)
-  // 'prompts' = "Meus Prompts" tab (shows the 3 generated cards)
-  const defaultTab    = (userText !== '' || cacheHit) ? 'prompts' : 'edit';
-
+async function openModal(): Promise<void> {
   const overlay = document.createElement('div');
   overlay.id = OVERLAY_ID;
   overlay.className = 'atenna-modal-overlay';
@@ -147,14 +140,65 @@ function openModal(): void {
   modal.setAttribute('aria-modal', 'true');
   modal.setAttribute('aria-label', 'Atenna Prompt');
 
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // ── Close handler ────────────────────────────────────
+  const close = () => { clearMsgInterval(); overlay.remove(); };
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
+  };
+  document.addEventListener('keydown', onKey);
+
+  // Show loading state
+  renderLoading(modal);
+
+  // ── Auth Gate: Check session FIRST ───────────────────
+  const session = await getActiveSession();
+
+  if (!session) {
+    // No session: show ONLY login screen
+    const logoUrl = getLogoUrl();
+    const logoImg = logoUrl
+      ? `<img src="${logoUrl}" width="22" height="22" alt="" aria-hidden="true"/>`
+      : '';
+
+    modal.innerHTML = `
+      <div class="atenna-modal__header">
+        <span class="atenna-modal__title">${logoImg}Atenna Prompt</span>
+        <button class="atenna-modal__close" aria-label="Fechar">×</button>
+      </div>
+      <div class="atenna-modal__body">
+        <div class="atenna-modal__view" data-view="login"></div>
+      </div>
+    `;
+
+    const loginView = modal.querySelector<HTMLElement>('[data-view="login"]')!;
+    const switchAuthView = (view: string) => {
+      if (view === 'login') renderLoginView(loginView, switchAuthView);
+      else if (view === 'signup') renderSignupView(loginView, switchAuthView);
+      else if (view === 'reset') renderResetView(loginView, switchAuthView);
+    };
+    switchAuthView('login');
+
+    modal.querySelector('.atenna-modal__close')!.addEventListener('click', close);
+    return;
+  }
+
+  // ── Session exists: Render full app ──────────────────
+  await syncPlanFromSupabase(session);
+
+  const platformInput = getCurrentInput();
+  const userText      = platformInput ? getInputText(platformInput).trim() : '';
+  const cacheHit      = promptCache !== null && promptCache.forText === userText && userText !== '';
+  const defaultTab    = (userText !== '' || cacheHit) ? 'prompts' : 'edit';
+
   const logoUrl = getLogoUrl();
   const logoImg = logoUrl
     ? `<img src="${logoUrl}" width="22" height="22" alt="" aria-hidden="true"/>`
     : '';
 
-  // Tab labels swapped from original:
-  // data-tab="edit"    → "Criar Prompt" (write text, click Gerar)
-  // data-tab="prompts" → "Meus Prompts" (3 generated cards)
   const editActive    = defaultTab === 'edit'    ? ' atenna-modal__tab--active' : '';
   const promptsActive = defaultTab === 'prompts' ? ' atenna-modal__tab--active' : '';
   const editSelected    = String(defaultTab === 'edit');
@@ -232,21 +276,13 @@ function openModal(): void {
     </div>
   `;
 
-  // User text goes via .value — never innerHTML
   const editorEl    = modal.querySelector<HTMLTextAreaElement>('.atenna-modal__editor')!;
   editorEl.value    = platformInput ? getInputText(platformInput) : '';
 
   const promptsView = modal.querySelector<HTMLElement>('[data-view="prompts"]')!;
   const usageBadge  = modal.querySelector<HTMLElement>('.atenna-modal__usage')!;
 
-  // ── Close ──────────────────────────────────────────────
-  const close = () => { clearMsgInterval(); overlay.remove(); };
   modal.querySelector('.atenna-modal__close')!.addEventListener('click', close);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
-  };
-  document.addEventListener('keydown', onKey);
 
   // ── Tab toggle ─────────────────────────────────────────
   const tabs  = modal.querySelectorAll<HTMLButtonElement>('.atenna-modal__tab');
@@ -311,54 +347,30 @@ function openModal(): void {
     void isPro().then(pro => runFlow(promptsView, usageBadge, text, platformInput, overlay, origin, pro));
   });
 
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
-
   // ── Auto-generate / show cache / idle ─────────────────
-  // Show spinner synchronously so it's visible on the very first paint
-  if (!cacheHit && userText !== '') renderLoading(promptsView);
+  const [usage, pro] = await Promise.all([getUsage(), isPro()]);
+  updateUsageBadge(usageBadge, usage.count, pro);
 
-  void (async () => {
-    const session = await getActiveSession();
-
-    // No session: show login view with auth flow
-    if (!session) {
-      const switchAuthView = (view: string) => {
-        if (view === 'login') renderLoginView(promptsView, switchAuthView);
-        else if (view === 'signup') renderSignupView(promptsView, switchAuthView);
-        else if (view === 'reset') renderResetView(promptsView, switchAuthView);
-      };
-      switchAuthView('login');
-      return;
+  if (cacheHit) {
+    renderPrompts(promptsView, promptCache!.data, platformInput, overlay, 'manual');
+  } else if (userText !== '') {
+    if (!cacheHit && userText !== '') renderLoading(promptsView);
+    if (pro && isVagueInput(userText)) {
+      void track('auto_suggestion_shown');
+      renderSuggestion(
+        promptsView,
+        () => {
+          void track('auto_suggestion_accepted');
+          switchTab('edit');
+          builderEl.classList.add('atenna-modal__builder--open');
+          builderToggleEl.classList.add('atenna-modal__builder-toggle--open');
+        },
+        () => runFlow(promptsView, usageBadge, userText, platformInput, overlay, 'auto', pro),
+      );
+    } else {
+      void runFlow(promptsView, usageBadge, userText, platformInput, overlay, 'auto', pro);
     }
-
-    // Session exists: sync plan and continue
-    await syncPlanFromSupabase(session);
-
-    const [usage, pro] = await Promise.all([getUsage(), isPro()]);
-    updateUsageBadge(usageBadge, usage.count, pro);
-
-    if (cacheHit) {
-      renderPrompts(promptsView, promptCache!.data, platformInput, overlay, 'manual');
-    } else if (userText !== '') {
-      if (pro && isVagueInput(userText)) {
-        void track('auto_suggestion_shown');
-        renderSuggestion(
-          promptsView,
-          () => {
-            void track('auto_suggestion_accepted');
-            switchTab('edit');
-            builderEl.classList.add('atenna-modal__builder--open');
-            builderToggleEl.classList.add('atenna-modal__builder-toggle--open');
-          },
-          () => runFlow(promptsView, usageBadge, userText, platformInput, overlay, 'auto', pro),
-        );
-      } else {
-        runFlow(promptsView, usageBadge, userText, platformInput, overlay, 'auto', pro);
-      }
-    }
-    // Empty input: badge already shown, stay on "Criar Prompt" tab
-  })();
+  }
 
   (modal.querySelector('.atenna-modal__close') as HTMLButtonElement).focus();
 }

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(python C:\\\\tmp\\\\setup_secrets_vps.py)"
+    ]
+  }
+}
