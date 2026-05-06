@@ -1058,45 +1058,51 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
   const status = document.createElement('div');
   status.className = 'atenna-modal__login-status';
 
+  const setStatus = (msg: string, type: 'error' | 'warning' | 'success' | '') => {
+    status.textContent = msg;
+    status.classList.remove('atenna-modal__login-status--error', 'atenna-modal__login-status--warning', 'atenna-modal__login-status--success');
+    if (type) status.classList.add(`atenna-modal__login-status--${type}`);
+  };
+
+  // Real-time confirm password check
+  confirmInput.addEventListener('blur', () => {
+    const pwd = passwordInput.value;
+    const confirm = confirmInput.value;
+    if (confirm && pwd !== confirm) setStatus('As senhas não conferem', 'warning');
+    else if (confirm && pwd === confirm) setStatus('Senhas conferem ✓', 'success');
+  });
+  confirmInput.addEventListener('input', () => {
+    const pwd = passwordInput.value;
+    const confirm = confirmInput.value;
+    if (confirm && pwd === confirm) setStatus('Senhas conferem ✓', 'success');
+    else if (confirm) setStatus('As senhas não conferem', 'warning');
+    else setStatus('', '');
+  });
+
   const handleClick = async () => {
     const email = emailInput.value.trim();
     const pwd = passwordInput.value;
     const confirm = confirmInput.value;
 
-    if (!email) {
-      status.textContent = 'Informe seu email';
-      status.classList.add('atenna-modal__login-status--warning');
-      return;
-    }
-    if (pwd.length < 6) {
-      status.textContent = 'Senha deve ter no mínimo 6 caracteres';
-      status.classList.add('atenna-modal__login-status--warning');
-      return;
-    }
-    if (pwd !== confirm) {
-      status.textContent = 'As senhas não conferem';
-      status.classList.add('atenna-modal__login-status--warning');
-      return;
-    }
+    if (!email) { setStatus('Informe seu email', 'warning'); return; }
+    if (pwd.length < 6) { setStatus('Senha deve ter no mínimo 6 caracteres', 'warning'); return; }
+    if (pwd !== confirm) { setStatus('As senhas não conferem', 'warning'); return; }
 
     void trackEvent('signup_submitted', { input_length: email.length });
 
     btn.disabled = true;
     btn.textContent = 'Criando…';
-    status.textContent = '';
-    status.classList.remove('atenna-modal__login-status--error', 'atenna-modal__login-status--warning');
+    setStatus('', '');
 
     const result = await signUpWithPassword(email, pwd);
     if (result.error) {
       void trackEvent('signup_error', { error: result.error });
-      status.textContent = result.error;
-      status.classList.add('atenna-modal__login-status--error');
+      setStatus(result.error, 'error');
       btn.disabled = false;
       btn.textContent = 'Criar conta';
     } else {
       void trackEvent('signup_success');
-      status.innerHTML = '<strong>Conta criada!</strong><br>Verifique seu email e clique no link de confirmação.';
-      status.classList.add('atenna-modal__login-status--success');
+      setStatus('Conta criada! Verifique seu email e clique no link de confirmação.', 'success');
       emailInput.disabled = true;
       passwordInput.disabled = true;
       confirmInput.disabled = true;
