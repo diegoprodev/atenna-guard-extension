@@ -1,6 +1,6 @@
 """
-DLP telemetry — lightweight event log.
-Writes structured JSON events to stdout (picked up by log aggregator).
+DLP telemetry — structured JSON event log.
+Writes to stdout; consumed by log aggregator or CloudWatch.
 """
 from __future__ import annotations
 
@@ -27,22 +27,74 @@ def entity_detected(
     _emit("dlp_entity_detected", {
         "entity_type": entity_type,
         "risk_level":  risk_level,
-        "score":       score,
+        "score":       round(score, 4),
         "session_id":  session_id,
     })
 
 
 def high_risk(score: float, entity_types: list[str], session_id: str | None) -> None:
     _emit("dlp_high_risk", {
-        "score":        score,
+        "score":        round(score, 4),
         "entity_types": entity_types,
         "session_id":   session_id,
     })
 
 
-def scan_complete(duration_ms: float, risk_level: RiskLevel, session_id: str | None) -> None:
-    _emit("dlp_scan_complete", {
-        "duration_ms": duration_ms,
-        "risk_level":  risk_level,
+def warning_shown(risk_level: RiskLevel, session_id: str | None) -> None:
+    _emit("dlp_warning_shown", {"risk_level": risk_level, "session_id": session_id})
+
+
+def send_override(risk_level: RiskLevel, session_id: str | None) -> None:
+    _emit("dlp_send_override", {"risk_level": risk_level, "session_id": session_id})
+
+
+def false_positive_feedback(
+    entity_type: str,
+    session_id:  str | None,
+    user_id:     str | None = None,
+) -> None:
+    _emit("dlp_false_positive_feedback", {
+        "entity_type": entity_type,
         "session_id":  session_id,
+        "user_id":     user_id,
+    })
+
+
+def scan_complete(
+    duration_ms: float,
+    risk_level:  RiskLevel,
+    session_id:  str | None,
+    entity_count: int = 0,
+) -> None:
+    _emit("dlp_scan_complete", {
+        "duration_ms":  round(duration_ms, 2),
+        "risk_level":   risk_level,
+        "entity_count": entity_count,
+        "session_id":   session_id,
+    })
+
+
+def latency(
+    phase:       str,  # "client" | "backend" | "total"
+    duration_ms: float,
+    session_id:  str | None,
+) -> None:
+    _emit("dlp_latency", {
+        "phase":       phase,
+        "duration_ms": round(duration_ms, 2),
+        "session_id":  session_id,
+    })
+
+
+def risk_distribution(
+    risk_level:   RiskLevel,
+    entity_types: list[str],
+    score:        float,
+    platform:     str | None,
+) -> None:
+    _emit("dlp_risk_distribution", {
+        "risk_level":   risk_level,
+        "entity_types": entity_types,
+        "score":        round(score, 4),
+        "platform":     platform,
     })

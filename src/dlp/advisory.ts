@@ -1,27 +1,36 @@
 // Advisory engine — translates scan result into UX decision.
-// Decides whether/how to surface the DLP warning.
+// Tone: intelligent and responsible, never alarmist or juridical.
 
 import type { ScanResult, Advisory, RiskLevel } from './types';
 
+// No emojis — clean, premium, contextual
 const MESSAGES: Record<RiskLevel, string> = {
   NONE:   '',
   LOW:    'Verifique se há informações sensíveis antes de enviar.',
-  MEDIUM: 'Possível informação sensível detectada. Revise antes de enviar.',
-  HIGH:   'Informação sensível detectada. Revise antes de enviar.',
+  MEDIUM: 'Detectamos um possível dado sensível. Revise antes de continuar.',
+  HIGH:   'Identificamos informação pessoal no texto. Revise antes de enviar.',
+};
+
+// Subtitle per level — more context, less alarm
+const SUBTITLES: Record<RiskLevel, string> = {
+  NONE:   '',
+  LOW:    'Pode ser seguro — confirme antes de prosseguir.',
+  MEDIUM: 'Considere remover ou substituir os dados identificados.',
+  HIGH:   'Dados pessoais expostos podem comprometer sua privacidade.',
 };
 
 const PRIMARY_CTA: Record<RiskLevel, string> = {
   NONE:   '',
-  LOW:    'Enviar',
-  MEDIUM: 'Revisar',
-  HIGH:   'Revisar',
+  LOW:    'Continuar',
+  MEDIUM: 'Revisar texto',
+  HIGH:   'Revisar texto',
 };
 
 const SECONDARY_CTA: Record<RiskLevel, string | null> = {
   NONE:   null,
   LOW:    null,
-  MEDIUM: 'Enviar mesmo assim',
-  HIGH:   'Enviar mesmo assim',
+  MEDIUM: 'Enviar assim mesmo',
+  HIGH:   'Enviar assim mesmo',
 };
 
 export function buildAdvisory(result: ScanResult): Advisory {
@@ -35,4 +44,9 @@ export function buildAdvisory(result: ScanResult): Advisory {
     secondaryCta: SECONDARY_CTA[riskLevel],
     entities,
   };
+}
+
+// Subtitle exposed for modal rendering
+export function getAdvisorySubtitle(level: RiskLevel): string {
+  return SUBTITLES[level];
 }

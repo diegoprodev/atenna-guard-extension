@@ -4,6 +4,67 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.9.0] — 2026-05-06 (DLP v2 — PT-BR Consolidado + Scoring Contextual)
+
+### Changed — `src/dlp/patterns.ts`
+- CPF: digit-verifier em TypeScript (`validateCPF`) — rejeita matematicamente inválidos
+- CNPJ: digit-verifier (`validateCNPJ`) com pesos oficiais
+- Credit card: Luhn check (`luhn`) — elimina falsos positivos em números aleatórios
+- API_KEY expandido: `sk-proj-` (OpenAI), `sk-ant-` (Anthropic), `AKIA…` (AWS), `AIza…` (Google/Gemini)
+- TOKEN: JWT `eyJ…` com 3 segmentos base64 obrigatórios
+- Phone BR: padrões separados para mobile (9 dígito) e fixo
+- CEP mantido com confiança reduzida (0.60)
+
+### Changed — `src/dlp/semantic.ts`
+- Novo hint `IS_PII_DISCLOSURE`: detecta frases "meu cpf é", "minha senha é" etc — override total para HIGH
+- `IS_PROTECTION_QUERY` expandido: "como mascarar", "anonimizar", "sanitizar", "redact", "pseudonimizar"
+- `IS_EXAMPLE_REQUEST` expandido: "exemplo de api key", "cpf de exemplo", "como funciona"
+- `IS_TECHNICAL_QUESTION` expandido: "gerar cpf", "calcular dígito verificador", "mock", "faker"
+- `isPiiDisclosure()` exportado; sobrepõe qualquer low-risk intent no scorer
+
+### Changed — `src/dlp/scorer.ts`
+- `IS_PII_DISCLOSURE` força HIGH (score ≥ 68) mesmo sem match de regex
+- `IS_EXAMPLE_REQUEST` multiplier: 0.20 → 0.18
+- `IS_PROTECTION_QUERY` multiplier: novo 0.12
+- PII awareness floor: sem entidades mas texto menciona conceitos sensíveis (cpf, api key, dados médicos) + contexto educacional/proteção → LOW (score 22)
+- `computeScore` recebe `rawText?` opcional para concept matching
+- Low-risk sempre vence sobre high-risk quando ambos presentes
+
+### Changed — `src/dlp/advisory.ts`
+- Emojis completamente removidos (🛡 etc.)
+- Mensagens premium, tom inteligente não-alarmista
+- Subtítulo por nível exposto via `getAdvisorySubtitle(level)`
+- CTAs: "Revisar texto" / "Enviar assim mesmo" (menos jurídico)
+
+### Changed — `backend/dlp/analyzer.py`
+- `CNPJRecognizer.validate_result()`: validação matemática completa com dois dígitos verificadores
+- `APIKeyRecognizer`: 9 padrões — OpenAI (sk-proj-, sk-), Anthropic (sk-ant-), AWS (AKIA), Google (AIza), Stripe, Bearer
+- `JWTRecognizer`: novo recognizer para tokens JWT `eyJ…`
+- `CreditCardRecognizer`: novo com Luhn check via `validate_result()`
+- `BRPhoneRecognizer`: dois padrões separados (mobile + fixo)
+
+### Changed — `backend/dlp/telemetry.py`
+- Novos eventos: `dlp_warning_shown`, `dlp_send_override`, `dlp_false_positive_feedback`
+- `dlp_latency`: phase (client/backend/total) + duration_ms
+- `dlp_risk_distribution`: risk_level + entity_types + score + platform
+- `dlp_scan_complete` agora inclui `entity_count`
+
+### Changed — `backend/dlp/pipeline.py`
+- Emite `dlp_latency("backend", ...)` e `dlp_risk_distribution(...)` após cada scan
+
+### Smoke Tests — 7/7 ✓
+| Caso | Texto | Esperado | Resultado |
+|------|-------|----------|-----------|
+| 1 | "meu cpf é 123" | HIGH | ✓ HIGH |
+| 2 | "regex validar cpf javascript" | NONE/LOW | ✓ NONE |
+| 3 | "como proteger dados médicos" | LOW | ✓ LOW |
+| 4 | "paciente com diabetes" | MEDIUM | ✓ MEDIUM |
+| 5 | "sk_live_abc123def456ghi789" | HIGH | ✓ HIGH |
+| 6 | "exemplo de API key" | LOW | ✓ LOW |
+| 7 | "como mascarar cpf" | LOW | ✓ LOW |
+
+---
+
 ## [2.8.0] — 2026-05-06 (Badge Centering + Pill Animation + Owl Zoom + Dot Tooltip)
 
 ### Fixed — Badge centering (causa raiz)

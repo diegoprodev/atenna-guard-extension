@@ -24,7 +24,7 @@ export function scan(text: string): ScanResult {
 
   const entities = scanPatterns(text);
   const hints    = detectSemanticHints(text);
-  const { score, riskLevel } = computeScore(entities, hints);
+  const { score, riskLevel } = computeScore(entities, hints, text);
 
   return {
     entities,

@@ -1,6 +1,6 @@
 """
 DLP pipeline orchestrator — runs full backend analysis and returns a ScanResponse.
-Designed to be called from the FastAPI route; raises no exceptions (returns safe default).
+Never raises: returns safe default on error so generation is never blocked.
 """
 from __future__ import annotations
 
@@ -24,19 +24,24 @@ def run(request: ScanRequest) -> ScanResponse:
             client_score=request.client_score,
         )
 
-        # Telemetry for entities
+        entity_types = [r.entity_type for r in results]
+
+        # Per-entity telemetry
         for r in results:
             telemetry.entity_detected(r.entity_type, risk_level, r.score, request.session_id)
+
         if risk_level == RiskLevel.HIGH:
-            telemetry.high_risk(score, [r.entity_type for r in results], request.session_id)
+            telemetry.high_risk(score, entity_types, request.session_id)
 
         duration_ms = (time.perf_counter() - t0) * 1000
-        telemetry.scan_complete(duration_ms, risk_level, request.session_id)
+
+        telemetry.latency("backend", duration_ms, request.session_id)
+        telemetry.risk_distribution(risk_level, entity_types, score, request.platform)
+        telemetry.scan_complete(duration_ms, risk_level, request.session_id, len(results))
 
         return build_response(risk_level, score, results, request.text, duration_ms)
 
     except Exception:
-        # Never fail the caller — return neutral on error
         duration_ms = (time.perf_counter() - t0) * 1000
         return ScanResponse(
             risk_level=RiskLevel.NONE,
