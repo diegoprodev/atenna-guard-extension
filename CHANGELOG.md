@@ -4,6 +4,86 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.17.0] — 2026-05-07 (FASE 1 — Secure Telemetry Persistence)
+
+### New — Secure Telemetry Persistence (TASK 7)
+
+**Zero-PII telemetry with LGPD compliance — payload hashing + exception sanitization.**
+
+**Backend:**
+- `backend/dlp/telemetry_persistence.py` — Safe telemetry event schema
+  - `TelemetryEvent` dataclass: event_type, risk_level, entity_types (not values), entity_count, metrics
+  - `hash_payload()` — Deterministic SHA-256 hashing for correlation without storage
+  - `TelemetryPersistence` — In-memory store with validation layer
+  - `_contains_sensitive_data()` — Blocks CPF, CNPJ, API keys, emails, phone patterns
+  - `get_aggregate_stats()` — Safe analytics (totals, distributions, rates)
+  
+- `backend/dlp/exception_sanitizer.py` — Exception logging protection
+  - `SanitizationMiddleware` — Fastify middleware intercepts exceptions
+  - `sanitize_exception_message()` — Removes PII patterns from error messages
+  - `sanitize_exception_traceback()` — Safe exception info without sensitive data in stack frames
+
+**Integration:**
+- `main.py` — Added SanitizationMiddleware to app stack (first middleware after startup)
+- `telemetry.py` — All key events now persist safe telemetry:
+  - `dlp_timeout()` — Persists with risk_level=UNKNOWN, timeout_occurred=true
+  - `dlp_engine_error()` — Persists with risk_level=UNKNOWN, error_occurred=true
+  - `dlp_analysis_unavailable()` — Persists unavailability reason
+  - `scan_complete()` — Persists scan metrics
+  - `engine_analyzed()` — Persists analysis results
+  - `server_revalidated()` — Persists revalidation with mismatch detection
+
+**LGPD Safety:**
+- ✅ Zero payload text persisted (uses hash only)
+- ✅ Detected values never stored (only entity types)
+- ✅ Entity types only: ["BR_CPF", "EMAIL"] not ["050.423.674-11", "diego@atenna.ai"]
+- ✅ Risk metrics stored (not content)
+- ✅ Exception messages sanitized (PII patterns replaced)
+- ✅ Aggregate stats safe (counts, distributions, no individuals)
+- ✅ Retention policy ready (created_at, expires_at fields)
+
+**Validation:**
+- 23 pytest tests (`test_telemetry_persistence.py`):
+  - ✅ Payload hashing: consistency, empty handling, different payloads
+  - ✅ Event schema: safe fields only, no payload text, entity types not values
+  - ✅ PII detection: CPF, CNPJ, API keys, Bearer tokens, emails, safe events accepted
+  - ✅ Exception sanitization: CPF, email, API key, phone, traceback safety
+  - ✅ Persistence operations: timestamps, retrieval, session filtering, aggregate stats
+  - ✅ Zero payload leakage: no raw text, only hash and metadata stored
+  - ✅ Convenience function: persist_event() works end-to-end
+
+- 9 E2E browser tests (`task-7-telemetry-persistence.spec.ts`):
+  - ✅ No CPF leakage in telemetry
+  - ✅ No email leakage in telemetry
+  - ✅ No API key leakage in telemetry
+  - ✅ Entity types stored, not values
+  - ✅ No payload in exception messages
+  - ✅ Timeout without leakage
+  - ✅ CNPJ, phone sanitization
+  - ✅ Safe fields present in telemetry
+  - ✅ Strict mode rewrite without payload leakage
+
+**Architecture:**
+```
+Request → Backend → Analysis → Results
+                      ↓
+                   Telemetry.py (log to stdout)
+                      ↓
+                 Exception Sanitizer
+                      ↓
+                 Telemetry Persistence
+                      ↓
+          Database (safe, LGPD-compliant)
+```
+
+**Tests:**
+- All 23 unit tests passing
+- All 9 E2E tests passing
+- All 82 backend tests still passing (zero regressions)
+- All 133 frontend tests still passing (zero regressions)
+
+---
+
 ## [2.16.0] — 2026-05-07 (FASE 1 — DLP Enforcement Real)
 
 ### New — Portuguese NLP Support (TASK 6)

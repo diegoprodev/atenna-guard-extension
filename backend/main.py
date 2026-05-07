@@ -10,12 +10,16 @@ from routes.dlp import router as dlp_router
 from middleware.auth import require_auth
 from dlp.enforcement import evaluate_strict_enforcement
 from dlp import engine, telemetry
+from dlp.exception_sanitizer import SanitizationMiddleware
 
 app = FastAPI(
     title="Atenna Guard Prompt — Backend",
     description="Gera 3 versões otimizadas de prompt usando Gemini Flash 1.5",
     version="1.0.0",
 )
+
+# TASK 7: Exception Sanitization (prevent PII leakage in error logs)
+app.add_middleware(SanitizationMiddleware)
 
 # CORS enterprise — apenas origens autorizadas
 app.add_middleware(

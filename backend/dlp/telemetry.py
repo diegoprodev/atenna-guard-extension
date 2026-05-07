@@ -1,6 +1,8 @@
 """
 DLP telemetry — structured JSON event log.
 Writes to stdout; consumed by log aggregator or CloudWatch.
+
+TASK 7: Also persists safe telemetry to database (zero PII).
 """
 from __future__ import annotations
 
@@ -8,6 +10,7 @@ import json
 import time
 from typing import Any
 from .entities import RiskLevel
+from .telemetry_persistence import persist_event
 
 
 def _emit(event: str, payload: dict[str, Any]) -> None:
@@ -73,6 +76,15 @@ def scan_complete(
         "session_id":   session_id,
     })
 
+    # TASK 7: Persist safe telemetry event (zero PII)
+    persist_event(
+        event_type="dlp_scan_complete",
+        risk_level=risk_level,
+        entity_count=entity_count,
+        duration_ms=duration_ms,
+        session_id=session_id,
+    )
+
 
 def latency(
     phase:       str,  # "client" | "backend" | "total"
@@ -108,6 +120,7 @@ def engine_analyzed(
     risk_level: str,
     entity_count: int,
     duration_ms: float,
+    entity_types: list[str] | None = None,
 ) -> None:
     """Engine completed analysis."""
     _emit("dlp_engine_analyzed", {
@@ -117,6 +130,17 @@ def engine_analyzed(
         "entity_count": entity_count,
         "duration_ms": round(duration_ms, 2),
     })
+
+    # TASK 7: Persist safe telemetry event (zero PII)
+    persist_event(
+        event_type="dlp_engine_analyzed",
+        risk_level=risk_level,
+        entity_types=entity_types or [],
+        entity_count=entity_count,
+        duration_ms=duration_ms,
+        source=source,
+        session_id=session_id,
+    )
 
 
 def mismatch_detected(
@@ -142,6 +166,8 @@ def server_revalidated(
     client_risk: str,
     server_risk: str,
     protected_tokens_detected: bool,
+    entity_types: list[str] | None = None,
+    entity_count: int = 0,
 ) -> None:
     """Server-side revalidation completed."""
     _emit("dlp_server_revalidated", {
@@ -151,6 +177,18 @@ def server_revalidated(
         "server_risk": server_risk,
         "protected_tokens_detected": protected_tokens_detected,
     })
+
+    # TASK 7: Persist safe telemetry event (zero PII)
+    persist_event(
+        event_type="dlp_server_revalidated",
+        risk_level=server_risk,
+        entity_types=entity_types or [],
+        entity_count=entity_count,
+        had_mismatch=(client_risk != server_risk),
+        source="server",
+        endpoint="/generate-prompts",
+        session_id=session_id,
+    )
 
 
 # ─── TASK 5: Timeout Safety ──────────────────────────────────
@@ -167,8 +205,19 @@ def dlp_timeout(
         "endpoint": endpoint,
         "duration_ms": round(duration_ms, 2),
         "source": source,
-        "status": "fallback_none",  # Fell back to NONE risk
+        "status": "fallback_unknown",  # Fell back to UNKNOWN risk
     })
+
+    # TASK 7: Persist safe telemetry event (zero PII)
+    persist_event(
+        event_type="dlp_timeout",
+        risk_level="UNKNOWN",  # Conservative: analysis unavailable
+        timeout_occurred=True,
+        duration_ms=duration_ms,
+        source=source,
+        endpoint=endpoint,
+        session_id=session_id,
+    )
 
 
 def dlp_engine_error(
@@ -186,6 +235,16 @@ def dlp_engine_error(
         "status": "fallback_unknown",  # Fell back to UNKNOWN risk
     })
 
+    # TASK 7: Persist safe telemetry event (zero PII)
+    persist_event(
+        event_type="dlp_engine_error",
+        risk_level="UNKNOWN",  # Conservative: analysis unavailable
+        error_occurred=True,
+        duration_ms=duration_ms,
+        endpoint=endpoint,
+        session_id=session_id,
+    )
+
 
 def dlp_analysis_unavailable(
     session_id: str | None,
@@ -201,3 +260,12 @@ def dlp_analysis_unavailable(
         "duration_ms": round(duration_ms, 2),
         "risk_level": "UNKNOWN",
     })
+
+    # TASK 7: Persist safe telemetry event (zero PII)
+    persist_event(
+        event_type="dlp_analysis_unavailable",
+        risk_level="UNKNOWN",
+        duration_ms=duration_ms,
+        endpoint=endpoint,
+        session_id=session_id,
+    )
