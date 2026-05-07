@@ -185,6 +185,7 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
     const d = dot as HTMLElement;
     d.classList.remove('atenna-btn__dot--medium', 'atenna-btn__dot--high');
     d.classList.add('atenna-btn__dot--typing');
+    d.setAttribute('data-tip', 'Digitando...');
     clearTimeout(typingTimer);
     typingTimer = setTimeout(() => {
       d.classList.remove('atenna-btn__dot--typing');
@@ -209,13 +210,20 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   };
 }
 
+const DLP_TIPS: Record<string, string> = {
+  HIGH:   '⚠ Dados sensíveis detectados',
+  MEDIUM: '◉ Atenção: possível dado sensível',
+  LOW:    '✓ Baixo risco',
+  NONE:   '✓ Tudo seguro',
+};
+
 export function updateBadgeDotRisk(level: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH'): void {
   const dot = document.querySelector('#atenna-guard-btn .atenna-btn__dot') as HTMLElement | null;
   if (!dot) return;
   dot.classList.remove('atenna-btn__dot--typing', 'atenna-btn__dot--medium', 'atenna-btn__dot--high');
+  dot.setAttribute('data-tip', DLP_TIPS[level] ?? '✓ Tudo seguro');
   if (level === 'HIGH')        dot.classList.add('atenna-btn__dot--high');
   else if (level === 'MEDIUM') dot.classList.add('atenna-btn__dot--medium');
-  // NONE/LOW: idle animation (no extra class)
 }
 
 export function removeButton(inputSelector: string): void {
