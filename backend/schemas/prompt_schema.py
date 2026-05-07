@@ -10,6 +10,11 @@ class DlpMetadataRequest(BaseModel):
     dlp_was_rewritten: bool = False
     dlp_user_override: bool = False
     dlp_client_score: int = 0
+    # Strict mode metadata (populated by backend enforcement)
+    dlp_strict_mode: bool = False
+    dlp_server_revalidated: bool = False
+    dlp_server_rewrite_applied: bool = False
+    dlp_final_payload_sanitized: bool = False
 
 
 class PromptRequest(BaseModel):
