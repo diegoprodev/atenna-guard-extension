@@ -706,6 +706,27 @@ async function openModal(): Promise<void> {
       toggleRow.appendChild(toggleLabel);
       toggleRow.appendChild(toggleInput);
 
+      // ── Uso section ─────────────────────────────────────
+      const divUso = document.createElement('div');
+      divUso.className = 'atenna-modal__account-divider';
+
+      const usoTitle = document.createElement('div');
+      usoTitle.className = 'atenna-modal__account-section';
+      usoTitle.textContent = 'Uso';
+
+      const usoRow1 = document.createElement('div');
+      usoRow1.className = 'atenna-modal__account-usage-row';
+      const usoRow2 = document.createElement('div');
+      usoRow2.className = 'atenna-modal__account-usage-row';
+
+      // Populate async
+      Promise.all([getUsage(), isPro(), getTotalCount()]).then(([usg, proUser, total]) => {
+        const limit = pro ? '∞' : String(DAILY_LIMIT);
+        usoRow1.innerHTML = `<span>Hoje</span><span>${usg.count}/${limit}</span>`;
+        usoRow2.innerHTML = `<span>Total</span><span>${total}</span>`;
+        void proUser;
+      });
+
       const logoutBtn = document.createElement('button');
       logoutBtn.className = 'atenna-modal__account-logout';
       logoutBtn.innerHTML = '⎋ &nbsp;Sair da conta';
@@ -721,6 +742,10 @@ async function openModal(): Promise<void> {
       menu.appendChild(divPersonal);
       menu.appendChild(sectionTitle);
       menu.appendChild(toggleRow);
+      menu.appendChild(divUso);
+      menu.appendChild(usoTitle);
+      menu.appendChild(usoRow1);
+      menu.appendChild(usoRow2);
 
       if (!pro) {
         const divAccount = document.createElement('div');

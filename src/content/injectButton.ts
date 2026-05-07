@@ -85,9 +85,22 @@ function showProtectionBanner(
   const uniqueTypes = [...new Set(entities.map(e => e.type))];
   const count = uniqueTypes.length;
 
+  // Header row: title + close button
+  const header = document.createElement('div');
+  header.className = 'atenna-protection-banner__header';
+
   const msg = document.createElement('p');
   msg.className   = 'atenna-protection-banner__msg';
   msg.textContent = `Dados sensíveis detectados${count > 1 ? ` (${count})` : ''}`;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className   = 'atenna-protection-banner__close';
+  closeBtn.textContent = '×';
+  closeBtn.setAttribute('aria-label', 'Fechar');
+  closeBtn.addEventListener('click', () => dismissProtectionBanner());
+
+  header.appendChild(msg);
+  header.appendChild(closeBtn);
 
   const sub = document.createElement('p');
   sub.className   = 'atenna-protection-banner__sub';
@@ -114,7 +127,7 @@ function showProtectionBanner(
 
   actions.appendChild(protectBtn);
   actions.appendChild(ignoreBtn);
-  banner.appendChild(msg);
+  banner.appendChild(header);
   banner.appendChild(sub);
   banner.appendChild(actions);
   document.body.appendChild(banner);
@@ -314,7 +327,18 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
 
   Promise.resolve().then(() => applyDefaultPosition(btn, input));
 
-  const update = () => positionButton(btn, input);
+  // Track input top so when input grows, savedPos adjusts accordingly
+  let lastInputTop = input.getBoundingClientRect().top;
+
+  const update = () => {
+    const newTop = input.getBoundingClientRect().top;
+    if (savedPos && Math.abs(newTop - lastInputTop) > 1) {
+      savedPos.top += newTop - lastInputTop;
+    }
+    lastInputTop = newTop;
+    positionButton(btn, input);
+  };
+
   window.addEventListener('scroll', update, { passive: true });
   window.addEventListener('resize', update, { passive: true });
 
@@ -344,17 +368,16 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
         return;
       }
       const result = scan(text);
-      const highEntities = result.entities.filter(e => result.riskLevel === 'HIGH');
-      updateBadgeDotRisk(result.riskLevel, result.entities.length);
+      const uniqueCount = new Set(result.entities.map(e => e.type)).size;
+      updateBadgeDotRisk(result.riskLevel, uniqueCount);
 
       if (result.riskLevel === 'HIGH') {
         if (autoBannerEnabled) showProtectionBanner(input, btn, result.entities);
         else { lastEntities = result.entities; lastScanInput = input; lastBannerBtn = btn; }
       } else {
         dismissProtectionBanner();
-        if (result.riskLevel !== 'HIGH') { lastEntities = []; }
+        lastEntities = [];
       }
-      void highEntities;
     }, 400);
   };
   input.addEventListener('input', onInput);

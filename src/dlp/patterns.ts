@@ -54,10 +54,16 @@ function luhn(raw: string): boolean {
 // Must: ≥1 word with 4+ chars, ≤1 word of only stopwords, not a known keyword sequence
 
 const NAME_STOPWORDS = new Set([
+  // Tech keywords
   'CPF', 'CNPJ', 'CEP', 'API', 'KEY', 'JWT', 'SQL', 'HTTP', 'HTTPS', 'URL',
   'GET', 'POST', 'PUT', 'DEL', 'AWS', 'RDS', 'IAM', 'VPC', 'PDF', 'CSV',
   'XML', 'JSON', 'HTML', 'CSS', 'OAB', 'CRM', 'RG', 'CNH', 'CTF', 'STF', 'STJ',
   'CODIGO', 'CODE', 'TOKEN', 'BEARER', 'SECRET', 'SENHA', 'EMAIL', 'USER',
+  // Portuguese common words that must not be interpreted as name parts
+  'NOME', 'MEU', 'TEU', 'SEU', 'MINHA', 'MEUS', 'SEUS', 'TEUS',
+  'EU', 'ELE', 'ELA', 'OU', 'OS', 'AS', 'UM', 'UMA', 'COM',
+  'NO', 'NA', 'NOS', 'NAS', 'NUM', 'NUMA',
+  'POR', 'PARA', 'SEM', 'SOB', 'AOS', 'AO',
 ]);
 
 function validateName(raw: string): boolean {
