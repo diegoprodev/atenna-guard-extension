@@ -111,19 +111,22 @@
   overflow: visible; /* allow dot ripple to bleed outside — looks intentional */
 }
 
-/* Coruja PNG — fundo transparente gerado pelo script */
+/* Coruja PNG — centralizada via absolute para ignorar flex do pai */
 .atenna-btn__icon {
-  width: 42px;
-  height: 42px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 46px;
+  height: 46px;
   object-fit: contain;
   display: block;
-  flex-shrink: 0;
   animation: atenna-icon-shine 3.5s ease-in-out infinite;
   transition: transform 600ms cubic-bezier(0.34, 1.2, 0.64, 1);
 }
 
 .atenna-btn:hover .atenna-btn__icon {
-  transform: scale(1.06) rotate(3deg);
+  transform: translate(-50%, -50%) scale(1.06) rotate(3deg);
 }
 
 /* Pulse ring — coruja "respira" no estado recolhido */
