@@ -4,6 +4,96 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.20.0] — 2026-05-07 (FASE 2.4 — Retention & Operational Governance)
+
+### New — Retention & Operational Governance
+
+**Lifecycle management for DLP telemetry with automatic purging based on risk severity.**
+
+**Database Migrations:**
+- `supabase/migrations/20260507_dlp_retention_policy.sql` — Core retention infrastructure
+  - `dlp_retention_policies` table: Risk levels (CRITICAL/HIGH/MEDIUM/LOW/SAFE/UNKNOWN) with retention days (180/120/60/30/30/90)
+  - `dlp_retention_logs` table: Audit trail of all purge executions (execution_id, event_type, records_purged, duration_ms)
+  - `dlp_storage_metrics` table: Daily snapshots of storage and growth metrics
+  - `purge_expired_events()` function: Batch-safe deletion (1000-5000 records per batch)
+  - `update_storage_metrics()` function: Calculate daily storage estimates and growth rates
+  - `calculate_expiration()` function: Auto-compute expires_at from risk level policy
+  - `trigger_set_event_expiration`: Trigger that auto-calculates expiration on event insert
+  - RLS policies for data isolation and audit logging
+
+- `supabase/migrations/20260507_user_dlp_stats_sync.sql` — User statistics sync
+  - `user_dlp_stats` enrichment with automatic sync triggers
+  - `increment_user_dlp_stats()` function: Atomically update protection counters
+  - `trigger_update_stats_on_scan()`: Auto-increment stats on dlp_scan_complete events
+  - `calculate_user_protection_rate()` function: Compute protection metrics
+  - `user_dlp_summary` view: Read-only protection statistics per user
+
+**Backend:**
+- `backend/dlp/retention_manager.py` — Python retention engine
+  - `RetentionPolicy` class: Policy definitions (180/120/60/30 days by risk level)
+  - `RetentionManager` class: 
+    - `purge_expired_events()` — Batch-safe deletion with idempotent execution IDs
+    - `update_storage_metrics()` — Calculate growth rate, storage estimate, retention average
+    - `get_retention_summary()` — Events expiring in 1/7/30 days
+    - `get_retention_policies()` — Fetch from database
+    - `validate_retention_config()` — Verify policies are setup
+  - Fallback mode (works without Supabase)
+  - Safe batch handling (max 5000 records, 300s timeout)
+
+- `backend/routes/retention.py` — REST API endpoints
+  - `GET /retention/health` — Health check + configuration status
+  - `GET /retention/policies` — Fetch retention policies
+  - `GET /retention/summary` — Events expiring soon (1/7/30 day windows)
+  - `GET /retention/metrics` — Storage metrics (growth, estimate, avg retention)
+  - `POST /retention/purge?batch_size=1000` — Trigger batch purge (admin operation)
+  - `POST /retention/validate-config` — Validate retention setup
+
+**Tests (29 new):**
+- `backend/dlp/test_retention_manager.py` — Comprehensive unit tests
+  - TestRetentionPolicy: Policy definitions, ranges, defaults
+  - TestRetentionManager: Initialization, batch safety, idempotency
+  - TestRetentionScenarios: Real-world purge scenarios
+  - TestRetentionDataIntegrity: Data loss prevention, soft delete capability
+  - TestRetentionPerformance: Batch sizes, timeouts, concurrency
+
+- `tests/e2e/fase-2.4-retention-governance.spec.ts` — E2E validation
+  - Policies configured for all risk levels
+  - Expiration summary (events expiring in 1/7/30 days)
+  - Storage metrics calculation
+  - Purge job triggering
+  - Idempotent execution (safe retries)
+  - Batch size limits respected
+  - Growth rate reasonableness
+  - Storage estimate consistency
+
+**Governance Features:**
+- ✅ LGPD-aligned retention (proportional to severity)
+- ✅ Automatic expiration calculation (trigger on insert)
+- ✅ Batch-safe purging (prevents large locks)
+- ✅ Idempotent execution (safe for cron retry)
+- ✅ Concurrent execution protection (pg_advisory_lock pattern)
+- ✅ Audit trail (dlp_retention_logs table)
+- ✅ Telemetry for purges (dlp_retention_completed/failed events)
+- ✅ Storage metrics (daily snapshots)
+- ✅ Growth monitoring (rate_pct, estimate_mb)
+- ✅ User statistics sync (protection_count, tokens_estimated, scans_total)
+
+**Execution Options:**
+1. Supabase cron (pg_cron) — Automated daily at 2AM UTC
+2. Backend worker — APScheduler-based job scheduling
+3. Manual trigger — Via REST API `/retention/purge`
+
+**Integration:**
+- `backend/main.py`: Added retention router
+- `requirements.txt`: No new dependencies (uses existing supabase client)
+
+**Tests Status:**
+- ✅ 29/29 unit tests passing
+- ✅ 10/10 E2E tests ready (need backend running)
+- ✅ Zero regressions (124+ total tests still passing)
+
+---
+
 ## [2.19.0] — 2026-05-07 (FASE 2.1 — E2E Anti-Vazamento Definitivo)
 
 ### New — E2E Anti-Vazamento Test Suite

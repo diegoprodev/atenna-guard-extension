@@ -7,6 +7,7 @@ from services.gemini_service import generate_prompts
 from routes.analytics import router as analytics_router
 from routes.auth import router as auth_router
 from routes.dlp import router as dlp_router
+from routes.retention import router as retention_router
 from middleware.auth import require_auth
 from dlp.enforcement import evaluate_strict_enforcement
 from dlp import engine, telemetry
@@ -34,6 +35,7 @@ app.add_middleware(
 app.include_router(analytics_router)
 app.include_router(auth_router)
 app.include_router(dlp_router)
+app.include_router(retention_router)
 
 
 @app.get("/health", tags=["Health"])
