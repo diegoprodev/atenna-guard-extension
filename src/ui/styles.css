@@ -51,25 +51,26 @@
   z-index: 999999;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
-  /* Always a 42px circle — label floats outside to the left */
   width: 42px;
   height: 42px;
-  border-radius: 50%;
+  border-radius: 21px;
   padding: 0;
   background: #22c55e;
   box-shadow: 0 2px 12px rgba(34, 197, 94, 0.45);
-  overflow: visible; /* label expands left, not clipped */
+  overflow: hidden;
 
   transition:
-    background   400ms cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow   400ms cubic-bezier(0.4, 0, 0.2, 1),
-    border-radius 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    width        500ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-radius 400ms cubic-bezier(0.4, 0, 0.2, 1),
+    background   400ms ease,
+    box-shadow   400ms ease;
 
   animation: atenna-badge-in 900ms cubic-bezier(0.34, 1.2, 0.64, 1) both;
 }
 
 .atenna-btn:hover {
-  border-radius: 50%;
+  width: 148px;
+  border-radius: 14px;
   background: #16a34a;
   box-shadow:
     0 8px 28px rgba(0, 0, 0, 0.25),
@@ -86,31 +87,39 @@
   filter: brightness(0.88);
 }
 
-/* ── Icon wrapper — fills the circle exactly ── */
+/* ── Icon wrapper — anchored RIGHT, never moves as pill expands ── */
 
 .atenna-btn__icon-wrap {
   position: absolute;
-  inset: 0;
+  right: 0;
+  top: 0;
+  width: 42px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
   overflow: visible;
 }
 
-/* Coruja PNG — centrada no círculo */
+/* Coruja: zoom-out ao expandir, zoom-in ao recolher */
 .atenna-btn__icon {
   width: 46px;
   height: 46px;
   object-fit: contain;
   display: block;
   flex-shrink: 0;
+  transform: scale(1);
+  opacity: 1;
   animation: atenna-icon-shine 3.5s ease-in-out infinite;
-  transition: transform 600ms cubic-bezier(0.34, 1.2, 0.64, 1);
+  transition:
+    transform 220ms cubic-bezier(0.4, 0, 0.6, 1),
+    opacity   180ms ease;
 }
 
 .atenna-btn:hover .atenna-btn__icon {
-  transform: scale(1.06) rotate(3deg);
+  transform: scale(0);
+  opacity: 0;
+  animation: none;
 }
 
 /* Pulse ring — coruja "respira" no estado recolhido */
@@ -129,13 +138,14 @@
   50%       { opacity: 0.9; transform: scale(1.08); }
 }
 
-/* Status dot — dentro do círculo verde, pulsa via scale */
+/* Status dot — bottom-right do botão (não do icon-wrap) */
 .atenna-btn__dot {
   position: absolute;
   bottom: 5px;
   right: 5px;
   width: 7px;
   height: 7px;
+  z-index: 1;
   border-radius: 50%;
   background: rgba(255,255,255,0.85);
   border: none;
@@ -176,32 +186,30 @@
   50%       { transform: scale(1.7); opacity: 1;   }
 }
 
-/* ── Label — floats to the LEFT of the circle ── */
+/* ── Label — inside the pill at left side ── */
 
 .atenna-btn__label {
   position: absolute;
-  right: 46px; /* sits just left of the 42px circle + 4px gap */
+  left: 14px;
   top: 50%;
-  transform: translateY(-50%) translateX(8px);
+  transform: translateY(-50%) translateX(-6px);
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: #16a34a;
-  border-radius: 10px;
-  padding: 6px 12px;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   transition:
-    opacity   250ms ease 150ms,
-    transform 350ms cubic-bezier(0.34, 1.2, 0.64, 1) 100ms;
+    opacity   180ms ease 0ms,
+    transform 200ms ease 0ms;
 }
 
 .atenna-btn:hover .atenna-btn__label {
   opacity: 1;
   transform: translateY(-50%) translateX(0);
   pointer-events: auto;
+  transition:
+    opacity   200ms ease 280ms,
+    transform 250ms cubic-bezier(0.34, 1.2, 0.64, 1) 250ms;
 }
 
 .atenna-btn__name {

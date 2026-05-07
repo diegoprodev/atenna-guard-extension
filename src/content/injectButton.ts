@@ -152,10 +152,9 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
     iconWrap.appendChild(img);
   }
 
-  // Status dot
+  // Status dot — on btn directly so it stays visible when owl zooms out
   const dot = document.createElement('span');
   dot.className = 'atenna-btn__dot';
-  iconWrap.appendChild(dot);
 
   // Expandable label (hidden by default, revealed on hover)
   const label = document.createElement('span');
@@ -169,6 +168,7 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
 
   btn.appendChild(iconWrap);
   btn.appendChild(label);
+  btn.appendChild(dot);
   addDragBehavior(btn, onToggle);
 
   document.body.appendChild(btn);
