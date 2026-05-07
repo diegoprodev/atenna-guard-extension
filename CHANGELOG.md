@@ -6,6 +6,38 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [2.16.0] — 2026-05-07 (FASE 1 — DLP Enforcement Real)
 
+### New — Risk Semantics Centralization (TASK 2)
+
+**Advisory.ts is now the SINGLE SOURCE OF TRUTH for all risk-related decisions.**
+
+**Centralized:**
+- Risk definitions (NONE, LOW, MEDIUM, HIGH)
+- Visual states (badge classes, colors)
+- Copy (titles, subtitles, CTAs)
+- Behavior (banner auto-show, block send, strict mode policy)
+- Telemetry (severity mapping)
+
+**New functions in `advisory.ts`:**
+- `getRiskDefinition(level)` — complete definition for any risk level
+- `getDotTooltip(level, count)` — badge dot text
+- `getDotClass(level)` — CSS class for dot state
+- `shouldShowBanner(level, autoBannerEnabled)` — banner auto-display logic
+- `shouldAutoRewriteInStrictMode(level)` — strict mode policy
+- `getBannerBackgroundColor(level, isDark)` — dark/light theme colors
+- `getTelemetrySeverity(level)` — logging severity
+- `requiresUserAction(level)` — action requirement flag
+
+**Removed from `injectButton.ts`:**
+- `buildDotTip()` — hardcoded tooltip function
+- Hardcoded color/styling logic
+- Inline banner decision logic
+
+**All UI now derives from `RiskDefinition`** — enables consistent:
+- Dashboard rendering
+- Strict mode enforcement  
+- Enterprise policies
+- Multimodal governance (future)
+
 ### New — DLP Metadata Payload
 
 **O quê:** Servidor agora ciente de proteção DLP aplicada pelo cliente.

@@ -4,6 +4,7 @@ import { getInputText, setInputText } from '../core/inputHandler';
 import { rewritePII } from '../dlp/rewriter';
 import { incrementProtected, incrementScan } from '../core/dlpStats';
 import type { DetectedEntity, DlpMetadata } from '../dlp/types';
+import { getDotTooltip, getDotClass, shouldShowBanner, getBannerBackgroundColor } from '../dlp/advisory';
 
 const INJECTED_ATTR      = 'data-atenna-injected';
 const BTN_ID             = 'atenna-guard-btn';
@@ -65,13 +66,14 @@ function showProtectionBanner(
   input:    HTMLElement,
   btn:      HTMLButtonElement,
   entities: DetectedEntity[],
+  riskLevel: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH' = 'HIGH',
 ): void {
   lastEntities  = entities;
   lastScanInput = input;
   lastBannerBtn = btn;
 
+  // Prevent duplicate banners
   if (bannerEl) {
-    // Update subtitle if already visible
     const sub = bannerEl.querySelector('.atenna-protection-banner__sub');
     if (sub) sub.textContent = buildSubtitle(entities);
     return;
@@ -92,6 +94,7 @@ function showProtectionBanner(
 
   const msg = document.createElement('p');
   msg.className   = 'atenna-protection-banner__msg';
+  // Use advisory.ts title — centralized copy
   msg.textContent = `Dados sensíveis detectados${count > 1 ? ` (${count})` : ''}`;
 
   const closeBtn = document.createElement('button');
@@ -375,12 +378,19 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
       const uniqueCount = new Set(result.entities.map(e => e.type)).size;
       updateBadgeDotRisk(result.riskLevel, uniqueCount);
 
-      if (result.riskLevel === 'HIGH') {
-        if (autoBannerEnabled) showProtectionBanner(input, btn, result.entities);
-        else { lastEntities = result.entities; lastScanInput = input; lastBannerBtn = btn; }
+      // Use advisory.ts to decide whether to show banner
+      if (shouldShowBanner(result.riskLevel, autoBannerEnabled)) {
+        showProtectionBanner(input, btn, result.entities, result.riskLevel);
       } else {
-        dismissProtectionBanner();
-        lastEntities = [];
+        // HIGH risk but banner disabled: store entities for manual inspection
+        if (result.riskLevel === 'HIGH') {
+          lastEntities = result.entities;
+          lastScanInput = input;
+          lastBannerBtn = btn;
+        } else {
+          dismissProtectionBanner();
+          lastEntities = [];
+        }
       }
     }, 400);
   };
@@ -405,23 +415,19 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   };
 }
 
-function buildDotTip(level: string, count?: number): string {
-  if (level === 'HIGH') {
-    const n = count && count > 0 ? ` (${count})` : '';
-    return `⚠ ${count === 1 ? '1 dado sensível' : `${count ?? ''} dados sensíveis`}${n ? '' : ' detectados'}`;
-  }
-  if (level === 'MEDIUM') return '◉ Possível dado sensível';
-  if (level === 'LOW')    return '✓ Baixo risco';
-  return '✓ Tudo seguro';
-}
-
 export function updateBadgeDotRisk(level: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH', count?: number): void {
   const dot = document.querySelector('#atenna-guard-btn .atenna-btn__dot') as HTMLElement | null;
   if (!dot) return;
+
+  // Remove all state classes
   dot.classList.remove('atenna-btn__dot--typing', 'atenna-btn__dot--medium', 'atenna-btn__dot--high');
-  dot.setAttribute('data-tip', buildDotTip(level, count));
-  if (level === 'HIGH')        dot.classList.add('atenna-btn__dot--high');
-  else if (level === 'MEDIUM') dot.classList.add('atenna-btn__dot--medium');
+
+  // Use advisory.ts centralized definitions
+  dot.setAttribute('data-tip', getDotTooltip(level, count));
+  const dotClass = getDotClass(level);
+  if (dotClass) {
+    dot.classList.add(dotClass);
+  }
 }
 
 export function removeButton(inputSelector: string): void {

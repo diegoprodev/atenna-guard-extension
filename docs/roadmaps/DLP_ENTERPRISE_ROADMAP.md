@@ -771,10 +771,10 @@ A principal métrica do Atenna DLP é:
 | Semantic hints | - | ✅ IMPLEMENTADO | 7+ contexts |
 | Badge + dot | - | ✅ IMPLEMENTADO | Drag, colors |
 | DLP Stats | - | ⚠️ PARCIAL | Migration pending |
-| /generate-prompts awareness | 1 | ✅ IMPLEMENTADO | v2.16.0 |
+| /generate-prompts awareness | 1 | ✅ IMPLEMENTADO | v2.16.0 — Task 1 |
 | Server-side revalidation | 1 | ⏳ PENDENTE | Re-analyze HIGH |
 | Strict mode | 1 | ⏳ PENDENTE | Pro feature |
-| advisory.ts integration | 1 | ⏳ PENDENTE | Remover hardcoded |
+| advisory.ts integration | 1 | ✅ IMPLEMENTADO | v2.16.0 — Task 2 |
 | Telemetry calls | 1 | ⏳ PENDENTE | warning_shown, etc |
 | pt_core_news_sm | 1 | ⏳ PENDENTE | NLP PT-BR |
 | Timeout safety | 1 | ⏳ PENDENTE | 3s max |
