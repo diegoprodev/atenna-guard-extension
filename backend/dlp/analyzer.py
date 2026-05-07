@@ -140,7 +140,10 @@ def get_analyzer() -> AnalyzerEngine:
     """Build and cache the Presidio engine with all custom recognizers."""
     provider = NlpEngineProvider(nlp_configuration={
         "nlp_engine_name": "spacy",
-        "models": [{"lang_code": "en", "model_name": "en_core_web_sm"}],
+        "models": [
+            {"lang_code": "pt", "model_name": "pt_core_news_sm"},  # TASK 6: Portuguese NLP
+            {"lang_code": "en", "model_name": "en_core_web_sm"},
+        ],
     })
     nlp_engine = provider.create_engine()
     engine = AnalyzerEngine(nlp_engine=nlp_engine, supported_languages=["en", "pt"])
