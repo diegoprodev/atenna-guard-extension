@@ -6,6 +6,46 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [2.16.0] — 2026-05-07 (FASE 1 — DLP Enforcement Real)
 
+### New — Strict Mode Infrastructure (TASK 3)
+
+**Proteção rigorosa configurável — servidor pode reescrever HIGH-risk antes de Gemini.**
+
+**Backend:**
+- `backend/dlp/enforcement.py` — serviço de decisão + rewrite automático
+- `STRICT_DLP_MODE=false` por padrão (modo observação)
+- Se `STRICT_DLP_MODE=true` + HIGH risk → rewrite automático com tokens semânticos
+- Logs estruturados: `dlp_strict_evaluated`, `dlp_strict_would_apply`, `dlp_strict_applied`
+- Compatível com requests sem DLP metadata (fallback gracioso)
+
+**LGPD Validator Integration:**
+- `backend/dlp/lgpd_validator.py` — validação de 15 categorias obrigatórias
+- **Dados Pessoais:** CPF, CNPJ, RG, CNH, email, telefone, CEP, processo judicial
+- **Dados Sensíveis:** saúde (HIV, câncer, diabetes), religião, política, biometria, sindical, raça
+- **Dados Corporativos:** API keys (sk_live_/sk_test_), JWT, credenciais, cartão, segredos, legal docs, financeiro, confidencial, estratégico
+- Context-aware scoring: health/legal/financial/confidential context eleva severidade
+- Detecção de health keywords (diagnóstico, medicação, cirurgia, hospital, etc)
+- Detecção de legal context (parecer, processo, jurídico, sentença)
+- Detecção de financial context (salário, investimento, balanço, lucro)
+- Detecção de confidentiality markers (confidencial, secreto, interno, restrito)
+
+**Exemplos validados:**
+- "Paciente com HIV" → HIGH
+- "Parecer confidencial procuradoria" → MEDIUM/HIGH
+- "Contrato confidencial licitação" → MEDIUM/HIGH
+- "api_key=sk_live_abc..." → HIGH
+- "Cartão 4111111111111111" → HIGH
+
+**Tests:**
+- 17 testes enforcement (pytest) — decisão + rewrite logic
+- 33 testes LGPD validator — todas as 15 categorias + exemplos obrigatórios
+- 8 testes E2E (Playwright) — payload sanitization no navegador real
+- 133 testes frontend (Vitest) — sem regressões
+
+**Configuration:**
+- `.env.example` — `STRICT_DLP_MODE=false`
+- `playwright.config.ts` — E2E tests com Chromium
+- `vitest.config.ts` — exclusão de E2E do Vitest
+
 ### New — Risk Semantics Centralization (TASK 2)
 
 **Advisory.ts is now the SINGLE SOURCE OF TRUTH for all risk-related decisions.**
