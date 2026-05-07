@@ -3,7 +3,7 @@ import { scan } from '../dlp/detector';
 import { getInputText, setInputText } from '../core/inputHandler';
 import { rewritePII } from '../dlp/rewriter';
 import { incrementProtected, incrementScan } from '../core/dlpStats';
-import type { DetectedEntity } from '../dlp/types';
+import type { DetectedEntity, DlpMetadata } from '../dlp/types';
 
 const INJECTED_ATTR      = 'data-atenna-injected';
 const BTN_ID             = 'atenna-guard-btn';
@@ -434,4 +434,31 @@ export function removeButton(inputSelector: string): void {
   currentCleanup?.();
   currentCleanup = undefined;
   document.getElementById(BTN_ID)?.remove();
+}
+
+export function getDlpMetadata(): DlpMetadata {
+  const uniqueTypes = [...new Set(lastEntities.map(e => e.type))];
+  const dot = document.querySelector('#atenna-guard-btn .atenna-btn__dot') as HTMLElement | null;
+  const riskClass = dot?.className ?? '';
+
+  let riskLevel: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH' = 'NONE';
+  if (riskClass.includes('--high'))   riskLevel = 'HIGH';
+  else if (riskClass.includes('--medium')) riskLevel = 'MEDIUM';
+  else if (riskClass.includes('--low')) riskLevel = 'LOW';
+
+  const clientScore = Math.round(
+    uniqueTypes.length > 0
+      ? 50 + (uniqueTypes.length * 15)  // rough estimation: each entity type adds ~15 points
+      : 0
+  );
+
+  return {
+    dlp_enabled: true,
+    dlp_risk_level: riskLevel,
+    dlp_entity_types: uniqueTypes as any[],
+    dlp_entity_count: lastEntities.length,
+    dlp_was_rewritten: bannerEl === undefined && riskLevel === 'NONE',
+    dlp_user_override: false,  // will be set by caller if user ignored banner
+    dlp_client_score: clientScore,
+  };
 }

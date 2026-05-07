@@ -37,6 +37,17 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       return true;
     }
 
+    // Extract DLP metadata from message (passed by content script)
+    const dlpMetadata = msg.dlp || {
+      dlp_enabled: false,
+      dlp_risk_level: 'NONE',
+      dlp_entity_types: [],
+      dlp_entity_count: 0,
+      dlp_was_rewritten: false,
+      dlp_user_override: false,
+      dlp_client_score: 0,
+    };
+
     getStoredJWT().then(jwt => {
       // JWT is mandatory — reject silently if not present
       if (!jwt) {
@@ -50,7 +61,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           'Content-Type':  'application/json',
           'Authorization': `Bearer ${jwt}`,
         },
-        body: JSON.stringify({ input: inputText }),
+        body: JSON.stringify({
+          input: inputText,
+          dlp: dlpMetadata,
+        }),
       })
         .then(res => {
           if (res.status === 401) { sendResponse({ ok: false, error: 'auth_required', status: 401 }); return; }

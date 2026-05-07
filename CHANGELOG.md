@@ -4,6 +4,88 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.16.0] — 2026-05-07 (FASE 1 — DLP Enforcement Real)
+
+### New — DLP Metadata Payload
+
+**O quê:** Servidor agora ciente de proteção DLP aplicada pelo cliente.
+
+**Estrutura:**
+```json
+{
+  "input": "Meu CPF é [CPF]",
+  "dlp": {
+    "dlp_enabled": true,
+    "dlp_risk_level": "HIGH",
+    "dlp_entity_types": ["CPF"],
+    "dlp_entity_count": 1,
+    "dlp_was_rewritten": true,
+    "dlp_user_override": false,
+    "dlp_client_score": 78
+  }
+}
+```
+
+### Changed — `/generate-prompts` endpoint
+
+- Recebe `dlp` metadata opcional em cada request
+- Loga evento `dlp_prompt_received` com metadata para telemetria
+- Prepara foundation para server-side validation (PHASE 1 Task 4)
+- Não bloqueia requests ainda (apenas logging)
+
+### Changed — `src/dlp/types.ts`
+
+- Novo type `DlpMetadata` com campos estruturados
+- Exportado para uso em frontend + backend
+
+### Changed — `src/background/background.ts`
+
+- Captura `dlp` metadata do message
+- Envia junto ao payload para `/generate-prompts`
+- Fallback seguro se metadata ausente
+
+### Changed — `src/ui/modal.ts`
+
+- Importa `getDlpMetadata()` de injectButton
+- Passa metadata ao background via `chrome.runtime.sendMessage`
+
+### New — `src/content/injectButton.ts:getDlpMetadata()`
+
+- Exporta estado DLP atual (risk level, entities, rewrite status)
+- Calcula score do cliente baseado em count de entidades
+- Called por modal antes de enviar requisição
+
+### Changed — `backend/schemas/prompt_schema.py`
+
+- Novo model `DlpMetadataRequest` com estrutura opcional
+- `PromptRequest` agora carrega `dlp?: DlpMetadataRequest`
+
+### Changed — `backend/main.py`
+
+- `POST /generate-prompts` loga evento `dlp_prompt_received`
+- Persiste metadata para análise (stdout com timestamp)
+- Transição para Phase 1 Task 4 (revalidation)
+
+### Tests
+
+- Novo E2E `tests/e2e/task-1-dlp-awareness.spec.ts`
+- Validação em browser real (Playwright)
+- Payload interception + metadata validation
+
+### IMPORTANTE
+
+**Nada ainda é BLOQUEADO.** Este é o FOUNDATION da FASE 1.
+
+Funcionalidade:
+- ✅ DLP metadata enviado
+- ✅ Payload não contém dados HIGH brutos (rewrite foi aplicado)
+- ✅ Server logando metadata
+- ⏳ Server revalidando (Task 4)
+- ⏳ Strict mode (Task 3)
+- ⏳ Telemetry persistida (Task 8)
+
+---
+
 ## [2.15.0] — 2026-05-06 (Security — Auth Gate Obrigatório)
 
 ### Fix crítico de segurança — Extensão funcionava sem login

@@ -8,7 +8,7 @@ import type { PromptOrigin, PromptType } from '../core/analytics';
 import { scan } from '../dlp/detector';
 import { buildAdvisory } from '../dlp/advisory';
 import type { Advisory } from '../dlp/types';
-import { updateBadgeDotRisk, setAutoBanner } from '../content/injectButton';
+import { updateBadgeDotRisk, setAutoBanner, getDlpMetadata } from '../content/injectButton';
 import { getDlpStats, syncDlpStats } from '../core/dlpStats';
 
 const OVERLAY_ID  = 'atenna-modal-overlay';
@@ -1842,8 +1842,13 @@ export async function fetchPrompts(inputText: string): Promise<PromptData> {
 function sendToBackground(inputText: string): Promise<{ ok: boolean; data: unknown } | null> {
   return new Promise((resolve) => {
     try {
+      const dlpMetadata = getDlpMetadata();
       chrome.runtime.sendMessage(
-        { type: 'ATENNA_FETCH', input: inputText },
+        {
+          type: 'ATENNA_FETCH',
+          input: inputText,
+          dlp: dlpMetadata,
+        },
         (response: { ok: boolean; data: unknown } | null | undefined) => {
           if (chrome.runtime.lastError) { resolve(null); return; }
           resolve(response ?? null);

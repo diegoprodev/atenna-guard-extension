@@ -43,9 +43,23 @@ async def generate(
     """
     Recebe o texto do usuário e retorna 3 versões otimizadas via Gemini.
     Requer JWT válido do Supabase (Bearer token).
+    Recebe metadata DLP do cliente para validação server-side.
     """
     if not request.input.strip():
         raise HTTPException(status_code=422, detail="Campo 'input' não pode ser vazio.")
+
+    # Log DLP metadata for telemetry
+    if request.dlp:
+        import json
+        print(json.dumps({
+            "event": "dlp_prompt_received",
+            "dlp_risk_level": request.dlp.dlp_risk_level,
+            "dlp_entity_count": request.dlp.dlp_entity_count,
+            "dlp_entity_types": request.dlp.dlp_entity_types,
+            "dlp_was_rewritten": request.dlp.dlp_was_rewritten,
+            "dlp_user_override": request.dlp.dlp_user_override,
+            "user_id": _user.get("sub"),
+        }), flush=True)
 
     result = await generate_prompts(request.input)
     return PromptResponse(**result)

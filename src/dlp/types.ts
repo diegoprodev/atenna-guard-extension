@@ -30,3 +30,13 @@ export interface Advisory {
   secondaryCta: string | null;
   entities:    DetectedEntity[];
 }
+
+export interface DlpMetadata {
+  dlp_enabled: boolean;
+  dlp_risk_level: RiskLevel;
+  dlp_entity_types: EntityType[];
+  dlp_entity_count: number;
+  dlp_was_rewritten: boolean;
+  dlp_user_override: boolean;
+  dlp_client_score: number;
+}
