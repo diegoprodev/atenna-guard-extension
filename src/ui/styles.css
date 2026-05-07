@@ -113,8 +113,8 @@
 
 /* Coruja PNG — fundo transparente gerado pelo script */
 .atenna-btn__icon {
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   object-fit: contain;
   display: block;
   flex-shrink: 0;

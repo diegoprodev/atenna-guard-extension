@@ -145,8 +145,8 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
     const img = document.createElement('img');
     img.className = 'atenna-btn__icon';
     img.src    = logoUrl;
-    img.width  = 36;
-    img.height = 36;
+    img.width  = 42;
+    img.height = 42;
     img.alt    = '';
     img.setAttribute('aria-hidden', 'true');
     iconWrap.appendChild(img);
