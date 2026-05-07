@@ -4,6 +4,55 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.11.0] — 2026-05-06 (DLP Realtime — P0 Fix + Test Suite 99/99)
+
+### Fix crítico — DLP realtime
+
+**Causa raiz:** `onInput` em `injectButton.ts` nunca chamava `scan()`. A detecção DLP só disparava no clique do botão "Refinar" no modal — nenhum scan em realtime ocorria.
+
+### Changed — `src/content/injectButton.ts`
+- Wire `scan()` com debounce 400ms no handler `onInput` de cada input detectado
+- Ao `riskLevel === HIGH`: exibe `showProtectionBanner(input, btn, entities)` — banner flutuante abaixo do badge
+- `Proteger dados` → chama `rewritePII(text, entities)` + `setInputText()` + dismiss banner + `updateBadgeDotRisk('NONE')`
+- `Enviar original` → dismiss sem rewrite
+- Cleanup do banner no `currentCleanup()`
+
+### New — `src/dlp/rewriter.ts`
+- `rewritePII(text, entities)` — substitui entidades detectadas por tokens semânticos
+- Tokens: `[CPF]`, `[CNPJ]`, `[EMAIL]`, `[TELEFONE]`, `[API_KEY]`, `[TOKEN]`, `[SENHA]`, `[CARTAO]`, `[ENDERECO]`, `[PROCESSO]`, `[NOME]`, `[DADO]`
+- Substituição de trás para frente (offsets preservados)
+
+### Changed — `src/dlp/patterns.ts`
+- CNJ: `NNNNNNN-DD.AAAA.J.TR.OOOO` — confidence 0.97
+- NAME ALL-CAPS: `validateName()` com stopword guard (CPF, CNPJ, API, JWT, SQL…) — rejeita sequências de keywords
+
+### Changed — `src/dlp/types.ts`
+- `EntityType` expandido: `PROCESS_NUM`, `NAME`
+
+### Changed — `src/dlp/scorer.ts`
+- `PROCESS_NUM: 72`, `NAME: 30`
+
+### New — `src/ui/styles.css`
+- `.atenna-protection-banner` — banner realtime discreto (borda vermelha suave, animação slide-in 180ms)
+
+### New — `src/dlp/dlp.test.ts`
+- 7 smoke tests obrigatórios: CPF cru, CPF mascarado, Nome+CPF, CNJ, educacional→NONE, API key, JWT
+
+### Fixed — `src/ui/modal.ts`
+- Overlay criado e appendado ao DOM **antes** do primeiro `await` — garante acesso síncrono em testes
+
+### Fixed — test suite (21 → 0 falhas)
+- `usageCounter.test.ts`: `DAILY_LIMIT` 10→5
+- `injectButton.test.ts`: label `'Atenna Prompt'` → `'ATENNA'`
+- `modal.test.ts`: tab labels Criar Prompt→Refinar, Meus Prompts→Histórico; `flushModalInit()` helper; skeleton loading; limite diário; cache reopen
+
+### Benchmark
+- Scan local: **< 1ms** por input
+- Debounce: **400ms** após último keystroke
+- Test suite: **99/99 passando**
+
+---
+
 ## [2.10.0] — 2026-05-06 (Identidade — Clareza, Premium UX e Copy)
 
 ### Changed — `src/ui/modal.ts`

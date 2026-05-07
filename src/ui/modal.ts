@@ -397,7 +397,29 @@ export function toggleModal(): void {
 async function openModal(): Promise<void> {
   void trackEvent('modal_opened');
 
-  // Track daily return (metrics)
+  // Create and mount overlay synchronously — tests and UX see it immediately.
+  const overlay = document.createElement('div');
+  overlay.id = OVERLAY_ID;
+  overlay.className = 'atenna-modal-overlay';
+
+  const modal = document.createElement('div');
+  modal.className = isDark() ? 'atenna-modal atenna-modal--dark' : 'atenna-modal';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-label', 'Atenna');
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // ── Close handler ────────────────────────────────────
+  const close = () => { clearMsgInterval(); overlay.remove(); };
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
+  };
+  document.addEventListener('keydown', onKey);
+
+  // Track daily return (async — non-blocking)
   const today = new Date().toISOString().split('T')[0];
   const lastOpen = await new Promise<string | null>(resolve => {
     try { chrome.storage.local.get('atenna_last_open_date', r => resolve(r['atenna_last_open_date'] as string | null)); }
@@ -410,27 +432,6 @@ async function openModal(): Promise<void> {
     try { chrome.storage.local.set({ atenna_last_open_date: today }, resolve); }
     catch { resolve(undefined); }
   });
-
-  const overlay = document.createElement('div');
-  overlay.id = OVERLAY_ID;
-  overlay.className = 'atenna-modal-overlay';
-
-  const modal = document.createElement('div');
-  modal.className = isDark() ? 'atenna-modal atenna-modal--dark' : 'atenna-modal';
-  modal.setAttribute('role', 'dialog');
-  modal.setAttribute('aria-modal', 'true');
-  modal.setAttribute('aria-label', 'Atenna Prompt');
-
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
-
-  // ── Close handler ────────────────────────────────────
-  const close = () => { clearMsgInterval(); overlay.remove(); };
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
-  };
-  document.addEventListener('keydown', onKey);
 
   // ── Auth Gate: Check session FIRST ───────────────────
   const session = await getActiveSession();

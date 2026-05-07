@@ -64,6 +64,13 @@ function addTextarea(value = 'texto de teste') {
   return ta;
 }
 
+// ── Helper: flush just the modal init async chain ─────────
+// openModal: 2× chrome.storage awaits + getActiveSession + syncPlanFromSupabase + Promise.all(usage)
+// Each await = 1 microtask even when the mock callback fires synchronously.
+async function flushModalInit(): Promise<void> {
+  for (let i = 0; i < 16; i++) await Promise.resolve();
+}
+
 // ── Helper: flush the full async flow ─────────────────────
 // Modal init: getActiveSession → syncPlanFromSupabase (dynamic import + fetch) → getUsage/isPro → runFlow
 // runFlow: renderLoading → getUsage → sendMessage → renderSuccess (500ms) → incrementUsage → renderPrompts
@@ -128,8 +135,9 @@ describe('toggleModal', () => {
     expect(document.querySelectorAll('#atenna-modal-overlay').length).toBe(1);
   });
 
-  it('close button removes overlay', () => {
+  it('close button removes overlay', async () => {
     toggleModal();
+    await flushModalInit();
     (document.querySelector('.atenna-modal__close') as HTMLButtonElement).click();
     expect(document.getElementById('atenna-modal-overlay')).toBeNull();
   });
@@ -149,68 +157,77 @@ describe('toggleModal', () => {
 
   // ── Header structure ─────────────────────────────────────
 
-  it('renders header with 2 tabs and usage badge', () => {
+  it('renders header with 2 tabs and usage badge', async () => {
     toggleModal();
+    await flushModalInit();
     expect(document.querySelectorAll('.atenna-modal__tab').length).toBe(2);
     expect(document.querySelector('.atenna-modal__usage')).not.toBeNull();
   });
 
   // ── Tab labels and order ─────────────────────────────────
 
-  it('"Criar Prompt" is first tab, "Meus Prompts" is second', () => {
+  it('"Refinar" is first tab, "Histórico" is second', async () => {
     toggleModal();
+    await flushModalInit();
     const tabs = document.querySelectorAll<HTMLButtonElement>('.atenna-modal__tab');
     expect(tabs[0].dataset.tab).toBe('edit');
-    expect(tabs[0].textContent).toBe('Criar Prompt');
+    expect(tabs[0].textContent).toBe('Refinar');
     expect(tabs[1].dataset.tab).toBe('prompts');
-    expect(tabs[1].textContent).toBe('Meus Prompts');
+    expect(tabs[1].textContent).toBe('Histórico');
   });
 
-  it('"Criar Prompt" tab is active when input is empty', () => {
-    toggleModal(); // no textarea in DOM
+  it('"Refinar" tab is active when input is empty', async () => {
+    toggleModal();
+    await flushModalInit();
     const active = document.querySelector<HTMLButtonElement>('.atenna-modal__tab--active');
     expect(active?.dataset.tab).toBe('edit');
   });
 
-  it('"Meus Prompts" tab is active when input has text', () => {
+  it('"Histórico" tab is active when input has text', async () => {
     addTextarea('algum texto');
     toggleModal();
+    await flushModalInit();
     const active = document.querySelector<HTMLButtonElement>('.atenna-modal__tab--active');
     expect(active?.dataset.tab).toBe('prompts');
   });
 
   // ── Dark mode ────────────────────────────────────────────
 
-  it('no dark class on light background', () => {
+  it('no dark class on light background', async () => {
     toggleModal();
+    await flushModalInit();
     expect(document.querySelector('.atenna-modal--dark')).toBeNull();
   });
 
-  it('adds dark class on dark background', () => {
+  it('adds dark class on dark background', async () => {
     vi.spyOn(window, 'getComputedStyle').mockReturnValue(
       { backgroundColor: 'rgb(15, 15, 15)' } as CSSStyleDeclaration
     );
     toggleModal();
+    await flushModalInit();
     expect(document.querySelector('.atenna-modal--dark')).not.toBeNull();
   });
 
   // ── Empty input — no auto-generation ─────────────────────
 
-  it('no spinner on open when input is empty', () => {
+  it('no spinner on open when input is empty', async () => {
     toggleModal();
+    await flushModalInit();
     expect(document.querySelector('.atenna-modal__spinner')).toBeNull();
   });
 
-  it('shows spinner immediately when input has text', () => {
+  it('shows skeleton loading when input has text', async () => {
     addTextarea('algum texto');
     toggleModal();
-    expect(document.querySelector('.atenna-modal__spinner')).not.toBeNull();
+    await flushModalInit();
+    expect(document.querySelector('.atenna-skeleton-loading')).not.toBeNull();
   });
 
-  it('shows loading message immediately when input has text', () => {
+  it('shows loading message when input has text', async () => {
     addTextarea('algum texto');
     toggleModal();
-    expect(document.querySelector('.atenna-modal__loading-msg')).not.toBeNull();
+    await flushModalInit();
+    expect(document.querySelector('.atenna-skeleton-loading__msg')).not.toBeNull();
   });
 
   it('no generation happens when input is empty', async () => {
@@ -274,8 +291,8 @@ describe('toggleModal', () => {
     document.body.innerHTML = '';
     addTextarea('texto cacheado');
     toggleModal();
-    // Cache hit renders after getUsage+isPro microtask ticks
-    for (let i = 0; i < 8; i++) await Promise.resolve();
+    // Cache hit renders after full modal init
+    for (let i = 0; i < 16; i++) await Promise.resolve();
 
     const fetchCallsOnReopen = (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls
       .filter(([msg]: [{ type?: string }]) => msg.type === 'ATENNA_FETCH').length;
@@ -286,34 +303,32 @@ describe('toggleModal', () => {
 
   // ── Usage counter ────────────────────────────────────────
 
-  it('usage badge shows X/10 format after generation', async () => {
+  it('usage badge shows remaining generations after generation', async () => {
     addTextarea('algum texto');
     toggleModal();
     await waitForFlow();
     const badge = document.querySelector('.atenna-modal__usage')!;
-    expect(badge.textContent).toMatch(/^\d+\/10$/);
+    expect(badge.textContent).toMatch(/gerações restantes/);
   });
 
-  it('usage count is 1 after first generation', async () => {
+  it('usage badge shows 4 gerações restantes after first generation', async () => {
     addTextarea('algum texto');
     toggleModal();
     await waitForFlow();
-    expect(document.querySelector('.atenna-modal__usage')!.textContent).toBe('1/10');
+    expect(document.querySelector('.atenna-modal__usage')!.textContent).toBe('4 gerações restantes');
   });
 
   // ── Limit reached ────────────────────────────────────────
 
-  it('shows limit UI when count is at 15', async () => {
+  it('shows limit UI when daily count is at 5', async () => {
     addTextarea('algum texto');
     chromeStore['atenna_usage'] = {
-      count: 15,
-      resetDate: Date.now() + 30 * 24 * 60 * 60 * 1000,
+      count: 5,
+      resetDate: Date.now() + 24 * 60 * 60 * 1000,
     };
     toggleModal();
-    for (let i = 0; i < 12; i++) await Promise.resolve();
-    expect(document.querySelector('.atenna-modal__limit-icon')).not.toBeNull();
-    expect(document.querySelector('.atenna-modal__loading-msg')!.textContent)
-      .toContain('Limite mensal atingido');
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    expect(document.querySelector('.atenna-modal__limit-reached')).not.toBeNull();
   });
 
   it('usage badge shows danger class at limit', async () => {
@@ -351,11 +366,12 @@ describe('toggleModal', () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalled();
   });
 
-  // ── Edit tab (Criar Prompt) ───────────────────────────────
+  // ── Edit tab (Refinar) ───────────────────────────────────
 
-  it('"Criar Prompt" tab shows edit view when clicked', () => {
+  it('"Refinar" tab shows edit view when clicked', async () => {
     addTextarea('algum texto');
     toggleModal();
+    await flushModalInit();
     Array.from(document.querySelectorAll<HTMLButtonElement>('.atenna-modal__tab'))
       .find(t => t.dataset.tab === 'edit')!.click();
     expect(
@@ -364,16 +380,18 @@ describe('toggleModal', () => {
     ).toBe(false);
   });
 
-  it('editor textarea is pre-filled with platform input text', () => {
+  it('editor textarea is pre-filled with platform input text', async () => {
     addTextarea('texto do usuário no chat');
     toggleModal();
+    await flushModalInit();
     expect(
       document.querySelector<HTMLTextAreaElement>('.atenna-modal__editor')!.value
     ).toBe('texto do usuário no chat');
   });
 
-  it('Gerar button triggers flow and switches to Meus Prompts', async () => {
-    toggleModal(); // empty input — Criar Prompt tab active
+  it('Refinar button triggers flow and switches to Histórico', async () => {
+    toggleModal(); // empty input — Refinar tab active
+    await flushModalInit();
     const editor = document.querySelector<HTMLTextAreaElement>('.atenna-modal__editor')!;
     editor.value = 'meu texto para gerar';
     document.querySelector<HTMLButtonElement>('.atenna-modal__regen')!.click();
@@ -383,8 +401,9 @@ describe('toggleModal', () => {
     expect(document.querySelectorAll('.atenna-modal__card').length).toBe(3);
   });
 
-  it('Gerar button with empty editor does nothing', () => {
+  it('Refinar button with empty editor does nothing', async () => {
     toggleModal();
+    await flushModalInit();
     document.querySelector<HTMLButtonElement>('.atenna-modal__regen')!.click();
     // Should still be on edit tab (no switch)
     const activeTab = document.querySelector<HTMLButtonElement>('.atenna-modal__tab--active');

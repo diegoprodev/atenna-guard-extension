@@ -40,10 +40,10 @@ describe('injectButton', () => {
     expect(document.querySelectorAll('.atenna-btn').length).toBe(1);
   });
 
-  it('button label contains "Atenna Prompt"', () => {
+  it('button label contains "ATENNA"', () => {
     injectButton(chatgpt, () => {});
     const btn = document.getElementById('atenna-guard-btn') as HTMLButtonElement;
-    expect(btn.textContent).toContain('Atenna Prompt');
+    expect(btn.textContent).toContain('ATENNA');
   });
 
   it('button contains logo img', () => {

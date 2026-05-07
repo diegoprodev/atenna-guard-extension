@@ -74,8 +74,8 @@ describe('usageCounter', () => {
     expect(usage.resetDate).toBeGreaterThan(Date.now());
   });
 
-  it('DAILY_LIMIT is 10', () => {
-    expect(DAILY_LIMIT).toBe(10);
+  it('DAILY_LIMIT is 5', () => {
+    expect(DAILY_LIMIT).toBe(5);
   });
 });
 
