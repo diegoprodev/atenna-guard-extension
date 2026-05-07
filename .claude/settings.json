@@ -64,7 +64,21 @@
       "PowerShell(ssh -o StrictHostKeyChecking=no -i C:\\\\Users\\\\dgapc\\\\.ssh\\\\atenna-vps root@157.90.246.156 \"ls /root/atenna-backend/dlp/ && cat /root/atenna-backend/requirements.txt\")",
       "PowerShell(ssh -o StrictHostKeyChecking=no -i C:\\\\Users\\\\dgapc\\\\.ssh\\\\atenna-vps root@157.90.246.156 \"cd /root/atenna-backend && docker compose build --no-cache 2>&1 | tail -30 && docker compose up -d && sleep 3 && docker ps --format 'table {{.Names}}\\\\t{{.Status}}'\")",
       "PowerShell(ssh -o StrictHostKeyChecking=no -i C:\\\\Users\\\\dgapc\\\\.ssh\\\\atenna-vps root@157.90.246.156 \"sleep 8 && docker ps --format 'table {{.Names}}\\\\t{{.Status}}' && docker logs atenna-backend-backend-1 --tail 5 2>&1\")",
-      "Bash(Get-ChildItem -Path \"C:\\\\projetos\\\\atenna-guard-extension\\\\backend\" -Name \"*.py\" -Recurse)"
+      "Bash(Get-ChildItem -Path \"C:\\\\projetos\\\\atenna-guard-extension\\\\backend\" -Name \"*.py\" -Recurse)",
+      "Bash(python -m pytest backend/dlp/test_timeout.py -v --tb=short)",
+      "Bash(python -m pytest backend/dlp/ -v --tb=line)",
+      "Bash(python -m pytest dlp/ -v --tb=line)",
+      "Bash(npm test *)",
+      "Bash(python -m py_compile backend/main.py backend/dlp/engine.py backend/dlp/pipeline.py backend/dlp/enforcement.py backend/routes/dlp.py)",
+      "Bash(python -m py_compile main.py dlp/engine.py dlp/pipeline.py dlp/enforcement.py routes/dlp.py)",
+      "Bash(python -m pytest dlp/test_timeout.py -v --tb=short)",
+      "Bash(python -m pytest dlp/test_timeout.py::TestUnknownRiskLevel -v)",
+      "Bash(python -m pytest dlp/ -q)",
+      "Bash(python -m spacy download pt_core_news_sm)",
+      "Bash(python -m pip install spacy --quiet)",
+      "Bash(python dlp/benchmark_nlp.py)",
+      "Bash(tee /tmp/benchmark_output.txt)",
+      "PowerShell(pip install supabase)"
     ],
     "additionalDirectories": [
       "C:\\Users\\dgapc\\.claude\\plans",

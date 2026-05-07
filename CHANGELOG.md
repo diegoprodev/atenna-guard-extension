@@ -4,6 +4,73 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.18.0] — 2026-05-07 (FASE 2 — Persistent Telemetry)
+
+### New — Persistent Telemetry Database (FASE 2.2)
+
+**Database-backed telemetry — Supabase dlp_events table with zero PII, safe metrics only.**
+
+**Backend:**
+- `supabase/migrations/20260507000000_dlp_events.sql` — New dlp_events table
+  - User context: user_id, tenant_id
+  - Event metadata: event_type, risk_level, entity_types (types only, never values)
+  - Behavioral flags: was_rewritten, strict_mode, mismatch_detected, timeout_occurred, error_occurred
+  - Metrics: duration_ms, score (risk 0-100)
+  - Source info: provider, endpoint, session_id
+  - Correlation: hashed_payload_id (SHA-256[:16])
+  - Timestamps: created_at, expires_at (retention policy ready)
+  - Indexes: user_created, risk_level, entity_types (GIN), session, event_type
+  - RLS: Users read own events only; service role can insert
+
+- `backend/dlp/supabase_telemetry.py` — Supabase-backed persistence
+  - SupabaseTelemetryPersistence class extends TelemetryPersistence
+  - Persists to Supabase dlp_events table
+  - Fallback to in-memory if Supabase unavailable
+  - Zero PII validation before insert
+  - Emits dlp_telemetry_persistence_failed event on Supabase failure
+
+- `backend/dlp/analytics.py` — Safe analytics queries
+  - get_user_metrics(): user statistics by period (no PII)
+  - get_system_metrics(): system-wide aggregates
+  - get_entity_risk_matrix(): entity type vs risk distribution
+  - get_endpoint_performance(): latency p95/p99, timeout rates by endpoint
+  - All queries return only aggregated data (no individual events)
+
+**Integration:**
+- requirements.txt: Added supabase dependency
+- Service uses SupabaseTelemetryPersistence as default persistence layer
+
+**Tests (17 new):**
+- TestSupabaseInitialization: With/without credentials
+- TestSupabasePersistence: Safe event persist, reject CPF/email/API key
+- TestFallbackBehavior: Fallback to in-memory when Supabase fails
+- TestAggregateStats: Safe analytics queries
+- TestDataIntegrity: No raw payload, entity types only
+- TestMultipleEvents: Multiple event handling, filtering by session
+
+**RLS & Security:**
+- ✅ Row-Level Security enabled (users read own events)
+- ✅ User_id required for insert (service role bypasses)
+- ✅ Tenant_id nullable but prepared for multi-tenant
+- ✅ Validation before insert (no sensitive patterns)
+- ✅ Fallback mechanism (no data loss if Supabase unavailable)
+
+**Tests:**
+- 17 new unit tests (all passing)
+- 122/122 total DLP tests (zero regressions)
+- E2E tests prepared (fase2-2-persistent-telemetry.spec.ts)
+
+**LGPD Compliance:**
+- ✅ Zero payload text in database (hash only)
+- ✅ Zero sensitive values (entity_types only)
+- ✅ Exception sanitization via middleware (FASE 1.7)
+- ✅ Safe analytics queries (aggregates only)
+- ✅ Retention policy ready (created_at, expires_at)
+- ✅ RLS for user privacy
+- ✅ Validation before persistence
+
+---
+
 ## [2.17.0] — 2026-05-07 (FASE 1 — Secure Telemetry Persistence)
 
 ### New — Secure Telemetry Persistence (TASK 7)
