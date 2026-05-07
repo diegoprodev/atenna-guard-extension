@@ -9,12 +9,20 @@ let currentCleanup: (() => void) | undefined;
 let rafId:          number | undefined;
 let savedPos:       { top: number; left: number } | null = null;
 
-// ── Logo ────────────────────────────────────────────────────
-
-function getLogoUrl(): string {
-  try { return chrome.runtime.getURL('icons/icon128.png'); }
-  catch { return ''; }
-}
+// ── Owl SVG — inline, no PNG dependency, always transparent background ──
+const OWL_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="white" aria-hidden="true">
+  <polygon points="30,4 37,20 23,20"/>
+  <polygon points="70,4 77,20 63,20"/>
+  <circle cx="50" cy="36" r="27"/>
+  <ellipse cx="50" cy="74" rx="21" ry="23"/>
+  <circle cx="37" cy="33" r="11.5" fill="rgba(0,0,0,0.18)"/>
+  <circle cx="63" cy="33" r="11.5" fill="rgba(0,0,0,0.18)"/>
+  <circle cx="37" cy="33" r="6" fill="rgba(0,0,0,0.55)"/>
+  <circle cx="63" cy="33" r="6" fill="rgba(0,0,0,0.55)"/>
+  <circle cx="40" cy="30" r="2" fill="white"/>
+  <circle cx="66" cy="30" r="2" fill="white"/>
+  <polygon points="50,39 45,47 55,47" fill="rgba(251,191,36,0.9)"/>
+</svg>`;
 
 // ── Visual container detection ──────────────────────────────
 
@@ -133,7 +141,6 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
 
   container.setAttribute(INJECTED_ATTR, 'true');
 
-  const logoUrl = getLogoUrl();
   const btn = document.createElement('button');
   btn.id        = BTN_ID;
   btn.className = BTN_CLASS;
@@ -143,16 +150,10 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   const iconWrap = document.createElement('span');
   iconWrap.className = 'atenna-btn__icon-wrap';
 
-  if (logoUrl) {
-    const img = document.createElement('img');
-    img.className = 'atenna-btn__icon';
-    img.src    = logoUrl;
-    img.width  = 34;
-    img.height = 34;
-    img.alt    = '';
-    img.setAttribute('aria-hidden', 'true');
-    iconWrap.appendChild(img);
-  }
+  const owlEl = document.createElement('span');
+  owlEl.className = 'atenna-btn__icon';
+  owlEl.innerHTML = OWL_SVG;
+  iconWrap.appendChild(owlEl);
 
   // Status dot
   const dot = document.createElement('span');
