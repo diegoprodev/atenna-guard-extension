@@ -111,22 +111,15 @@
   overflow: visible; /* allow dot ripple to bleed outside — looks intentional */
 }
 
-/* Coruja SVG inline — fundo 100% transparente, reta e centralizada */
+/* Coruja PNG — fundo transparente gerado pelo script */
 .atenna-btn__icon {
-  width: 34px;
-  height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  display: block;
   flex-shrink: 0;
   animation: atenna-icon-shine 3.5s ease-in-out infinite;
   transition: transform 600ms cubic-bezier(0.34, 1.2, 0.64, 1);
-}
-
-.atenna-btn__icon svg {
-  width: 100%;
-  height: 100%;
-  display: block;
 }
 
 .atenna-btn:hover .atenna-btn__icon {
