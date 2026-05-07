@@ -98,17 +98,19 @@
   filter: brightness(0.88);
 }
 
-/* ── Icon wrapper (always visible, circular) ─────────── */
+/* ── Icon wrapper — absolute so flex-row-reverse never offsets it ── */
 
 .atenna-btn__icon-wrap {
-  position: relative;
-  flex-shrink: 0;
+  position: absolute;
+  top: 0;
+  right: 0;
   width: 42px;
   height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: visible; /* allow dot ripple to bleed outside — looks intentional */
+  overflow: visible;
+  pointer-events: none;
 }
 
 /* Coruja PNG — centralizada via absolute para ignorar flex do pai */
