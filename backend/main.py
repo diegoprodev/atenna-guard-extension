@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
 from schemas.prompt_schema import PromptRequest, PromptResponse
@@ -6,6 +6,7 @@ from services.gemini_service import generate_prompts
 from routes.analytics import router as analytics_router
 from routes.auth import router as auth_router
 from routes.dlp import router as dlp_router
+from middleware.auth import require_auth
 
 app = FastAPI(
     title="Atenna Guard Prompt — Backend",
@@ -35,10 +36,13 @@ async def health():
 
 
 @app.post("/generate-prompts", response_model=PromptResponse, tags=["Prompts"])
-async def generate(request: PromptRequest):
+async def generate(
+    request: PromptRequest,
+    _user: dict = Depends(require_auth),   # 401 if no valid JWT
+):
     """
     Recebe o texto do usuário e retorna 3 versões otimizadas via Gemini.
-    Em caso de falha na API externa, retorna fallback local automaticamente.
+    Requer JWT válido do Supabase (Bearer token).
     """
     if not request.input.strip():
         raise HTTPException(status_code=422, detail="Campo 'input' não pode ser vazio.")

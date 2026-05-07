@@ -38,19 +38,26 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     }
 
     getStoredJWT().then(jwt => {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (jwt) headers['Authorization'] = `Bearer ${jwt}`;
+      // JWT is mandatory — reject silently if not present
+      if (!jwt) {
+        sendResponse({ ok: false, error: 'auth_required', status: 401 });
+        return;
+      }
 
       return fetch(BACKEND_URL, {
         method:  'POST',
-        headers,
-        body:    JSON.stringify({ input: inputText }),
-      });
-    })
-      .then(res => {
-        if (!res.ok) { sendResponse({ ok: false, status: res.status }); return; }
-        return res.json().then(data => sendResponse({ ok: true, data }));
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({ input: inputText }),
       })
+        .then(res => {
+          if (res.status === 401) { sendResponse({ ok: false, error: 'auth_required', status: 401 }); return; }
+          if (!res.ok)            { sendResponse({ ok: false, status: res.status }); return; }
+          return res.json().then(data => sendResponse({ ok: true, data }));
+        });
+    })
       .catch(err => {
         console.warn('[Atenna] background fetch error:', err);
         sendResponse({ ok: false, error: String(err) });

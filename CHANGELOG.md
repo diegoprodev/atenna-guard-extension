@@ -4,6 +4,138 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.15.0] — 2026-05-06 (Security — Auth Gate Obrigatório)
+
+### Fix crítico de segurança — Extensão funcionava sem login
+
+**Causa raiz:** Três vetores simultâneos permitiam uso sem autenticação:
+1. `content.ts` injetava o badge sem checar sessão
+2. `background.ts` enviava JWT opcionalmente (request funcionava sem token)
+3. `backend/main.py /generate-prompts` não tinha nenhuma validação JWT
+
+### Changed — `src/content/content.ts`
+- `init()` agora chama `checkAuth()` antes de qualquer injeção
+- Badge só aparece para usuários com sessão Supabase válida
+- `chrome.storage.onChanged` detecta login/logout em tempo real:
+  - Login → injeta badge automaticamente
+  - Logout → remove badge via `removeButton()`
+- `_isAuthenticated` flag evita re-checks no MutationObserver
+
+### Changed — `src/background/background.ts`
+- JWT passa a ser **obrigatório** para `ATENNA_FETCH`
+- Se JWT ausente → `sendResponse({ ok: false, error: 'auth_required', status: 401 })`
+- Se backend retorna 401 → propaga `auth_required` ao frontend
+- Removido `if (jwt) headers[...]` (branch que deixava header opcional)
+
+### New — `backend/middleware/auth.py`
+- `require_auth` FastAPI Dependency
+- Valida Bearer JWT via `GET /auth/v1/user` do Supabase
+- 401 se token ausente, inválido ou expirado
+- 503 se Supabase offline (não expõe detalhes internos)
+- Lê `SUPABASE_URL` e `SUPABASE_ANON_KEY` de variáveis de ambiente
+
+### Changed — `backend/main.py`
+- `POST /generate-prompts` → `Depends(require_auth)` obrigatório
+- Sem JWT válido → 401 antes de qualquer processamento
+
+### Changed — `backend/routes/dlp.py`
+- `POST /dlp/scan` → `Depends(require_auth)` obrigatório
+
+### Análise de risco
+| Camada | Antes | Depois |
+|--------|-------|--------|
+| Badge injection | Sem auth | Requer sessão válida |
+| DLP scan | Sem auth | Requer sessão válida |
+| generate-prompts | Sem auth | JWT obrigatório + validado no servidor |
+| dlp/scan | Sem auth | JWT obrigatório + validado no servidor |
+
+---
+
+## [2.14.0] — 2026-05-06 (Settings Dashboard — Uso, LGPD & DLP, 2-way Sync)
+
+### New — `src/core/dlpStats.ts`
+- `DlpStats`: `protectedCount`, `tokensEstimated`, `scansTotal`
+- `getDlpStats / incrementProtected(charsSaved) / incrementScan()`
+- `syncDlpStats()` — merge offline-first (max local vs remoto, sem perda)
+- `pushDlpStatsToSupabase / fetchDlpStatsFromSupabase` via REST
+
+### New — `supabase/migrations/20260506_dlp_stats.sql`
+- Tabela `user_dlp_stats` com RLS (select/insert/update próprio)
+
+### Changed — `src/content/injectButton.ts`
+- `incrementScan()` a cada DLP scan realizado
+- `incrementProtected(charsSaved)` no clique "Proteger dados" (calcula tokens economizados)
+
+### Changed — `src/ui/modal.ts` — Gear ⚙ → Settings Dashboard
+- Gear click abre página completa `renderSettingsPage()` em vez de dropdown
+- Header: ← Voltar + ⎋ Sair
+- User card: avatar inicial + email + badge Free/Pro
+- Seção **Uso de Prompts**: barras hoje/mês, total, CTA upgrade se Free
+- Seção **LGPD & Proteção**: dados protegidos, scans, tokens ~Xk, taxa de proteção com barra colorida (verde ≥70 / amarelo ≥40 / vermelho <40)
+- Seção **Personalização**: toggle alerta automático
+- Sync 2-way async ao abrir (merge max, push de volta)
+
+### New — `src/ui/modal.css` — Settings styles
+- `.atenna-settings__*`: header, user-card, avatar, plan-badge, body scroll, section-title, stat-row, bar-wrap/fill, upgrade-cta
+
+---
+
+## [2.13.0] — 2026-05-06 (UX Fixes — Cor Banner, Badge Input Tracking, X Button)
+
+### Fix — DLP NAME stopwords
+- Adicionados: `NOME`, `MEU`, `TEU`, `SEU`, `MINHA` + preposições PT-BR
+- "meu nome é DIEGO RODRIGUES" → detecta apenas `DIEGO RODRIGUES` → `"meu nome é [NOME]"` ✓
+
+### Fix — Banner cor
+- Light: `#f0f0f0` | Dark: `#1a1a1a` (near-black, tom ChatGPT/Claude)
+- Botão primário verde `#22c55e` em ambos os temas
+
+### Added — Botão × no banner
+- Header row com título + × à direita
+
+### Fix — Contagem correta
+- `updateBadgeDotRisk` recebe `uniqueCount` (tipos únicos) em vez de `entities.length`
+- "3 tipos únicos detectados" em vez de "5 entidades totais"
+
+### Fix — Badge quando input cresce
+- ResizeObserver calcula `delta` do `input.getBoundingClientRect().top`
+- `savedPos.top` ajustado proporcionalmente — badge arrastado acompanha o input
+
+### Changed — Dot HIGH animation
+- `0.85s → 2s`, `scale(1.7) → scale(1.35)` — sutil, sem firula
+
+### Added — Seção Uso na engrenagem
+- "Hoje X/5" e "Total X" — substituído pelo dashboard completo na v2.14.0
+
+---
+
+## [2.12.0] — 2026-05-06 (DLP UX — Badge Overflow, Banner Acima, PT-BR, Toggle)
+
+### Fix — Dot overflow fora do badge
+- `overflow: visible` no `.atenna-btn` — dot sobressai fora do círculo verde
+- Dot reposicionado: `bottom: -2px; right: -2px` com border branca
+
+### Fix — Tooltip do dot
+- `z-index: 1000002`, `bottom: calc(100% + 8px)` — aparece acima do badge
+- Tooltip mostra contagem: `"⚠ 2 dados sensíveis"`
+
+### Fix — Banner acima do badge
+- `positionBannerAbove()` usa `bottom style` → aparece sobre o badge
+- Animação `translateY(6px→0)` — sobe a partir do badge
+
+### Added — Dark theme no banner
+- `.atenna-protection-banner--dark` detectado por `isDarkPage()` (luminância do body)
+
+### Added — Labels PT-BR para entidades
+- `PHONE → Telefone`, `NAME → Nome`, `API_KEY → Chave API`, `CREDIT_CARD → Cartão`, etc.
+
+### Added — Toggle alerta automático (⚙)
+- `autoBannerEnabled` (default: true) — quando OFF, banner só aparece ao clicar badge
+- Persiste em `chrome.storage.local.atenna_settings.autoBanner`
+- `setAutoBanner()` exportado de `injectButton.ts`
+
+---
+
 ## [2.11.0] — 2026-05-06 (DLP Realtime — P0 Fix + Test Suite 99/99)
 
 ### Fix crítico — DLP realtime
