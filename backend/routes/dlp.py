@@ -12,8 +12,9 @@ async def scan(request: ScanRequest, _user: dict = Depends(require_auth)) -> Sca
     Backend DLP scan — Presidio + contextual scoring.
     Called asynchronously after the local client-side pre-scan.
     Never blocks prompt generation.
+    Includes timeout protection (max 3s).
     """
-    return run(request)
+    return await run(request)
 
 
 @router.get("/health")

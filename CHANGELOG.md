@@ -6,6 +6,34 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [2.16.0] — 2026-05-07 (FASE 1 — DLP Enforcement Real)
 
+### New — Timeout Safety (TASK 5)
+
+**DLP analysis nunca trava o backend — máximo 3 segundos com fallback seguro.**
+
+**Backend:**
+- `backend/dlp/engine.py` — `analyze()` e `revalidate()` agora async com timeout
+- `backend/dlp/pipeline.py` — `run()` agora async com timeout para /dlp/scan
+- Máximo 3 segundos por análise (ANALYSIS_TIMEOUT_SECONDS = 3.0)
+- Fallback seguro: timeout ou erro retorna AnalysisResult(risk_level="NONE")
+- Presidio calls rodam em thread pool via asyncio.run_in_executor()
+- Telemetry estruturada: `dlp_timeout` + `dlp_engine_error` eventos
+
+**Endpoints:**
+- `/dlp/scan` — nunca trava, sempre responde em <3s mesmo com Presidio lento
+- `/generate-prompts` — revalidação com timeout, fallback gracioso
+
+**Garantias:**
+- ✅ Nenhum hang — máximo 3 segundos por análise
+- ✅ Geração nunca bloqueada — mesmo se DLP timeout
+- ✅ Fallback automático — NONE risk se timeout/erro
+- ✅ Auditável — telemetry para todos timeout/error scenarios
+
+**Tests:**
+- 10 testes timeout (`test_timeout.py`) — timeout/exception/telemetry
+- 5 testes E2E (`task-5-timeout-safety.spec.ts`) — browser real timeout scenarios
+- 79 testes backend total (sem regressões)
+- 133 testes frontend total (sem regressões)
+
 ### New — Strict Mode Infrastructure (TASK 3)
 
 **Proteção rigorosa configurável — servidor pode reescrever HIGH-risk antes de Gemini.**

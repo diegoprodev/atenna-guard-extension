@@ -161,7 +161,8 @@ class TestMismatchDetection:
 class TestRevalidationFlow:
     """Testa fluxo completo de revalidação."""
 
-    def test_revalidate_returns_analysis_and_mismatch(self):
+    @pytest.mark.asyncio
+    async def test_revalidate_returns_analysis_and_mismatch(self):
         """Revalidate retorna tupla (analysis, mismatch)."""
         engine = DLPEngine()
         client_meta = {"dlp_risk_level": "NONE"}
@@ -172,7 +173,7 @@ class TestRevalidationFlow:
             with patch("dlp.engine.score_results") as mock_score:
                 mock_score.return_value = (0, "NONE")
 
-                analysis, mismatch = engine.revalidate(
+                analysis, mismatch = await engine.revalidate(
                     "Normal text",
                     client_meta,
                 )
@@ -180,7 +181,8 @@ class TestRevalidationFlow:
                 assert isinstance(analysis, AnalysisResult)
                 assert isinstance(mismatch, MismatchReport)
 
-    def test_protected_tokens_set_was_rewritten(self):
+    @pytest.mark.asyncio
+    async def test_protected_tokens_set_was_rewritten(self):
         """Detecta que payload foi reescrito."""
         engine = DLPEngine()
 
@@ -190,7 +192,7 @@ class TestRevalidationFlow:
             with patch("dlp.engine.score_results") as mock_score:
                 mock_score.return_value = (0, "NONE")
 
-                analysis = engine.analyze("[CPF] e [EMAIL]")
+                analysis = await engine.analyze("[CPF] e [EMAIL]")
 
                 assert analysis.protected_tokens_detected is True
                 assert analysis.was_rewritten is True
@@ -205,7 +207,8 @@ class TestGlobalEngineInstance:
         engine2 = get_engine()
         assert engine1 is engine2
 
-    def test_convenience_functions_use_global_engine(self):
+    @pytest.mark.asyncio
+    async def test_convenience_functions_use_global_engine(self):
         """Funções de conveniência usam engine global."""
         # Should not raise
         with patch("dlp.engine.DLPEngine.analyze") as mock_analyze:
@@ -221,7 +224,7 @@ class TestGlobalEngineInstance:
                 was_rewritten=False,
             )
 
-            result = analyze("test")
+            result = await analyze("test")
             assert result.risk_level == "NONE"
 
 

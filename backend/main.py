@@ -72,8 +72,9 @@ async def generate(
     }), flush=True)
 
     # ─── TASK 4: Server-side Revalidation (without HTTP internal call) ───
+    # ─── TASK 5: With timeout protection ───
     # Use shared engine directly (no /dlp/scan HTTP call)
-    server_analysis, mismatch = engine.revalidate(
+    server_analysis, mismatch = await engine.revalidate(
         input_text,
         dlp_meta,
         session_id=session_id,
@@ -115,6 +116,7 @@ async def generate(
     enforcement_result = evaluate_strict_enforcement(
         input_text,
         server_dlp_meta,  # Use server, not client
+        entities=server_analysis.entities,  # Pass actual entities from server analysis
     )
 
     # Usa payload reescrito se strict mode aplicou proteção

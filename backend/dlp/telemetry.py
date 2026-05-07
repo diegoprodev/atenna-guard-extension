@@ -151,3 +151,37 @@ def server_revalidated(
         "server_risk": server_risk,
         "protected_tokens_detected": protected_tokens_detected,
     })
+
+
+# ─── TASK 5: Timeout Safety ──────────────────────────────────
+
+def dlp_timeout(
+    session_id: str | None,
+    endpoint: str,  # "analyze", "scan", or "generate-prompts"
+    duration_ms: float,
+    source: str,  # "client" or "server"
+) -> None:
+    """DLP analysis timed out after ANALYSIS_TIMEOUT_SECONDS."""
+    _emit("dlp_timeout", {
+        "session_id": session_id,
+        "endpoint": endpoint,
+        "duration_ms": round(duration_ms, 2),
+        "source": source,
+        "status": "fallback_none",  # Fell back to NONE risk
+    })
+
+
+def dlp_engine_error(
+    session_id: str | None,
+    endpoint: str,  # "analyze", "scan", or "generate-prompts"
+    error_type: str,  # Exception class name
+    duration_ms: float,
+) -> None:
+    """DLP engine encountered error and fell back to NONE risk."""
+    _emit("dlp_engine_error", {
+        "session_id": session_id,
+        "endpoint": endpoint,
+        "error_type": error_type,
+        "duration_ms": round(duration_ms, 2),
+        "status": "fallback_none",  # Fell back to NONE risk
+    })

@@ -1,9 +1,11 @@
 """
 DLP pipeline orchestrator — runs full backend analysis and returns a ScanResponse.
 Never raises: returns safe default on error so generation is never blocked.
+Includes timeout protection to ensure frontend is never blocked.
 """
 from __future__ import annotations
 
+import asyncio
 import time
 
 from .entities import RiskLevel, ScanRequest, ScanResponse
@@ -12,13 +14,22 @@ from .scoring import score_results
 from .advisory import build_response
 from . import telemetry
 
+# Timeout constant (same as engine)
+SCAN_TIMEOUT_SECONDS = 3.0
 
-def run(request: ScanRequest) -> ScanResponse:
+
+async def run(request: ScanRequest) -> ScanResponse:
     t0 = time.perf_counter()
     telemetry.scan_started(request.session_id, request.platform)
 
     try:
-        results = analyze(request.text)
+        # Run Presidio analysis with timeout protection
+        loop = asyncio.get_event_loop()
+        results = await asyncio.wait_for(
+            loop.run_in_executor(None, analyze, request.text),
+            timeout=SCAN_TIMEOUT_SECONDS,
+        )
+
         score, risk_level = score_results(
             results,
             client_score=request.client_score,
@@ -41,8 +52,33 @@ def run(request: ScanRequest) -> ScanResponse:
 
         return build_response(risk_level, score, results, request.text, duration_ms)
 
-    except Exception:
+    except asyncio.TimeoutError:
+        # Timeout: return safe default (NONE risk)
         duration_ms = (time.perf_counter() - t0) * 1000
+        telemetry.dlp_timeout(
+            session_id=request.session_id,
+            endpoint="scan",
+            duration_ms=duration_ms,
+            source="client",
+        )
+        return ScanResponse(
+            risk_level=RiskLevel.NONE,
+            score=0,
+            entities=[],
+            advisory="",
+            show_warning=False,
+            duration_ms=duration_ms,
+        )
+
+    except Exception as e:
+        # Any error: return safe default
+        duration_ms = (time.perf_counter() - t0) * 1000
+        telemetry.dlp_engine_error(
+            session_id=request.session_id,
+            endpoint="scan",
+            error_type=type(e).__name__,
+            duration_ms=duration_ms,
+        )
         return ScanResponse(
             risk_level=RiskLevel.NONE,
             score=0,

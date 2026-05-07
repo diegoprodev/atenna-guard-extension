@@ -150,28 +150,28 @@ class TestStrictEnforcement:
     def test_strict_mode_true_high_risk_rewrites(self):
         """STRICT_DLP_MODE=true com HIGH risk: reescreve."""
         with patch.dict(os.environ, {"STRICT_DLP_MODE": "true"}):
-            with patch("dlp.enforcement.dlp_analyze") as mock_analyze:
-                # Mock retorna análise de HIGH risk com CPF
-                mock_analyze.return_value = MagicMock(
-                    risk_level="HIGH",
-                    entities=[
-                        {"type": "BR_CPF", "value": "050.423.674-11", "start": 4, "end": 18}
-                    ],
-                )
-                dlp_meta = {
-                    "dlp_risk_level": "HIGH",
-                    "dlp_entity_count": 1,
-                    "dlp_entity_types": ["BR_CPF"],
-                }
-                result = evaluate_strict_enforcement(
-                    "CPF 050.423.674-11",
-                    dlp_meta,
-                )
-                # Deve reescrever
-                assert result["applied"] is True
-                assert result["sanitized"] is True
-                assert "[CPF]" in result["rewritten_text"]
-                assert "050.423.674-11" not in result["rewritten_text"]
+            # Create mock entity object
+            mock_entity = MagicMock()
+            mock_entity.entity_type = "BR_CPF"
+            mock_entity.text = "050.423.674-11"
+            mock_entity.start = 4
+            mock_entity.end = 18
+
+            dlp_meta = {
+                "dlp_risk_level": "HIGH",
+                "dlp_entity_count": 1,
+                "dlp_entity_types": ["BR_CPF"],
+            }
+            result = evaluate_strict_enforcement(
+                "CPF 050.423.674-11",
+                dlp_meta,
+                entities=[mock_entity],
+            )
+            # Deve reescrever
+            assert result["applied"] is True
+            assert result["sanitized"] is True
+            assert "[CPF]" in result["rewritten_text"]
+            assert "050.423.674-11" not in result["rewritten_text"]
 
     def test_strict_mode_true_low_risk_no_rewrite(self):
         """STRICT_DLP_MODE=true com LOW risk: não reescreve."""

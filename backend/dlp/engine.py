@@ -7,10 +7,16 @@ Used by:
 - strict mode enforcement
 
 NO HTTP internal calls. Single instance, shared context.
+
+TASK 5: Timeout Safety
+- Maximum 3s timeout per analysis
+- Fail-safe defaults on timeout
+- Structured telemetry
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import time
@@ -20,6 +26,10 @@ from dataclasses import dataclass
 from .analyzer import analyze
 from .scoring import score_results
 from . import telemetry
+
+# Timeout constants
+ANALYSIS_TIMEOUT_SECONDS = 3.0
+MIN_TIMEOUT_SECONDS = 0.1  # Minimum acceptable timeout
 
 
 @dataclass
@@ -76,7 +86,7 @@ class DLPEngine:
     def __init__(self):
         self.analyzer = None  # Lazy-loaded
 
-    def analyze(
+    async def analyze(
         self,
         text: str,
         source: str = "server",
@@ -84,7 +94,7 @@ class DLPEngine:
         session_id: Optional[str] = None,
     ) -> AnalysisResult:
         """
-        Analyze text and return analysis result.
+        Analyze text and return analysis result with timeout protection.
 
         Args:
             text: Text to analyze
@@ -105,8 +115,12 @@ class DLPEngine:
         text_hash = self._hash_text(text)
 
         try:
-            # Run Presidio analysis
-            entities = analyze(text)
+            # Run Presidio analysis with timeout protection
+            loop = asyncio.get_event_loop()
+            entities = await asyncio.wait_for(
+                loop.run_in_executor(None, analyze, text),
+                timeout=ANALYSIS_TIMEOUT_SECONDS,
+            )
             score, risk_level = score_results(entities)
 
             entity_types = [e.entity_type for e in entities]
@@ -136,9 +150,16 @@ class DLPEngine:
 
             return result
 
-        except Exception as e:
-            # Fail-safe: return NONE risk
+        except asyncio.TimeoutError:
+            # Timeout: fail-safe return NONE risk
             duration_ms = (time.perf_counter() - t0) * 1000
+            if session_id:
+                telemetry.dlp_timeout(
+                    session_id=session_id,
+                    endpoint="analyze",
+                    duration_ms=duration_ms,
+                    source=source,
+                )
             return AnalysisResult(
                 risk_level="NONE",
                 score=0,
@@ -151,14 +172,36 @@ class DLPEngine:
                 was_rewritten=was_rewritten,
             )
 
-    def revalidate(
+        except Exception as e:
+            # Any other error: fail-safe return NONE risk
+            duration_ms = (time.perf_counter() - t0) * 1000
+            if session_id:
+                telemetry.dlp_engine_error(
+                    session_id=session_id,
+                    endpoint="analyze",
+                    error_type=type(e).__name__,
+                    duration_ms=duration_ms,
+                )
+            return AnalysisResult(
+                risk_level="NONE",
+                score=0,
+                entities=[],
+                entity_types=[],
+                duration_ms=duration_ms,
+                source=source,
+                text_hash=text_hash,
+                protected_tokens_detected=protected_detected,
+                was_rewritten=was_rewritten,
+            )
+
+    async def revalidate(
         self,
         text: str,
         client_metadata: dict,
         session_id: Optional[str] = None,
     ) -> tuple[AnalysisResult, MismatchReport]:
         """
-        Revalidate server-side and compare with client findings.
+        Revalidate server-side and compare with client findings (with timeout).
 
         Args:
             text: Original input text
@@ -169,7 +212,7 @@ class DLPEngine:
             (server_analysis, mismatch_report)
         """
         # Server-side analysis
-        server_result = self.analyze(
+        server_result = await self.analyze(
             text,
             source="server",
             client_metadata=client_metadata,
@@ -274,14 +317,14 @@ def get_engine() -> DLPEngine:
     return _engine
 
 
-def analyze(
+async def analyze(
     text: str,
     source: str = "server",
     client_metadata: Optional[dict] = None,
     session_id: Optional[str] = None,
 ) -> AnalysisResult:
     """Convenience function to use global engine."""
-    return get_engine().analyze(
+    return await get_engine().analyze(
         text,
         source=source,
         client_metadata=client_metadata,
@@ -289,13 +332,13 @@ def analyze(
     )
 
 
-def revalidate(
+async def revalidate(
     text: str,
     client_metadata: dict,
     session_id: Optional[str] = None,
 ) -> tuple[AnalysisResult, MismatchReport]:
     """Convenience function to use global engine."""
-    return get_engine().revalidate(
+    return await get_engine().revalidate(
         text,
         client_metadata=client_metadata,
         session_id=session_id,

@@ -10,8 +10,7 @@ Responsável por:
 import os
 import json
 from typing import Optional
-from .pipeline import run as dlp_analyze
-from .entities import ScanRequest, RiskLevel
+from .entities import RiskLevel
 
 
 def is_strict_mode_enabled() -> bool:
@@ -67,10 +66,16 @@ def rewrite_pii_tokens(text: str, entities: list) -> str:
 
 def evaluate_strict_enforcement(
     input_text: str,
-    client_dlp_metadata: dict,
+    server_dlp_metadata: dict,
+    entities: Optional[list] = None,
 ) -> dict:
     """
     Avalia se strict mode deve ser aplicado.
+
+    Args:
+        input_text: Original text to potentially rewrite
+        server_dlp_metadata: Server-side analysis metadata
+        entities: List of entity objects from server analysis (optional)
 
     Retorna dict com:
     - would_apply: bool (se strict mode estivesse ativado)
@@ -79,10 +84,10 @@ def evaluate_strict_enforcement(
     - sanitized: bool
     """
     strict_enabled = is_strict_mode_enabled()
-    client_risk = client_dlp_metadata.get("dlp_risk_level", "NONE")
+    server_risk = server_dlp_metadata.get("dlp_risk_level", "NONE")
 
     # Simular ou aplicar rewrite
-    should_rewrite = client_risk == "HIGH"
+    should_rewrite = server_risk == "HIGH"
 
     result = {
         "would_apply": should_rewrite,  # se strict estivesse ativado
@@ -97,12 +102,25 @@ def evaluate_strict_enforcement(
     # Se strict mode está ativado, aplica rewrite
     if strict_enabled:
         try:
-            # Re-analisa server-side para obter entidades
-            scan_req = ScanRequest(text=input_text)
-            dlp_result = dlp_analyze(scan_req)
+            # Use provided entities (from server analysis) to rewrite
+            # Convert Presidio RecognizerResult objects to dict format if needed
+            entity_list = []
+            if entities:
+                for entity in entities:
+                    if hasattr(entity, '__dict__'):
+                        # It's a RecognizerResult object
+                        entity_list.append({
+                            "type": entity.entity_type,
+                            "value": entity.text,
+                            "start": entity.start,
+                            "end": entity.end,
+                        })
+                    else:
+                        # Already a dict
+                        entity_list.append(entity)
 
-            if dlp_result.risk_level == "HIGH" and dlp_result.entities:
-                rewritten = rewrite_pii_tokens(input_text, dlp_result.entities)
+            if entity_list:
+                rewritten = rewrite_pii_tokens(input_text, entity_list)
                 result["rewritten_text"] = rewritten
                 result["applied"] = True
                 result["sanitized"] = True
@@ -111,20 +129,20 @@ def evaluate_strict_enforcement(
                 _log_event("dlp_strict_applied", {
                     "original_length": len(input_text),
                     "rewritten_length": len(rewritten),
-                    "entity_count": len(dlp_result.entities),
-                    "entity_types": [e.get("type") for e in dlp_result.entities],
+                    "entity_count": len(entity_list),
+                    "entity_types": [e.get("type") for e in entity_list],
                 })
         except Exception as e:
             # Se rewrite falhar, usa original (fail-open)
             _log_event("dlp_strict_error", {
                 "error": str(e),
-                "risk_level": client_risk,
+                "risk_level": server_risk,
             })
     else:
         # Modo observação: registra o que TERIA feito
         _log_event("dlp_strict_would_apply", {
-            "risk_level": client_risk,
-            "entities": client_dlp_metadata.get("dlp_entity_types", []),
+            "risk_level": server_risk,
+            "entities": server_dlp_metadata.get("dlp_entity_types", []),
         })
 
     return result
