@@ -50,6 +50,27 @@ function luhn(raw: string): boolean {
   return sum % 10 === 0;
 }
 
+// ── Brazilian name validator ──────────────────────────────────
+// Must: ≥1 word with 4+ chars, ≤1 word of only stopwords, not a known keyword sequence
+
+const NAME_STOPWORDS = new Set([
+  'CPF', 'CNPJ', 'CEP', 'API', 'KEY', 'JWT', 'SQL', 'HTTP', 'HTTPS', 'URL',
+  'GET', 'POST', 'PUT', 'DEL', 'AWS', 'RDS', 'IAM', 'VPC', 'PDF', 'CSV',
+  'XML', 'JSON', 'HTML', 'CSS', 'OAB', 'CRM', 'RG', 'CNH', 'CTF', 'STF', 'STJ',
+  'CODIGO', 'CODE', 'TOKEN', 'BEARER', 'SECRET', 'SENHA', 'EMAIL', 'USER',
+]);
+
+function validateName(raw: string): boolean {
+  const words = raw.trim().split(/\s+/);
+  if (words.length < 2) return false;
+  // At least one word must be >= 4 chars (filters "DA DE DO")
+  if (!words.some(w => w.length >= 4)) return false;
+  // More than half the words cannot be stopwords
+  const stopCount = words.filter(w => NAME_STOPWORDS.has(w)).length;
+  if (stopCount > words.length / 2) return false;
+  return true;
+}
+
 // ── Pattern definitions ───────────────────────────────────────
 
 const PATTERNS: PatternDef[] = [
@@ -145,6 +166,21 @@ const PATTERNS: PatternDef[] = [
     type: 'ADDRESS',
     pattern: /\b\d{5}[-\s]?\d{3}\b/g,
     confidence: 0.60,
+  },
+  // CNJ process number — NNNNNNN-DD.AAAA.J.TR.OOOO
+  {
+    type: 'PROCESS_NUM',
+    pattern: /\b\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}\b/g,
+    confidence: 0.97,
+  },
+  // Brazilian full name in ALL_CAPS (2-4 words, at least one word >= 4 chars)
+  // Matches "DIEGO RODRIGUES DA SILVA", "MARIA JOSE SANTOS"
+  // Filtered by stopword guard to avoid "CPF CODIGO", "API KEY", etc.
+  {
+    type: 'NAME',
+    pattern: /\b(?:[A-ZÁÉÍÓÚÃÕÇÂÊÎÔÛÀÈÙÄËÏÖÜ]{2,}\s+){1,3}[A-ZÁÉÍÓÚÃÕÇÂÊÎÔÛÀÈÙÄËÏÖÜ]{2,}\b/g,
+    confidence: 0.65,
+    validate: validateName,
   },
 ];
 

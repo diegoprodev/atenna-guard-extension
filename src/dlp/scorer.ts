@@ -18,6 +18,8 @@ const ENTITY_BASE_SCORES: Record<string, number> = {
   MEDICAL:     55,
   LEGAL:       50,
   GENERIC_PII: 35,
+  PROCESS_NUM: 72,
+  NAME:        30,
 };
 
 // Intent multipliers — applied to the max entity score
@@ -47,7 +49,7 @@ function scoreToLevel(score: number): RiskLevel {
 const PII_CONCEPT_TERMS = [
   'cpf', 'cnpj', 'senha', 'api key', 'api_key', 'token', 'cartão de crédito',
   'dados médicos', 'dados pessoais', 'informação sensível', 'dado sensível',
-  'chave secreta', 'secret key', 'bearer', 'jwt',
+  'chave secreta', 'secret key', 'bearer', 'jwt', 'número do processo', 'processo judicial',
 ];
 
 function mentionsPiiConcept(hints: SemanticHint[], text?: string): boolean {

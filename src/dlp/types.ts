@@ -3,7 +3,8 @@ export type RiskLevel = 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH';
 export type EntityType =
   | 'CPF' | 'CNPJ' | 'EMAIL' | 'PHONE'
   | 'API_KEY' | 'TOKEN' | 'PASSWORD' | 'CREDIT_CARD'
-  | 'ADDRESS' | 'MEDICAL' | 'LEGAL' | 'GENERIC_PII';
+  | 'ADDRESS' | 'MEDICAL' | 'LEGAL' | 'GENERIC_PII'
+  | 'PROCESS_NUM' | 'NAME';
 
 export interface DetectedEntity {
   type:       EntityType;

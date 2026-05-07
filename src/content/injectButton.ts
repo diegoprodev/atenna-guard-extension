@@ -1,4 +1,8 @@
 import type { PlatformConfig } from './detectInput';
+import { scan } from '../dlp/detector';
+import { getInputText, setInputText } from '../core/inputHandler';
+import { rewritePII } from '../dlp/rewriter';
+import type { DetectedEntity } from '../dlp/types';
 
 const INJECTED_ATTR    = 'data-atenna-injected';
 const BTN_ID           = 'atenna-guard-btn';
@@ -8,6 +12,74 @@ const BADGE_RIGHT_OFFSET = 90; // clears toolbar icons (mic, send) on all platfo
 let currentCleanup: (() => void) | undefined;
 let rafId:          number | undefined;
 let savedPos:       { top: number; left: number } | null = null;
+
+// ── Protection banner state ─────────────────────────────────
+
+let bannerEl:        HTMLElement | undefined;
+let lastEntities:    DetectedEntity[] = [];
+let lastScanInput:   HTMLElement | undefined;
+
+function showProtectionBanner(
+  input:    HTMLElement,
+  btn:      HTMLButtonElement,
+  entities: DetectedEntity[],
+): void {
+  if (bannerEl) { lastEntities = entities; lastScanInput = input; return; }
+
+  lastEntities  = entities;
+  lastScanInput = input;
+
+  const banner = document.createElement('div');
+  banner.id        = 'atenna-protection-banner';
+  banner.className = 'atenna-protection-banner';
+
+  const msg = document.createElement('p');
+  msg.className   = 'atenna-protection-banner__msg';
+  msg.textContent = 'Dados sensíveis detectados';
+
+  const sub = document.createElement('p');
+  sub.className   = 'atenna-protection-banner__sub';
+  sub.textContent = lastEntities.map(e => e.type.replace('_', ' ')).filter((v, i, a) => a.indexOf(v) === i).join(' · ');
+
+  const actions = document.createElement('div');
+  actions.className = 'atenna-protection-banner__actions';
+
+  const protectBtn = document.createElement('button');
+  protectBtn.className   = 'atenna-protection-banner__btn atenna-protection-banner__btn--primary';
+  protectBtn.textContent = 'Proteger dados';
+  protectBtn.addEventListener('click', () => {
+    const text      = getInputText(lastScanInput!);
+    const rewritten = rewritePII(text, lastEntities);
+    setInputText(lastScanInput!, rewritten);
+    dismissProtectionBanner();
+    updateBadgeDotRisk('NONE');
+  });
+
+  const ignoreBtn = document.createElement('button');
+  ignoreBtn.className   = 'atenna-protection-banner__btn';
+  ignoreBtn.textContent = 'Enviar original';
+  ignoreBtn.addEventListener('click', () => dismissProtectionBanner());
+
+  actions.appendChild(protectBtn);
+  actions.appendChild(ignoreBtn);
+  banner.appendChild(msg);
+  banner.appendChild(sub);
+  banner.appendChild(actions);
+  document.body.appendChild(banner);
+  bannerEl = banner;
+
+  // Position below badge
+  const btnRect = btn.getBoundingClientRect();
+  banner.style.top  = `${btnRect.bottom + 8}px`;
+  banner.style.right = `${window.innerWidth - btnRect.right}px`;
+}
+
+function dismissProtectionBanner(): void {
+  bannerEl?.remove();
+  bannerEl       = undefined;
+  lastEntities   = [];
+  lastScanInput  = undefined;
+}
 
 function getLogoUrl(): string {
   try { return chrome.runtime.getURL('icons/icon128.png'); }
@@ -179,17 +251,40 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   window.addEventListener('scroll', update, { passive: true });
   window.addEventListener('resize', update, { passive: true });
 
-  // Typing detection — turns dot green neon while user is writing
+  // Realtime DLP scan — debounced 400ms after last keystroke
   let typingTimer: ReturnType<typeof setTimeout> | undefined;
+  let scanTimer:   ReturnType<typeof setTimeout> | undefined;
+
   const onInput = () => {
+    // Immediate visual: typing indicator
     const d = dot as HTMLElement;
     d.classList.remove('atenna-btn__dot--medium', 'atenna-btn__dot--high');
     d.classList.add('atenna-btn__dot--typing');
     d.setAttribute('data-tip', 'Digitando...');
+
     clearTimeout(typingTimer);
     typingTimer = setTimeout(() => {
       d.classList.remove('atenna-btn__dot--typing');
     }, 1500);
+
+    // DLP scan fires 400ms after last keystroke (<50ms local, non-blocking)
+    clearTimeout(scanTimer);
+    scanTimer = setTimeout(() => {
+      const text = getInputText(input);
+      if (!text || text.trim().length < 8) {
+        updateBadgeDotRisk('NONE');
+        dismissProtectionBanner();
+        return;
+      }
+      const result = scan(text);
+      updateBadgeDotRisk(result.riskLevel);
+
+      if (result.riskLevel === 'HIGH') {
+        showProtectionBanner(input, btn, result.entities);
+      } else {
+        dismissProtectionBanner();
+      }
+    }, 400);
   };
   input.addEventListener('input', onInput);
 
@@ -206,6 +301,8 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
     window.removeEventListener('resize', update);
     input.removeEventListener('input', onInput);
     clearTimeout(typingTimer);
+    clearTimeout(scanTimer);
+    dismissProtectionBanner();
     ro?.disconnect();
   };
 }
