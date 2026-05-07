@@ -26,7 +26,13 @@
       "PowerShell(cd \"c:\\\\projetos\\\\atenna-guard-extension\"; $env:PYTHONIOENCODING=\"utf-8\"; python test-production.py 2>&1)",
       "PowerShell(npx --yes @anthropic-ai/claude-code mcp list 2>&1)",
       "PowerShell(pip install playwright -q 2>&1)",
-      "PowerShell(python -m playwright install chromium 2>&1)"
+      "PowerShell(python -m playwright install chromium 2>&1)",
+      "Bash(python -c ' *)",
+      "Bash(dir \"c:\\\\projetos\\\\atenna-guard-extension\\\\dist\")",
+      "Bash(grep -E \"\\\\.\\(ts|tsx|js\\)$\")",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\projetos\\\\atenna-guard-extension\\\\src\\\\core\" -File | Select-Object Name, @{Name=\"SizeKB\";Expression={[math]::Round\\($_.Length/1KB, 2\\)}} | Format-Table -AutoSize)",
+      "Bash(node scripts/generate-icons.mjs)",
+      "Bash(python -c \"import json,sys; m=json.load\\(sys.stdin\\); print\\(json.dumps\\(m.get\\('content_scripts'\\), indent=2\\)\\)\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\dgapc\\.claude\\plans",

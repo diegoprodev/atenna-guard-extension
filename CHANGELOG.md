@@ -4,6 +4,36 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.8.0] — 2026-05-06 (Badge Centering + Pill Animation + Owl Zoom + Dot Tooltip)
+
+### Fixed — Badge centering (causa raiz)
+- `flex-direction: row-reverse` removido — era a causa do deslocamento da coruja para a esquerda em todos os estados
+- Botão agora é um círculo fixo 42×42px; `icon-wrap` usa `position: absolute; right: 0` — nunca se move enquanto o pill expande
+- Coruja centralizada via `display: flex; align-items: center; justify-content: center` no icon-wrap
+
+### Changed — Pill expansion
+- Badge expande `width` 42px → 148px para a esquerda (ancoragem por `right` no CSS)
+- `overflow: hidden` restaurado no botão para clicar a label durante a expansão
+- Label "ATENNA" posicionada via `position: absolute; left: 14px` dentro do pill — sem separar em elemento externo
+
+### Added — Owl zoom animation
+- Hover: coruja faz zoom-out (scale 1→0 + opacity fade) em 450ms `cubic-bezier(0.4,0,1,1)`
+- Un-hover: coruja faz zoom-in spring (scale 0→1) em 550ms `cubic-bezier(0.34,1.56,0.64,1)` com leve overshoot
+- Ring pulse para ao expandir: `.atenna-btn:hover .atenna-btn__icon-wrap::before { opacity: 0 }`
+
+### Added — Dot tooltip
+- Dot movido do `icon-wrap` para o `btn` diretamente — fica visível mesmo quando a coruja está em zoom-out
+- `pointer-events: auto` no dot — hover funciona corretamente
+- Tooltip via CSS `::after` + atributo `data-tip` — aparece acima do dot ao passar o mouse
+- Cor do tooltip por estado DLP: verde (`#16a34a`) / laranja (`#f97316`) / vermelho (`#ef4444`) / dark padrão
+- Textos: `✓ Tudo seguro` · `Digitando...` · `◉ Atenção: possível dado sensível` · `⚠ Dados sensíveis detectados`
+
+### Fixed — Icon PNG
+- `generate-icons.mjs` atualizado: círculo preto removido; ícones gerados como coruja branca em fundo transparente
+- Badge fornece o fundo verde via CSS — sem `mix-blend-mode` ou filtros
+
+---
+
 ## [2.7.0] — 2026-05-06 (Badge Visual Overhaul + DLP-Reactive Dot)
 
 ### Changed — Badge (`src/ui/styles.css`, `src/content/injectButton.ts`)
