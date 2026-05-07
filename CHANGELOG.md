@@ -4,6 +4,32 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.10.0] — 2026-05-06 (Identidade — Clareza, Premium UX e Copy)
+
+### Changed — `src/ui/modal.ts`
+- Header: "Atenna Prompt" → "Atenna" (autenticado e não autenticado)
+- Tabs: "Criar Prompt" → "Refinar" · "Meus Prompts" → "Histórico"
+- Onboarding pré-login (`renderPreLoginOnboarding`): headline "Clareza antes da inteligência.", 3 capabilidades com ícones SVG, tag de acesso gratuito, sem emojis
+- Login (`renderLoginView`): título "Bem-vindo ao Atenna.", subtítulo atualizado, bloco de features removido, ícones SVG nos inputs
+- Signup (`renderSignupView`): ícones text chars (✉ ⚿ ◯) substituídos por SVG idênticos ao login
+- Builder: rótulo atualizado → "Descreva sua intenção — combinamos para estruturar com clareza"
+- Botão gerar: "Gerar Prompts" → "Refinar"
+- Empty state: título "O que você quer criar hoje?" → "O que você quer organizar?" · subtítulo atualizado
+- Toast de uso: "Prompt aplicado ✓" → "Aplicado"
+- Loading messages: sem linguagem de "prompt"
+- Onboarding minimal removeu menção a prompt
+
+### Changed — `src/ui/modal.css`
+- Login inputs: `border: 1px` (era 1.5px), `border-radius: 8px`, `background: var(--at-card-bg)`, foco com glow suave `rgba(34,197,94,0.08)`
+- Login button: botão escuro (#1a1a1a), versão dark (fundo branco), hover com shadow sutil — linha Linear/Arc em vez de verde Bootstrap
+- Onboarding wordmark: novo estilo `.atenna-modal__onb-wordmark` uppercase tracking
+- Onboarding headline: `23px`, `letter-spacing: -0.025em`
+- Onboarding features: ícone em box `30×30` com borda, alinhamento central SVG, `align-items: center`
+- Onboarding CTA: botão escuro, premium, dark-mode aware
+- Input icon left: `display: inline-flex; line-height: 0` — SVG alinhados corretamente
+
+---
+
 ## [2.9.0] — 2026-05-06 (DLP v2 — PT-BR Consolidado + Scoring Contextual)
 
 ### Changed — `src/dlp/patterns.ts`

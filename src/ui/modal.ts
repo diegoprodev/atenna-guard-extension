@@ -14,8 +14,8 @@ const OVERLAY_ID  = 'atenna-modal-overlay';
 const SUCCESS_MS  = 500;
 
 const LOADING_MESSAGES = [
-  'Estruturando intenção...',
-  'Refinando instruções...',
+  'Organizando intenção...',
+  'Refinando contexto...',
   'Preparando versões...',
 ];
 
@@ -78,11 +78,11 @@ function renderOnboarding(
 
   const subtitle = document.createElement('p');
   subtitle.className = 'atenna-modal__onb-subtitle';
-  subtitle.textContent = 'Ideias estruturadas geram respostas melhores.';
+  subtitle.textContent = 'Melhores instruções geram melhores respostas.';
 
   const description = document.createElement('p');
   description.className = 'atenna-modal__onb-description';
-  description.textContent = 'Refine solicitações para IA em segundos.';
+  description.textContent = 'Organize solicitações para IA com mais clareza.';
 
   wrap.appendChild(title);
   wrap.appendChild(subtitle);
@@ -100,11 +100,11 @@ function renderEmptyState(
 
   const title = document.createElement('h3');
   title.className = 'atenna-modal__empty-title';
-  title.textContent = 'O que você quer criar hoje?';
+  title.textContent = 'O que você quer organizar?';
 
   const subtitle = document.createElement('p');
   subtitle.className = 'atenna-modal__empty-subtitle';
-  subtitle.textContent = 'Escolha um ponto de partida ou escreva sua própria ideia.';
+  subtitle.textContent = 'Escolha um ponto de partida ou descreva sua intenção.';
 
   const chipsContainer = document.createElement('div');
   chipsContainer.className = 'atenna-modal__empty-chips';
@@ -146,7 +146,7 @@ async function renderMeusPrompts(
     empty.className = 'atenna-modal__empty-state';
     empty.innerHTML = `
       <h3 class="atenna-modal__empty-title">Histórico vazio</h3>
-      <p class="atenna-modal__empty-subtitle">Seus prompts salvos aparecerão aqui.</p>
+      <p class="atenna-modal__empty-subtitle">Suas solicitações salvas aparecerão aqui.</p>
     `;
     container.appendChild(empty);
     return;
@@ -190,7 +190,7 @@ async function renderMeusPrompts(
       if (platformInput) {
         setInputText(platformInput, entry.text);
         overlay.remove();
-        showToast('Prompt aplicado ✓');
+        showToast('Aplicado');
       } else {
         showToast('Input não encontrado');
       }
@@ -246,11 +246,11 @@ function renderUpgradeModal(onClose: () => void): HTMLElement {
 
   const title = document.createElement('h2');
   title.className = 'atenna-upgrade-modal__title';
-  title.textContent = 'Crie prompts sem limites';
+  title.textContent = 'Utilize sem restrições';
 
   const subtitle = document.createElement('p');
   subtitle.className = 'atenna-upgrade-modal__subtitle';
-  subtitle.textContent = 'Desbloqueie gerações ilimitadas e prioridade de processamento.';
+  subtitle.textContent = 'Acesso contínuo sem limites diários e processamento prioritário.';
 
   hero.appendChild(heroClose);
   hero.appendChild(badge);
@@ -262,9 +262,9 @@ function renderUpgradeModal(onClose: () => void): HTMLElement {
   body.className = 'atenna-upgrade-modal__body';
 
   const features: Array<[string, string]> = [
-    ['Gerações ilimitadas por dia', 'Sem restrição diária ou mensal'],
+    ['Utilizações ilimitadas por dia', 'Sem restrição diária ou mensal'],
     ['Processamento prioritário', 'Respostas mais rápidas'],
-    ['Histórico completo', 'Acesse todos os prompts criados'],
+    ['Histórico completo', 'Acesse todas as solicitações anteriores'],
     ['Suporte dedicado', 'Atendimento prioritário'],
   ];
 
@@ -443,7 +443,7 @@ async function openModal(): Promise<void> {
 
     modal.innerHTML = `
       <div class="atenna-modal__header">
-        <span class="atenna-modal__title">${logoImg}Atenna Prompt</span>
+        <span class="atenna-modal__title">${logoImg}Atenna</span>
         <button class="atenna-modal__close" aria-label="Fechar">×</button>
       </div>
       <div class="atenna-modal__body">
@@ -490,10 +490,10 @@ async function openModal(): Promise<void> {
 
   modal.innerHTML = `
     <div class="atenna-modal__header">
-      <span class="atenna-modal__title">${logoImg}Atenna Prompt</span>
+      <span class="atenna-modal__title">${logoImg}Atenna</span>
       <div class="atenna-modal__toggle" role="tablist">
-        <button class="atenna-modal__tab${editActive}"    data-tab="edit"    role="tab" aria-selected="${editSelected}">Criar Prompt</button>
-        <button class="atenna-modal__tab${promptsActive}" data-tab="prompts" role="tab" aria-selected="${promptsSelected}">Meus Prompts</button>
+        <button class="atenna-modal__tab${editActive}"    data-tab="edit"    role="tab" aria-selected="${editSelected}">Refinar</button>
+        <button class="atenna-modal__tab${promptsActive}" data-tab="prompts" role="tab" aria-selected="${promptsSelected}">Histórico</button>
       </div>
       <div class="atenna-modal__header-right">
         <span class="atenna-modal__usage" aria-label="Uso diário">…</span>
@@ -514,7 +514,7 @@ async function openModal(): Promise<void> {
           <span class="atenna-modal__builder-toggle-arrow">›</span>
         </button>
         <div class="atenna-modal__builder">
-          <p class="atenna-modal__builder-hint">Escolha ou descreva — combinamos para gerar prompts superiores</p>
+          <p class="atenna-modal__builder-hint">Descreva sua intenção — combinamos para estruturar com clareza</p>
           <div class="atenna-modal__builder-item">
             <span class="atenna-modal__builder-num">1</span>
             <div class="atenna-modal__builder-field">
@@ -558,7 +558,7 @@ async function openModal(): Promise<void> {
             </div>
           </div>
         </div>
-        <button class="atenna-modal__regen">Gerar Prompts</button>
+        <button class="atenna-modal__regen">Refinar</button>
       </div>
     </div>
   `;
@@ -980,6 +980,11 @@ function renderLimitReached(container: HTMLElement): void {
   container.appendChild(wrap);
 }
 
+// Static SVG icons for onboarding — safe for innerHTML
+const ONB_ICON_CLARITY = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`;
+const ONB_ICON_SHIELD  = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+const ONB_ICON_FLOW    = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
+
 function renderPreLoginOnboarding(container: HTMLElement, switchView: (view: string) => void): void {
   void trackEvent('onboarding_shown');
   chrome.storage.local.set({ atenna_onboarding_seen: true });
@@ -991,20 +996,30 @@ function renderPreLoginOnboarding(container: HTMLElement, switchView: (view: str
 
   wrap.innerHTML = `
     <div class="atenna-modal__onb-hero">
-      <div class="atenna-modal__onb-headline">Prompts melhores.<br>Resultados melhores.</div>
-      <p class="atenna-modal__onb-sub">Transforme qualquer ideia em prompts estruturados para ChatGPT, Claude e Gemini — em segundos.</p>
+      <div class="atenna-modal__onb-wordmark">Atenna</div>
+      <div class="atenna-modal__onb-headline">Clareza antes da inteligência.</div>
+      <p class="atenna-modal__onb-sub">Uma camada entre você e a IA — para que suas intenções cheguem com precisão.</p>
     </div>
     <ul class="atenna-modal__onb-features">
-      <li><span class="atenna-modal__onb-icon">⚡</span><div><strong>3 versões otimizadas</strong><span>Direto, técnico e estruturado</span></div></li>
-      <li><span class="atenna-modal__onb-icon">🎯</span><div><strong>Builder inteligente</strong><span>Preencha objetivo, contexto e formato</span></div></li>
-      <li><span class="atenna-modal__onb-icon">📋</span><div><strong>Histórico de prompts</strong><span>Acesse e reutilize o que funcionou</span></div></li>
+      <li>
+        <span class="atenna-modal__onb-icon">${ONB_ICON_CLARITY}</span>
+        <div><strong>Organiza instruções complexas</strong><span>Estrutura sua intenção em versões claras e objetivas</span></div>
+      </li>
+      <li>
+        <span class="atenna-modal__onb-icon">${ONB_ICON_SHIELD}</span>
+        <div><strong>Detecta dados sensíveis</strong><span>Alerta sobre possíveis informações pessoais antes do envio</span></div>
+      </li>
+      <li>
+        <span class="atenna-modal__onb-icon">${ONB_ICON_FLOW}</span>
+        <div><strong>Melhora a comunicação com IA</strong><span>Solicitações mais claras geram respostas mais precisas</span></div>
+      </li>
     </ul>
-    <div class="atenna-modal__onb-free-tag">✓ Grátis · 5 gerações por dia · Sem cartão</div>
+    <div class="atenna-modal__onb-free-tag">Disponível hoje · 5 utilizações · Sem cartão</div>
   `;
 
   const ctaBtn = document.createElement('button');
   ctaBtn.className = 'atenna-modal__onb-cta';
-  ctaBtn.textContent = 'Criar conta grátis';
+  ctaBtn.textContent = 'Começar';
   ctaBtn.addEventListener('click', () => {
     void trackEvent('onboarding_cta_clicked');
     switchView('signup');
@@ -1012,7 +1027,7 @@ function renderPreLoginOnboarding(container: HTMLElement, switchView: (view: str
 
   const loginLink = document.createElement('button');
   loginLink.className = 'atenna-modal__onb-login';
-  loginLink.textContent = 'Já tenho conta →';
+  loginLink.textContent = 'Já tenho uma conta';
   loginLink.addEventListener('click', () => {
     void trackEvent('onboarding_login_clicked');
     switchView('login');
@@ -1033,19 +1048,11 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
 
   const title = document.createElement('h2');
   title.className = 'atenna-modal__login-title';
-  title.textContent = 'A IA certa começa com o prompt certo';
+  title.textContent = 'Bem-vindo ao Atenna.';
 
   const subtitle = document.createElement('p');
   subtitle.className = 'atenna-modal__login-subtitle';
-  subtitle.textContent = 'Crie prompts estruturados com precisão e clareza em segundos';
-
-  const features = document.createElement('div');
-  features.className = 'atenna-modal__login-features';
-  features.innerHTML = `
-    <div class="atenna-modal__feature">5 gerações gratuitas por dia</div>
-    <div class="atenna-modal__feature">Estruturação inteligente automática</div>
-    <div class="atenna-modal__feature">Otimizado para IA moderna</div>
-  `;
+  subtitle.textContent = 'Uma camada de clareza para suas solicitações de IA.';
 
   const inputGroup = document.createElement('div');
   inputGroup.className = 'atenna-modal__login-group';
@@ -1060,7 +1067,7 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
   emailInput.autocomplete = 'email';
   const emailIcon = document.createElement('span');
   emailIcon.className = 'atenna-modal__input-icon-left';
-  emailIcon.textContent = '✉';
+  emailIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`;
   emailWrapper.appendChild(emailIcon);
   emailWrapper.appendChild(emailInput);
 
@@ -1070,21 +1077,21 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
   const passwordInput = document.createElement('input');
   passwordInput.type = 'password';
   passwordInput.className = 'atenna-modal__login-input';
-  passwordInput.placeholder = 'Sua senha';
+  passwordInput.placeholder = 'Senha';
   passwordInput.autocomplete = 'current-password';
   const pwdIcon = document.createElement('span');
   pwdIcon.className = 'atenna-modal__input-icon-left';
-  pwdIcon.textContent = '⚿';
+  pwdIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
   const eyeToggle = document.createElement('button');
   eyeToggle.className = 'atenna-modal__input-icon-right';
   eyeToggle.type = 'button';
-  eyeToggle.textContent = '○';
+  eyeToggle.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
   eyeToggle.title = 'Mostrar senha';
   eyeToggle.addEventListener('click', (e) => {
     e.preventDefault();
     const isPassword = passwordInput.type === 'password';
     passwordInput.type = isPassword ? 'text' : 'password';
-    eyeToggle.title = isPassword ? 'Esconder senha' : 'Mostrar senha';
+    eyeToggle.title = isPassword ? 'Ocultar senha' : 'Mostrar senha';
   });
   passwordWrapper.appendChild(pwdIcon);
   passwordWrapper.appendChild(passwordInput);
@@ -1169,7 +1176,6 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
 
   wrap.appendChild(title);
   wrap.appendChild(subtitle);
-  wrap.appendChild(features);
   wrap.appendChild(inputGroup);
   wrap.appendChild(status);
   wrap.appendChild(linksDiv);
@@ -1208,7 +1214,7 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
   emailInput.autocomplete = 'email';
   const emailIcon = document.createElement('span');
   emailIcon.className = 'atenna-modal__input-icon-left';
-  emailIcon.textContent = '✉';
+  emailIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`;
   emailWrapper.appendChild(emailIcon);
   emailWrapper.appendChild(emailInput);
 
@@ -1222,11 +1228,11 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
   passwordInput.autocomplete = 'new-password';
   const pwdIcon = document.createElement('span');
   pwdIcon.className = 'atenna-modal__input-icon-left';
-  pwdIcon.textContent = '🔒'.replace('🔒', '⚿');
+  pwdIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
   const eyeToggle = document.createElement('button');
   eyeToggle.className = 'atenna-modal__input-icon-right';
   eyeToggle.type = 'button';
-  eyeToggle.textContent = '◯';
+  eyeToggle.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
   eyeToggle.title = 'Mostrar senha';
   eyeToggle.addEventListener('click', (e) => {
     e.preventDefault();
@@ -1248,11 +1254,11 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
   confirmInput.autocomplete = 'new-password';
   const confirmIcon = document.createElement('span');
   confirmIcon.className = 'atenna-modal__input-icon-left';
-  confirmIcon.textContent = '⚿';
+  confirmIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
   const eyeToggle2 = document.createElement('button');
   eyeToggle2.className = 'atenna-modal__input-icon-right';
   eyeToggle2.type = 'button';
-  eyeToggle2.textContent = '◯';
+  eyeToggle2.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
   eyeToggle2.title = 'Mostrar senha';
   eyeToggle2.addEventListener('click', (e) => {
     e.preventDefault();
@@ -1577,7 +1583,7 @@ function buildCard(
       setInputText(platformInput, ta.value);
       clearMsgInterval();
       overlay.remove();
-      showToast('Prompt aplicado ✓');
+      showToast('Aplicado');
     } else {
       showToast('Input não encontrado — use Copiar');
     }
