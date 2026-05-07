@@ -8,7 +8,8 @@ import type { PromptOrigin, PromptType } from '../core/analytics';
 import { scan } from '../dlp/detector';
 import { buildAdvisory } from '../dlp/advisory';
 import type { Advisory } from '../dlp/types';
-import { updateBadgeDotRisk } from '../content/injectButton';
+import { updateBadgeDotRisk, setAutoBanner } from '../content/injectButton';
+import { getDlpStats, syncDlpStats } from '../core/dlpStats';
 
 const OVERLAY_ID  = 'atenna-modal-overlay';
 const SUCCESS_MS  = 500;
@@ -313,6 +314,249 @@ function renderUpgradeModal(onClose: () => void): HTMLElement {
   box.appendChild(hero);
   box.appendChild(body);
   overlay.appendChild(box);
+
+  return overlay;
+}
+
+// ─── Settings Dashboard Page ──────────────────────────────────
+
+function makeProgressBar(value: number, max: number, color = '#22c55e'): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'atenna-settings__bar-wrap';
+  const fill = document.createElement('div');
+  fill.className = 'atenna-settings__bar-fill';
+  const pct = max > 0 ? Math.min(100, Math.round(value / max * 100)) : 0;
+  fill.style.width = `${pct}%`;
+  fill.style.background = color;
+  wrap.appendChild(fill);
+  return wrap;
+}
+
+function makeStatRow(label: string, value: string, sub?: string): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'atenna-settings__stat-row';
+  const l = document.createElement('span');
+  l.className = 'atenna-settings__stat-label';
+  l.textContent = label;
+  const v = document.createElement('span');
+  v.className = 'atenna-settings__stat-value';
+  v.textContent = value;
+  row.appendChild(l);
+  row.appendChild(v);
+  if (sub) {
+    const s = document.createElement('span');
+    s.className = 'atenna-settings__stat-sub';
+    s.textContent = sub;
+    row.appendChild(s);
+  }
+  return row;
+}
+
+function makeSectionTitle(text: string): HTMLElement {
+  const h = document.createElement('div');
+  h.className = 'atenna-settings__section-title';
+  h.textContent = text;
+  return h;
+}
+
+function renderSettingsPage(
+  session: { email: string; access_token: string },
+  pro: boolean,
+  onBack: () => void,
+): HTMLElement {
+  const dark = isDark();
+  const overlay = document.createElement('div');
+  overlay.id = 'atenna-settings-overlay';
+  overlay.className = 'atenna-modal-overlay';
+
+  const box = document.createElement('div');
+  box.className = dark ? 'atenna-modal atenna-modal--dark atenna-settings' : 'atenna-modal atenna-settings';
+
+  // ── Header ───────────────────────────────────────────────
+  const header = document.createElement('div');
+  header.className = 'atenna-settings__header';
+
+  const backBtn = document.createElement('button');
+  backBtn.className = 'atenna-settings__back';
+  backBtn.innerHTML = '← Voltar';
+  backBtn.addEventListener('click', onBack);
+
+  const logoutBtn = document.createElement('button');
+  logoutBtn.className = 'atenna-settings__logout';
+  logoutBtn.innerHTML = '⎋&nbsp;Sair';
+  logoutBtn.addEventListener('click', async () => {
+    void trackEvent('logout_clicked');
+    const { signOut } = await import('../core/auth');
+    await signOut();
+    onBack();
+    window.location.reload();
+  });
+
+  header.appendChild(backBtn);
+  header.appendChild(logoutBtn);
+
+  // ── User card ────────────────────────────────────────────
+  const userCard = document.createElement('div');
+  userCard.className = 'atenna-settings__user-card';
+
+  const avatar = document.createElement('div');
+  avatar.className = 'atenna-settings__avatar';
+  avatar.textContent = (session.email?.[0] ?? 'A').toUpperCase();
+
+  const userInfo = document.createElement('div');
+  userInfo.className = 'atenna-settings__user-info';
+
+  const emailEl = document.createElement('div');
+  emailEl.className = 'atenna-settings__user-email';
+  emailEl.textContent = session.email;
+
+  const planBadge = document.createElement('span');
+  planBadge.className = `atenna-settings__plan-badge${pro ? ' atenna-settings__plan-badge--pro' : ''}`;
+  planBadge.textContent = pro ? 'Pro ✓' : 'Free';
+
+  userInfo.appendChild(emailEl);
+  userInfo.appendChild(planBadge);
+  userCard.appendChild(avatar);
+  userCard.appendChild(userInfo);
+
+  // ── Scroll body ──────────────────────────────────────────
+  const body = document.createElement('div');
+  body.className = 'atenna-settings__body';
+
+  // Skeleton while loading
+  const skeleton = document.createElement('div');
+  skeleton.className = 'atenna-skeleton-loading';
+  skeleton.style.cssText = 'height:200px;border-radius:8px;margin:12px 0;';
+  body.appendChild(skeleton);
+
+  box.appendChild(header);
+  box.appendChild(userCard);
+  box.appendChild(body);
+  overlay.appendChild(box);
+
+  // ── Load all data async ──────────────────────────────────
+  void (async () => {
+    try {
+      const [usage, monthly, total, dlpLocal] = await Promise.all([
+        getUsage(),
+        getMonthlyUsage(),
+        getTotalCount(),
+        getDlpStats(),
+      ]);
+
+      // Attempt Supabase sync (non-blocking)
+      let dlp = dlpLocal;
+      if (session.access_token) {
+        try {
+          // Extract user_id from JWT
+          const { decodeJwtPayload } = await import('../core/auth');
+          const payload = decodeJwtPayload(session.access_token);
+          const userId = payload['sub'] as string | undefined;
+          if (userId) dlp = await syncDlpStats(session.access_token, userId);
+        } catch { /* offline */ }
+      }
+
+      const taxaProtecao = dlp.scansTotal > 0
+        ? Math.min(100, Math.round(dlp.protectedCount / dlp.scansTotal * 100))
+        : 0;
+      const tokensK = dlp.tokensEstimated >= 1000
+        ? `~${(dlp.tokensEstimated / 1000).toFixed(1)}k`
+        : `~${dlp.tokensEstimated}`;
+      const dailyLimit  = pro ? '∞' : String(DAILY_LIMIT);
+      const monthlyLimit = pro ? '∞' : String(MONTHLY_LIMIT);
+
+      skeleton.remove();
+
+      // ── Seção: Uso de Prompts ──────────────────────────
+      body.appendChild(makeSectionTitle('📊 Uso de Prompts'));
+
+      const usageSection = document.createElement('div');
+      usageSection.className = 'atenna-settings__section';
+
+      const todayRow = makeStatRow('Hoje', `${usage.count} / ${dailyLimit}`);
+      if (!pro) todayRow.appendChild(makeProgressBar(usage.count, DAILY_LIMIT));
+
+      const monthRow = makeStatRow('Este mês', `${monthly} / ${monthlyLimit}`);
+      if (!pro) monthRow.appendChild(makeProgressBar(monthly, MONTHLY_LIMIT, '#3b82f6'));
+
+      usageSection.appendChild(todayRow);
+      usageSection.appendChild(monthRow);
+      usageSection.appendChild(makeStatRow('Total', `${total} refinamentos`));
+
+      if (!pro) {
+        const upgradeBtn = document.createElement('button');
+        upgradeBtn.className = 'atenna-settings__upgrade-cta';
+        upgradeBtn.textContent = '★ Upgrade para Pro — acesso ilimitado';
+        upgradeBtn.addEventListener('click', () => {
+          void trackEvent('upgrade_modal_shown');
+          const up = renderUpgradeModal(() => up.remove());
+          document.body.appendChild(up);
+        });
+        usageSection.appendChild(upgradeBtn);
+      }
+
+      body.appendChild(usageSection);
+
+      // ── Seção: LGPD & Proteção ────────────────────────
+      body.appendChild(makeSectionTitle('🛡 LGPD & Proteção de Dados'));
+
+      const dlpSection = document.createElement('div');
+      dlpSection.className = 'atenna-settings__section';
+
+      dlpSection.appendChild(makeStatRow('Dados protegidos', String(dlp.protectedCount), 'substituições realizadas'));
+      dlpSection.appendChild(makeStatRow('Scans DLP', String(dlp.scansTotal), 'verificações em tempo real'));
+      dlpSection.appendChild(makeStatRow('Tokens economizados', tokensK, 'estimativa de dados ofuscados'));
+
+      const taxaRow = document.createElement('div');
+      taxaRow.className = 'atenna-settings__stat-row atenna-settings__stat-row--bar';
+      const taxaLabel = document.createElement('span');
+      taxaLabel.className = 'atenna-settings__stat-label';
+      taxaLabel.textContent = 'Taxa de proteção';
+      const taxaVal = document.createElement('span');
+      taxaVal.className = 'atenna-settings__stat-value';
+      taxaVal.textContent = `${taxaProtecao}%`;
+      taxaRow.appendChild(taxaLabel);
+      taxaRow.appendChild(taxaVal);
+      dlpSection.appendChild(taxaRow);
+      dlpSection.appendChild(makeProgressBar(taxaProtecao, 100, taxaProtecao >= 70 ? '#22c55e' : taxaProtecao >= 40 ? '#f59e0b' : '#ef4444'));
+
+      body.appendChild(dlpSection);
+
+      // ── Seção: Personalização ─────────────────────────
+      body.appendChild(makeSectionTitle('⚙ Personalização'));
+
+      const personalSection = document.createElement('div');
+      personalSection.className = 'atenna-settings__section';
+
+      const toggleRow = document.createElement('label');
+      toggleRow.className = 'atenna-modal__account-toggle-row';
+      toggleRow.style.padding = '8px 0';
+
+      const toggleLabel = document.createElement('span');
+      toggleLabel.textContent = 'Alerta automático de dados';
+
+      const toggleInput = document.createElement('input');
+      toggleInput.type = 'checkbox';
+      toggleInput.className = 'atenna-modal__account-toggle';
+
+      chrome.storage.local.get('atenna_settings', (res) => {
+        const s = res['atenna_settings'] as { autoBanner?: boolean } | undefined;
+        toggleInput.checked = s?.autoBanner !== false;
+      });
+
+      toggleInput.addEventListener('change', () => {
+        setAutoBanner(toggleInput.checked);
+      });
+
+      toggleRow.appendChild(toggleLabel);
+      toggleRow.appendChild(toggleInput);
+      personalSection.appendChild(toggleRow);
+      body.appendChild(personalSection);
+
+    } catch {
+      skeleton.textContent = 'Erro ao carregar dados.';
+    }
+  })();
 
   return overlay;
 }
@@ -658,125 +902,19 @@ async function openModal(): Promise<void> {
   const [usage, pro, totalCount] = await Promise.all([getUsage(), isPro(), getTotalCount()]);
   await updateUsageBadge(usageBadge, usage.count, pro);
 
-  // Gear menu — account info + personalização + logout
+  // Gear button → opens full Settings Dashboard page
   const gearBtn = modal.querySelector<HTMLButtonElement>('[data-gear]');
-  const accountEl = modal.querySelector<HTMLElement>('.atenna-modal__account');
-  if (gearBtn && accountEl) {
+  if (gearBtn) {
     gearBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const existing = accountEl.querySelector('.atenna-modal__account-menu');
+      const existing = document.getElementById('atenna-settings-overlay');
       if (existing) { existing.remove(); return; }
-
-      const menu = document.createElement('div');
-      menu.className = 'atenna-modal__account-menu';
-
-      const emailEl = document.createElement('div');
-      emailEl.className = 'atenna-modal__account-email';
-      emailEl.textContent = session.email || 'Conta';
-
-      // ── Personalização section ──────────────────────────
-      const divPersonal = document.createElement('div');
-      divPersonal.className = 'atenna-modal__account-divider';
-
-      const sectionTitle = document.createElement('div');
-      sectionTitle.className = 'atenna-modal__account-section';
-      sectionTitle.textContent = 'Personalização';
-
-      const toggleRow = document.createElement('label');
-      toggleRow.className = 'atenna-modal__account-toggle-row';
-
-      const toggleLabel = document.createElement('span');
-      toggleLabel.textContent = 'Alerta automático de dados';
-
-      const toggleInput = document.createElement('input');
-      toggleInput.type = 'checkbox';
-      toggleInput.className = 'atenna-modal__account-toggle';
-
-      // Read current setting
-      chrome.storage.local.get('atenna_settings', (res) => {
-        const s = res['atenna_settings'] as { autoBanner?: boolean } | undefined;
-        toggleInput.checked = s?.autoBanner !== false; // default true
-      });
-
-      toggleInput.addEventListener('change', async () => {
-        const { setAutoBanner } = await import('../content/injectButton');
-        setAutoBanner(toggleInput.checked);
-      });
-
-      toggleRow.appendChild(toggleLabel);
-      toggleRow.appendChild(toggleInput);
-
-      // ── Uso section ─────────────────────────────────────
-      const divUso = document.createElement('div');
-      divUso.className = 'atenna-modal__account-divider';
-
-      const usoTitle = document.createElement('div');
-      usoTitle.className = 'atenna-modal__account-section';
-      usoTitle.textContent = 'Uso';
-
-      const usoRow1 = document.createElement('div');
-      usoRow1.className = 'atenna-modal__account-usage-row';
-      const usoRow2 = document.createElement('div');
-      usoRow2.className = 'atenna-modal__account-usage-row';
-
-      // Populate async
-      Promise.all([getUsage(), isPro(), getTotalCount()]).then(([usg, proUser, total]) => {
-        const limit = pro ? '∞' : String(DAILY_LIMIT);
-        usoRow1.innerHTML = `<span>Hoje</span><span>${usg.count}/${limit}</span>`;
-        usoRow2.innerHTML = `<span>Total</span><span>${total}</span>`;
-        void proUser;
-      });
-
-      const logoutBtn = document.createElement('button');
-      logoutBtn.className = 'atenna-modal__account-logout';
-      logoutBtn.innerHTML = '⎋ &nbsp;Sair da conta';
-      logoutBtn.addEventListener('click', async () => {
-        void trackEvent('logout_clicked');
-        const { signOut } = await import('../core/auth');
-        await signOut();
-        overlay.remove();
-        window.location.reload();
-      });
-
-      menu.appendChild(emailEl);
-      menu.appendChild(divPersonal);
-      menu.appendChild(sectionTitle);
-      menu.appendChild(toggleRow);
-      menu.appendChild(divUso);
-      menu.appendChild(usoTitle);
-      menu.appendChild(usoRow1);
-      menu.appendChild(usoRow2);
-
-      if (!pro) {
-        const divAccount = document.createElement('div');
-        divAccount.className = 'atenna-modal__account-divider';
-        const upgradeBtn = document.createElement('button');
-        upgradeBtn.className = 'atenna-modal__account-logout';
-        upgradeBtn.style.color = '#16a34a';
-        upgradeBtn.innerHTML = '★ &nbsp;Upgrade para Pro';
-        upgradeBtn.addEventListener('click', () => {
-          menu.remove();
-          void trackEvent('upgrade_modal_shown');
-          const upgradeOverlay = renderUpgradeModal(() => {
-            void trackEvent('upgrade_modal_closed');
-            upgradeOverlay.remove();
-          });
-          document.body.appendChild(upgradeOverlay);
-        });
-        menu.appendChild(divAccount);
-        menu.appendChild(upgradeBtn);
-      }
-
-      const divLogout = document.createElement('div');
-      divLogout.className = 'atenna-modal__account-divider';
-      menu.appendChild(divLogout);
-      menu.appendChild(logoutBtn);
-
-      accountEl.appendChild(menu);
-      const closeMenu = (ev: MouseEvent) => {
-        if (!menu.contains(ev.target as Node)) { menu.remove(); document.removeEventListener('click', closeMenu); }
-      };
-      setTimeout(() => document.addEventListener('click', closeMenu), 0);
+      const settingsPage = renderSettingsPage(
+        session,
+        pro,
+        () => { document.getElementById('atenna-settings-overlay')?.remove(); },
+      );
+      document.body.appendChild(settingsPage);
     });
   }
 

@@ -2,6 +2,7 @@ import type { PlatformConfig } from './detectInput';
 import { scan } from '../dlp/detector';
 import { getInputText, setInputText } from '../core/inputHandler';
 import { rewritePII } from '../dlp/rewriter';
+import { incrementProtected, incrementScan } from '../core/dlpStats';
 import type { DetectedEntity } from '../dlp/types';
 
 const INJECTED_ATTR      = 'data-atenna-injected';
@@ -115,9 +116,11 @@ function showProtectionBanner(
   protectBtn.addEventListener('click', () => {
     const text      = getInputText(lastScanInput!);
     const rewritten = rewritePII(text, lastEntities);
+    const charsSaved = Math.max(0, text.length - rewritten.length);
     setInputText(lastScanInput!, rewritten);
     dismissProtectionBanner();
     updateBadgeDotRisk('NONE', 0);
+    void incrementProtected(charsSaved);
   });
 
   const ignoreBtn = document.createElement('button');
@@ -368,6 +371,7 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
         return;
       }
       const result = scan(text);
+      void incrementScan();
       const uniqueCount = new Set(result.entities.map(e => e.type)).size;
       updateBadgeDotRisk(result.riskLevel, uniqueCount);
 
