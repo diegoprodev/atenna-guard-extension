@@ -658,7 +658,7 @@ async function openModal(): Promise<void> {
   const [usage, pro, totalCount] = await Promise.all([getUsage(), isPro(), getTotalCount()]);
   await updateUsageBadge(usageBadge, usage.count, pro);
 
-  // Gear menu — account info + logout
+  // Gear menu — account info + personalização + logout
   const gearBtn = modal.querySelector<HTMLButtonElement>('[data-gear]');
   const accountEl = modal.querySelector<HTMLElement>('.atenna-modal__account');
   if (gearBtn && accountEl) {
@@ -674,6 +674,38 @@ async function openModal(): Promise<void> {
       emailEl.className = 'atenna-modal__account-email';
       emailEl.textContent = session.email || 'Conta';
 
+      // ── Personalização section ──────────────────────────
+      const divPersonal = document.createElement('div');
+      divPersonal.className = 'atenna-modal__account-divider';
+
+      const sectionTitle = document.createElement('div');
+      sectionTitle.className = 'atenna-modal__account-section';
+      sectionTitle.textContent = 'Personalização';
+
+      const toggleRow = document.createElement('label');
+      toggleRow.className = 'atenna-modal__account-toggle-row';
+
+      const toggleLabel = document.createElement('span');
+      toggleLabel.textContent = 'Alerta automático de dados';
+
+      const toggleInput = document.createElement('input');
+      toggleInput.type = 'checkbox';
+      toggleInput.className = 'atenna-modal__account-toggle';
+
+      // Read current setting
+      chrome.storage.local.get('atenna_settings', (res) => {
+        const s = res['atenna_settings'] as { autoBanner?: boolean } | undefined;
+        toggleInput.checked = s?.autoBanner !== false; // default true
+      });
+
+      toggleInput.addEventListener('change', async () => {
+        const { setAutoBanner } = await import('../content/injectButton');
+        setAutoBanner(toggleInput.checked);
+      });
+
+      toggleRow.appendChild(toggleLabel);
+      toggleRow.appendChild(toggleInput);
+
       const logoutBtn = document.createElement('button');
       logoutBtn.className = 'atenna-modal__account-logout';
       logoutBtn.innerHTML = '⎋ &nbsp;Sair da conta';
@@ -685,7 +717,14 @@ async function openModal(): Promise<void> {
         window.location.reload();
       });
 
+      menu.appendChild(emailEl);
+      menu.appendChild(divPersonal);
+      menu.appendChild(sectionTitle);
+      menu.appendChild(toggleRow);
+
       if (!pro) {
+        const divAccount = document.createElement('div');
+        divAccount.className = 'atenna-modal__account-divider';
         const upgradeBtn = document.createElement('button');
         upgradeBtn.className = 'atenna-modal__account-logout';
         upgradeBtn.style.color = '#16a34a';
@@ -699,13 +738,14 @@ async function openModal(): Promise<void> {
           });
           document.body.appendChild(upgradeOverlay);
         });
-        menu.appendChild(emailEl);
+        menu.appendChild(divAccount);
         menu.appendChild(upgradeBtn);
-        menu.appendChild(logoutBtn);
-      } else {
-        menu.appendChild(emailEl);
-        menu.appendChild(logoutBtn);
       }
+
+      const divLogout = document.createElement('div');
+      divLogout.className = 'atenna-modal__account-divider';
+      menu.appendChild(divLogout);
+      menu.appendChild(logoutBtn);
 
       accountEl.appendChild(menu);
       const closeMenu = (ev: MouseEvent) => {

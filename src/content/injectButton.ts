@@ -4,42 +4,94 @@ import { getInputText, setInputText } from '../core/inputHandler';
 import { rewritePII } from '../dlp/rewriter';
 import type { DetectedEntity } from '../dlp/types';
 
-const INJECTED_ATTR    = 'data-atenna-injected';
-const BTN_ID           = 'atenna-guard-btn';
-const BTN_CLASS        = 'atenna-btn';
-const BADGE_RIGHT_OFFSET = 90; // clears toolbar icons (mic, send) on all platforms
+const INJECTED_ATTR      = 'data-atenna-injected';
+const BTN_ID             = 'atenna-guard-btn';
+const BTN_CLASS          = 'atenna-btn';
+const BADGE_RIGHT_OFFSET = 90;
 
 let currentCleanup: (() => void) | undefined;
 let rafId:          number | undefined;
 let savedPos:       { top: number; left: number } | null = null;
+
+// ── Settings ────────────────────────────────────────────────
+
+let autoBannerEnabled = true;
+
+// Read persisted setting at module load
+try {
+  chrome.storage.local.get('atenna_settings', (result) => {
+    const s = result['atenna_settings'] as { autoBanner?: boolean } | undefined;
+    if (s && typeof s.autoBanner === 'boolean') autoBannerEnabled = s.autoBanner;
+  });
+} catch { /* non-extension env */ }
+
+export function setAutoBanner(enabled: boolean): void {
+  autoBannerEnabled = enabled;
+  try { chrome.storage.local.set({ atenna_settings: { autoBanner: enabled } }); } catch { /* */ }
+}
+
+// ── PT-BR labels for entity types ───────────────────────────
+
+const ENTITY_LABELS: Record<string, string> = {
+  CPF: 'CPF', CNPJ: 'CNPJ', EMAIL: 'E-mail', PHONE: 'Telefone',
+  API_KEY: 'Chave API', TOKEN: 'Token', PASSWORD: 'Senha',
+  CREDIT_CARD: 'Cartão', ADDRESS: 'Endereço', PROCESS_NUM: 'Processo',
+  MEDICAL: 'Dado médico', LEGAL: 'Dado legal', GENERIC_PII: 'Dado pessoal',
+  NAME: 'Nome',
+};
+
+function entityLabel(type: string): string {
+  return ENTITY_LABELS[type] ?? type;
+}
+
+function isDarkPage(): boolean {
+  try {
+    const bg = getComputedStyle(document.body).backgroundColor;
+    const m = bg.match(/\d+/g);
+    if (m && m.length >= 3) return 0.299 * +m[0] + 0.587 * +m[1] + 0.114 * +m[2] < 128;
+  } catch { /* */ }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
 
 // ── Protection banner state ─────────────────────────────────
 
 let bannerEl:        HTMLElement | undefined;
 let lastEntities:    DetectedEntity[] = [];
 let lastScanInput:   HTMLElement | undefined;
+let lastBannerBtn:   HTMLButtonElement | undefined;
 
 function showProtectionBanner(
   input:    HTMLElement,
   btn:      HTMLButtonElement,
   entities: DetectedEntity[],
 ): void {
-  if (bannerEl) { lastEntities = entities; lastScanInput = input; return; }
-
   lastEntities  = entities;
   lastScanInput = input;
+  lastBannerBtn = btn;
+
+  if (bannerEl) {
+    // Update subtitle if already visible
+    const sub = bannerEl.querySelector('.atenna-protection-banner__sub');
+    if (sub) sub.textContent = buildSubtitle(entities);
+    return;
+  }
+
+  const dark = isDarkPage();
 
   const banner = document.createElement('div');
   banner.id        = 'atenna-protection-banner';
-  banner.className = 'atenna-protection-banner';
+  banner.className = 'atenna-protection-banner' + (dark ? ' atenna-protection-banner--dark' : '');
+
+  const uniqueTypes = [...new Set(entities.map(e => e.type))];
+  const count = uniqueTypes.length;
 
   const msg = document.createElement('p');
   msg.className   = 'atenna-protection-banner__msg';
-  msg.textContent = 'Dados sensíveis detectados';
+  msg.textContent = `Dados sensíveis detectados${count > 1 ? ` (${count})` : ''}`;
 
   const sub = document.createElement('p');
   sub.className   = 'atenna-protection-banner__sub';
-  sub.textContent = lastEntities.map(e => e.type.replace('_', ' ')).filter((v, i, a) => a.indexOf(v) === i).join(' · ');
+  sub.textContent = buildSubtitle(entities);
 
   const actions = document.createElement('div');
   actions.className = 'atenna-protection-banner__actions';
@@ -52,7 +104,7 @@ function showProtectionBanner(
     const rewritten = rewritePII(text, lastEntities);
     setInputText(lastScanInput!, rewritten);
     dismissProtectionBanner();
-    updateBadgeDotRisk('NONE');
+    updateBadgeDotRisk('NONE', 0);
   });
 
   const ignoreBtn = document.createElement('button');
@@ -68,10 +120,19 @@ function showProtectionBanner(
   document.body.appendChild(banner);
   bannerEl = banner;
 
-  // Position below badge
+  positionBannerAbove(btn, banner);
+}
+
+function buildSubtitle(entities: DetectedEntity[]): string {
+  return [...new Set(entities.map(e => e.type))].map(entityLabel).join(' · ');
+}
+
+function positionBannerAbove(btn: HTMLButtonElement, banner: HTMLElement): void {
   const btnRect = btn.getBoundingClientRect();
-  banner.style.top  = `${btnRect.bottom + 8}px`;
+  banner.style.top   = 'auto';
   banner.style.right = `${window.innerWidth - btnRect.right}px`;
+  // Position above badge: `bottom` = distance from viewport bottom to badge top, plus gap
+  banner.style.bottom = `${window.innerHeight - btnRect.top + 8}px`;
 }
 
 function dismissProtectionBanner(): void {
@@ -79,6 +140,7 @@ function dismissProtectionBanner(): void {
   bannerEl       = undefined;
   lastEntities   = [];
   lastScanInput  = undefined;
+  lastBannerBtn  = undefined;
 }
 
 function getLogoUrl(): string {
@@ -175,6 +237,11 @@ function addDragBehavior(btn: HTMLButtonElement, onToggle: () => void): void {
   // Click fires after mouseup — skip it if a drag just occurred.
   btn.addEventListener('click', () => {
     if (dragMoved) { dragMoved = false; return; }
+    // When auto-banner is OFF and there are HIGH entities: show banner on click
+    if (!autoBannerEnabled && lastEntities.length > 0 && lastScanInput) {
+      showProtectionBanner(lastScanInput, btn, lastEntities);
+      return;
+    }
     onToggle();
   });
 }
@@ -277,13 +344,17 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
         return;
       }
       const result = scan(text);
-      updateBadgeDotRisk(result.riskLevel);
+      const highEntities = result.entities.filter(e => result.riskLevel === 'HIGH');
+      updateBadgeDotRisk(result.riskLevel, result.entities.length);
 
       if (result.riskLevel === 'HIGH') {
-        showProtectionBanner(input, btn, result.entities);
+        if (autoBannerEnabled) showProtectionBanner(input, btn, result.entities);
+        else { lastEntities = result.entities; lastScanInput = input; lastBannerBtn = btn; }
       } else {
         dismissProtectionBanner();
+        if (result.riskLevel !== 'HIGH') { lastEntities = []; }
       }
+      void highEntities;
     }, 400);
   };
   input.addEventListener('input', onInput);
@@ -307,18 +378,21 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   };
 }
 
-const DLP_TIPS: Record<string, string> = {
-  HIGH:   '⚠ Dados sensíveis detectados',
-  MEDIUM: '◉ Atenção: possível dado sensível',
-  LOW:    '✓ Baixo risco',
-  NONE:   '✓ Tudo seguro',
-};
+function buildDotTip(level: string, count?: number): string {
+  if (level === 'HIGH') {
+    const n = count && count > 0 ? ` (${count})` : '';
+    return `⚠ ${count === 1 ? '1 dado sensível' : `${count ?? ''} dados sensíveis`}${n ? '' : ' detectados'}`;
+  }
+  if (level === 'MEDIUM') return '◉ Possível dado sensível';
+  if (level === 'LOW')    return '✓ Baixo risco';
+  return '✓ Tudo seguro';
+}
 
-export function updateBadgeDotRisk(level: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH'): void {
+export function updateBadgeDotRisk(level: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH', count?: number): void {
   const dot = document.querySelector('#atenna-guard-btn .atenna-btn__dot') as HTMLElement | null;
   if (!dot) return;
   dot.classList.remove('atenna-btn__dot--typing', 'atenna-btn__dot--medium', 'atenna-btn__dot--high');
-  dot.setAttribute('data-tip', DLP_TIPS[level] ?? '✓ Tudo seguro');
+  dot.setAttribute('data-tip', buildDotTip(level, count));
   if (level === 'HIGH')        dot.classList.add('atenna-btn__dot--high');
   else if (level === 'MEDIUM') dot.classList.add('atenna-btn__dot--medium');
 }

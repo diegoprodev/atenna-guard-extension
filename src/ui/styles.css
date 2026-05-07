@@ -57,7 +57,7 @@
   padding: 0;
   background: #22c55e;
   box-shadow: 0 2px 12px rgba(34, 197, 94, 0.45);
-  overflow: hidden;
+  overflow: visible; /* dot and tooltip must protrude outside the circle */
 
   transition:
     width        500ms cubic-bezier(0.4, 0, 0.2, 1),
@@ -99,6 +99,7 @@
   align-items: center;
   justify-content: center;
   overflow: visible;
+  z-index: 1;
 }
 
 /* Coruja: zoom-out lento ao expandir, zoom-in spring ao recolher */
@@ -149,43 +150,44 @@
   50%       { opacity: 0.9; transform: scale(1.08); }
 }
 
-/* Status dot — bottom-right do botão */
+/* Status dot — protrudes outside the badge bottom-right */
 .atenna-btn__dot {
   position: absolute;
-  bottom: 5px;
-  right: 5px;
-  width: 7px;
-  height: 7px;
-  z-index: 2;
+  bottom: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  z-index: 1000001; /* above badge */
   border-radius: 50%;
   background: rgba(255,255,255,0.85);
-  border: none;
+  border: 1.5px solid rgba(255,255,255,0.6);
   animation: atenna-dot-idle 2.6s ease-in-out infinite;
   transition: background 350ms ease;
   pointer-events: auto;
   cursor: default;
 }
 
-/* Tooltip do dot */
+/* Tooltip do dot — aparece ACIMA, fora do badge */
 .atenna-btn__dot::after {
   content: attr(data-tip);
   position: absolute;
-  bottom: calc(100% + 7px);
-  right: 0;
+  bottom: calc(100% + 8px);
+  right: -4px;
   white-space: nowrap;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  padding: 5px 9px;
+  padding: 5px 10px;
   border-radius: 7px;
   pointer-events: none;
   opacity: 0;
-  transform: translateY(4px);
+  transform: translateY(5px);
   transition: opacity 180ms ease, transform 200ms ease;
+  z-index: 1000002;
   /* light default */
   background: #1f2937;
   color: #f9fafb;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.28);
 }
 
 .atenna-btn__dot:hover::after {
@@ -242,6 +244,8 @@
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
+  /* clip to prevent text leaking outside collapsed badge */
+  clip-path: inset(0 -4px 0 0);
   transition:
     opacity   180ms ease 0ms,
     transform 200ms ease 0ms;
@@ -374,30 +378,43 @@
 /* ── Realtime Protection Banner ────────────────────────────── */
 
 @keyframes atenna-banner-in {
-  from { opacity: 0; transform: translateY(-4px); }
+  /* slides up from badge */
+  from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 .atenna-protection-banner {
   position: fixed;
+  /* top: auto; bottom + right set by JS (positionBannerAbove) */
   z-index: 2147483646;
   background: #ffffff;
-  border: 1px solid rgba(239, 68, 68, 0.22);
+  border: 1px solid rgba(239, 68, 68, 0.18);
   border-radius: 10px;
-  padding: 11px 14px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-  min-width: 220px;
-  max-width: 280px;
+  padding: 12px 14px 10px;
+  box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.10), 0 4px 24px rgba(0, 0, 0, 0.08);
+  min-width: 230px;
+  max-width: 290px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  animation: atenna-banner-in 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation: atenna-banner-in 200ms cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+/* Dark theme variant — matches Atenna modal dark palette */
+.atenna-protection-banner--dark {
+  background: #1a1a2e;
+  border-color: rgba(239, 68, 68, 0.25);
+  box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.4), 0 4px 24px rgba(0, 0, 0, 0.5);
 }
 
 .atenna-protection-banner__msg {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   color: #111111;
-  margin: 0 0 2px;
+  margin: 0 0 3px;
   line-height: 1.3;
+}
+
+.atenna-protection-banner--dark .atenna-protection-banner__msg {
+  color: #f1f5f9;
 }
 
 .atenna-protection-banner__sub {
@@ -405,8 +422,12 @@
   color: #9ca3af;
   margin: 0 0 10px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   line-height: 1.3;
+}
+
+.atenna-protection-banner--dark .atenna-protection-banner__sub {
+  color: #6b7280;
 }
 
 .atenna-protection-banner__actions {
@@ -429,9 +450,19 @@
   white-space: nowrap;
 }
 
+.atenna-protection-banner--dark .atenna-protection-banner__btn {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #9ca3af;
+}
+
 .atenna-protection-banner__btn:hover {
   background: rgba(0, 0, 0, 0.05);
   color: #111;
+}
+
+.atenna-protection-banner--dark .atenna-protection-banner__btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
 }
 
 .atenna-protection-banner__btn--primary {
@@ -440,7 +471,16 @@
   border-color: transparent;
 }
 
+.atenna-protection-banner--dark .atenna-protection-banner__btn--primary {
+  background: #22c55e;
+  color: #000000;
+}
+
 .atenna-protection-banner__btn--primary:hover {
   background: #000000;
   color: #ffffff;
+}
+
+.atenna-protection-banner--dark .atenna-protection-banner__btn--primary:hover {
+  background: #16a34a;
 }
