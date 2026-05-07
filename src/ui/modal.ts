@@ -412,7 +412,7 @@ function renderSettingsPage(
 
   const planBadge = document.createElement('span');
   planBadge.className = `atenna-settings__plan-badge${pro ? ' atenna-settings__plan-badge--pro' : ''}`;
-  planBadge.textContent = pro ? 'Pro ✓' : 'Free';
+  planBadge.textContent = pro ? 'Pro ✓' : 'Grátis';
 
   userInfo.appendChild(emailEl);
   userInfo.appendChild(planBadge);
