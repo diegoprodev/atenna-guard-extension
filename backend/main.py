@@ -9,6 +9,7 @@ from routes.auth import router as auth_router
 from routes.dlp import router as dlp_router
 from middleware.auth import require_auth
 from dlp.enforcement import evaluate_strict_enforcement
+from dlp import engine, telemetry
 
 app = FastAPI(
     title="Atenna Guard Prompt — Backend",
@@ -55,6 +56,9 @@ async def generate(
     input_text = request.input
     dlp_meta = request.dlp or {}
 
+    # Session ID for telemetry tracking
+    session_id = dlp_meta.get("dlp_session_id")
+
     # Log DLP metadata arrival
     print(json.dumps({
         "event": "dlp_prompt_received",
@@ -64,25 +68,68 @@ async def generate(
         "dlp_was_rewritten": dlp_meta.get("dlp_was_rewritten", False),
         "dlp_user_override": dlp_meta.get("dlp_user_override", False),
         "user_id": user_id,
+        "session_id": session_id,
     }), flush=True)
 
-    # Avalia se deve aplicar proteção rigorosa
-    enforcement_result = evaluate_strict_enforcement(
+    # ─── TASK 4: Server-side Revalidation (without HTTP internal call) ───
+    # Use shared engine directly (no /dlp/scan HTTP call)
+    server_analysis, mismatch = engine.revalidate(
         input_text,
         dlp_meta,
+        session_id=session_id,
+    )
+
+    # Log revalidation result
+    telemetry.server_revalidated(
+        session_id=session_id,
+        text_hash=server_analysis.text_hash,
+        client_risk=dlp_meta.get("dlp_risk_level", "NONE"),
+        server_risk=server_analysis.risk_level,
+        protected_tokens_detected=server_analysis.protected_tokens_detected,
+    )
+
+    # Log if mismatch detected
+    if mismatch.has_mismatch:
+        print(json.dumps({
+            "event": "dlp_client_server_divergence",
+            "divergence_type": mismatch.divergence_type,
+            "client_risk": mismatch.client_risk,
+            "server_risk": mismatch.server_risk,
+            "client_entities": mismatch.client_entity_count,
+            "server_entities": mismatch.server_entity_count,
+            "confidence": round(mismatch.confidence, 2),
+            "user_id": user_id,
+            "session_id": session_id,
+        }), flush=True)
+
+    # ─── Strict Mode: Use server result for enforcement ───
+    # Create enforcement metadata from server analysis
+    server_dlp_meta = {
+        "dlp_risk_level": server_analysis.risk_level,
+        "dlp_entity_count": len(server_analysis.entities),
+        "dlp_entity_types": server_analysis.entity_types,
+        "dlp_was_rewritten": server_analysis.was_rewritten,
+    }
+
+    # Evaluate strict enforcement using SERVER analysis
+    enforcement_result = evaluate_strict_enforcement(
+        input_text,
+        server_dlp_meta,  # Use server, not client
     )
 
     # Usa payload reescrito se strict mode aplicou proteção
     final_input = enforcement_result["rewritten_text"]
 
-    # Log decision
+    # Log enforcement decision
     if enforcement_result["would_apply"]:
         print(json.dumps({
             "event": "dlp_strict_evaluated",
-            "risk_level": dlp_meta.get("dlp_risk_level", "NONE"),
+            "risk_level": server_analysis.risk_level,
             "would_apply": True,
             "applied": enforcement_result["applied"],
+            "source": "server_revalidation",
             "user_id": user_id,
+            "session_id": session_id,
         }), flush=True)
 
     result = await generate_prompts(final_input)

@@ -98,3 +98,56 @@ def risk_distribution(
         "score":        round(score, 4),
         "platform":     platform,
     })
+
+
+# ─── TASK 4: Server-side Revalidation ────────────────────────
+
+def engine_analyzed(
+    session_id: str | None,
+    source: str,  # "client" or "server"
+    risk_level: str,
+    entity_count: int,
+    duration_ms: float,
+) -> None:
+    """Engine completed analysis."""
+    _emit("dlp_engine_analyzed", {
+        "session_id": session_id,
+        "source": source,
+        "risk_level": risk_level,
+        "entity_count": entity_count,
+        "duration_ms": round(duration_ms, 2),
+    })
+
+
+def mismatch_detected(
+    session_id: str | None,
+    divergence_type: str,  # client_low_server_high, etc
+    client_risk: str,
+    server_risk: str,
+    confidence: float,
+) -> None:
+    """Client vs server finding divergence detected."""
+    _emit("dlp_server_mismatch", {
+        "session_id": session_id,
+        "divergence_type": divergence_type,
+        "client_risk": client_risk,
+        "server_risk": server_risk,
+        "confidence": round(confidence, 2),
+    })
+
+
+def server_revalidated(
+    session_id: str | None,
+    text_hash: str,
+    client_risk: str,
+    server_risk: str,
+    protected_tokens_detected: bool,
+) -> None:
+    """Server-side revalidation completed."""
+    _emit("dlp_server_revalidated", {
+        "session_id": session_id,
+        "text_hash": text_hash,
+        "client_risk": client_risk,
+        "server_risk": server_risk,
+        "protected_tokens_detected": protected_tokens_detected,
+    })
