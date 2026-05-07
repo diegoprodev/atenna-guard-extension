@@ -177,11 +177,27 @@ def dlp_engine_error(
     error_type: str,  # Exception class name
     duration_ms: float,
 ) -> None:
-    """DLP engine encountered error and fell back to NONE risk."""
+    """DLP engine encountered error and fell back to UNKNOWN risk."""
     _emit("dlp_engine_error", {
         "session_id": session_id,
         "endpoint": endpoint,
         "error_type": error_type,
         "duration_ms": round(duration_ms, 2),
-        "status": "fallback_none",  # Fell back to NONE risk
+        "status": "fallback_unknown",  # Fell back to UNKNOWN risk
+    })
+
+
+def dlp_analysis_unavailable(
+    session_id: str | None,
+    reason: str,  # "timeout", "error", "unavailable"
+    endpoint: str,
+    duration_ms: float,
+) -> None:
+    """DLP analysis was unavailable (timeout, error, or provider issue)."""
+    _emit("dlp_analysis_unavailable", {
+        "session_id": session_id,
+        "reason": reason,
+        "endpoint": endpoint,
+        "duration_ms": round(duration_ms, 2),
+        "risk_level": "UNKNOWN",
     })

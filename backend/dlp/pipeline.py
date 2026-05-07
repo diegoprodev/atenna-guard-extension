@@ -53,7 +53,7 @@ async def run(request: ScanRequest) -> ScanResponse:
         return build_response(risk_level, score, results, request.text, duration_ms)
 
     except asyncio.TimeoutError:
-        # Timeout: return safe default (NONE risk)
+        # Timeout: return UNKNOWN (analysis incomplete, not NONE)
         duration_ms = (time.perf_counter() - t0) * 1000
         telemetry.dlp_timeout(
             session_id=request.session_id,
@@ -62,7 +62,7 @@ async def run(request: ScanRequest) -> ScanResponse:
             source="client",
         )
         return ScanResponse(
-            risk_level=RiskLevel.NONE,
+            risk_level=RiskLevel.UNKNOWN,
             score=0,
             entities=[],
             advisory="",
@@ -71,7 +71,7 @@ async def run(request: ScanRequest) -> ScanResponse:
         )
 
     except Exception as e:
-        # Any error: return safe default
+        # Any error: return UNKNOWN (analysis unavailable, not NONE)
         duration_ms = (time.perf_counter() - t0) * 1000
         telemetry.dlp_engine_error(
             session_id=request.session_id,
@@ -80,7 +80,7 @@ async def run(request: ScanRequest) -> ScanResponse:
             duration_ms=duration_ms,
         )
         return ScanResponse(
-            risk_level=RiskLevel.NONE,
+            risk_level=RiskLevel.UNKNOWN,
             score=0,
             entities=[],
             advisory="",

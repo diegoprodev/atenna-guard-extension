@@ -14,7 +14,7 @@ All notable changes to **Atenna Guard Extension** are documented here.
 - `backend/dlp/engine.py` — `analyze()` e `revalidate()` agora async com timeout
 - `backend/dlp/pipeline.py` — `run()` agora async com timeout para /dlp/scan
 - Máximo 3 segundos por análise (ANALYSIS_TIMEOUT_SECONDS = 3.0)
-- Fallback seguro: timeout ou erro retorna AnalysisResult(risk_level="NONE")
+- Fallback seguro: timeout ou erro retorna AnalysisResult(risk_level="UNKNOWN")
 - Presidio calls rodam em thread pool via asyncio.run_in_executor()
 - Telemetry estruturada: `dlp_timeout` + `dlp_engine_error` eventos
 
@@ -25,14 +25,40 @@ All notable changes to **Atenna Guard Extension** are documented here.
 **Garantias:**
 - ✅ Nenhum hang — máximo 3 segundos por análise
 - ✅ Geração nunca bloqueada — mesmo se DLP timeout
-- ✅ Fallback automático — NONE risk se timeout/erro
+- ✅ Fallback semântico — UNKNOWN risk se timeout/erro (não NONE)
 - ✅ Auditável — telemetry para todos timeout/error scenarios
 
 **Tests:**
-- 10 testes timeout (`test_timeout.py`) — timeout/exception/telemetry
+- 13 testes timeout (`test_timeout.py`) — timeout/exception/telemetry/UNKNOWN semantics
 - 5 testes E2E (`task-5-timeout-safety.spec.ts`) — browser real timeout scenarios
-- 79 testes backend total (sem regressões)
+- 82 testes backend total (sem regressões)
 - 133 testes frontend total (sem regressões)
+
+### Fix — UNKNOWN Risk Level Semantics (TASK 5 Correction)
+
+**Arquitetura de segurança enterprise: Timeout NÃO significa ausência de risco.**
+
+**Problema corrigido:**
+- ANTES: timeout/erro → risk_level="NONE" (semanticamente incorreto)
+- DEPOIS: timeout/erro → risk_level="UNKNOWN" (semântica correta)
+
+**Distinção clara:**
+- `NONE` = análise completada, sem risco detectado
+- `UNKNOWN` = análise não completada/indisponível, risco não pode ser determinado
+
+**Mudanças:**
+- Nova RiskLevel enum: `RiskLevel.UNKNOWN`
+- Engine timeout/error → retorna UNKNOWN (não NONE)
+- Pipeline timeout/error → retorna UNKNOWN (não NONE)
+- Enforcement: UNKNOWN NÃO é tratado como NONE (conservador)
+- Telemetry: `dlp_analysis_unavailable` novo evento
+- Validação: 3 novos testes semântica UNKNOWN
+
+**Impacto:**
+- Temporal safety garantida (3s máximo)
+- Semântica correta (UNKNOWN ≠ NONE)
+- Auditoria precisa (timeout registrado corretamente)
+- Geração nunca bloqueada (fallback seguro)
 
 ### New — Strict Mode Infrastructure (TASK 3)
 

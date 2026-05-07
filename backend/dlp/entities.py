@@ -4,10 +4,11 @@ from pydantic import BaseModel
 
 
 class RiskLevel(str, Enum):
-    NONE   = "NONE"
-    LOW    = "LOW"
-    MEDIUM = "MEDIUM"
-    HIGH   = "HIGH"
+    NONE      = "NONE"      # Analysis completed: no risk detected
+    LOW       = "LOW"       # Analysis completed: low risk
+    MEDIUM    = "MEDIUM"    # Analysis completed: medium risk
+    HIGH      = "HIGH"      # Analysis completed: high risk
+    UNKNOWN   = "UNKNOWN"   # Analysis failed/incomplete: cannot determine risk
 
 
 class DetectedEntity(BaseModel):

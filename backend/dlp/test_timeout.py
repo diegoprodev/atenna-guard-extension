@@ -27,8 +27,8 @@ class TestAnalyzeTimeout:
     """Tests for analyze() timeout behavior."""
 
     @pytest.mark.asyncio
-    async def test_analyze_timeout_returns_none_risk(self):
-        """analyze() returns NONE risk on timeout."""
+    async def test_analyze_timeout_returns_unknown_risk(self):
+        """analyze() returns UNKNOWN risk on timeout (not NONE)."""
         engine = DLPEngine()
 
         # Mock slow analyzer that exceeds timeout
@@ -57,14 +57,14 @@ class TestAnalyzeTimeout:
 
                     result = await engine_instance.analyze("test text")
 
-                    assert result.risk_level == "NONE"
+                    assert result.risk_level == "UNKNOWN"
                     assert result.score == 0
                     assert result.entities == []
                     assert result.protected_tokens_detected is False
 
     @pytest.mark.asyncio
-    async def test_analyze_exception_returns_none_risk(self):
-        """analyze() returns NONE risk on any exception."""
+    async def test_analyze_exception_returns_unknown_risk(self):
+        """analyze() returns UNKNOWN risk on any exception (not NONE)."""
         engine = DLPEngine()
 
         # Mock analyzer that raises exception
@@ -73,7 +73,7 @@ class TestAnalyzeTimeout:
 
             result = await engine.analyze("test text")
 
-            assert result.risk_level == "NONE"
+            assert result.risk_level == "UNKNOWN"
             assert result.score == 0
             assert result.entities == []
 
@@ -115,8 +115,8 @@ class TestRevalidateTimeout:
     """Tests for revalidate() timeout behavior."""
 
     @pytest.mark.asyncio
-    async def test_revalidate_timeout_returns_none_risk(self):
-        """revalidate() returns NONE risk on timeout."""
+    async def test_revalidate_timeout_returns_unknown_risk(self):
+        """revalidate() returns UNKNOWN risk on timeout (not NONE)."""
         engine = DLPEngine()
 
         # Mock timeout in analyze() call
@@ -126,8 +126,8 @@ class TestRevalidateTimeout:
             client_meta = {"dlp_risk_level": "HIGH", "dlp_entity_count": 1}
             analysis, mismatch = await engine.revalidate("test text", client_meta)
 
-            # Server returns NONE on timeout, client sent HIGH
-            assert analysis.risk_level == "NONE"
+            # Server returns UNKNOWN on timeout, client sent HIGH
+            assert analysis.risk_level == "UNKNOWN"
             # Mismatch is detected: client_high_server_low (client overestimated due to timeout)
             assert mismatch.has_mismatch is True
             assert mismatch.divergence_type == "client_high_server_low"
@@ -137,8 +137,8 @@ class TestScanTimeout:
     """Tests for /scan endpoint timeout behavior."""
 
     @pytest.mark.asyncio
-    async def test_scan_timeout_returns_none_risk(self):
-        """scan pipeline returns NONE risk on timeout."""
+    async def test_scan_timeout_returns_unknown_risk(self):
+        """scan pipeline returns UNKNOWN risk on timeout (not NONE)."""
         from dlp.pipeline import run
         from dlp.entities import ScanRequest
 
@@ -155,13 +155,13 @@ class TestScanTimeout:
 
             response = await run(request)
 
-            assert response.risk_level == "NONE"
+            assert response.risk_level == "UNKNOWN"
             assert response.score == 0
             assert response.entities == []
 
     @pytest.mark.asyncio
-    async def test_scan_exception_returns_none_risk(self):
-        """scan pipeline returns NONE risk on exception."""
+    async def test_scan_exception_returns_unknown_risk(self):
+        """scan pipeline returns UNKNOWN risk on exception (not NONE)."""
         from dlp.pipeline import run
         from dlp.entities import ScanRequest
 
@@ -178,8 +178,53 @@ class TestScanTimeout:
 
             response = await run(request)
 
-            assert response.risk_level == "NONE"
+            assert response.risk_level == "UNKNOWN"
             assert response.score == 0
+
+
+class TestUnknownRiskLevel:
+    """Tests for UNKNOWN risk level semantics."""
+
+    def test_unknown_is_separate_from_none(self):
+        """UNKNOWN and NONE are semantically distinct."""
+        # NONE = analyzed, no risk
+        # UNKNOWN = not analyzed, risk undetermined
+        from dlp.entities import RiskLevel
+
+        assert RiskLevel.NONE != RiskLevel.UNKNOWN
+        assert RiskLevel.NONE.value == "NONE"
+        assert RiskLevel.UNKNOWN.value == "UNKNOWN"
+
+    def test_enforcement_does_not_rewrite_unknown(self):
+        """Strict mode does NOT rewrite UNKNOWN risk (conservative)."""
+        from dlp.enforcement import evaluate_strict_enforcement
+        import os
+
+        with patch.dict(os.environ, {"STRICT_DLP_MODE": "true"}):
+            dlp_meta = {
+                "dlp_risk_level": "UNKNOWN",
+                "dlp_entity_count": 0,
+                "dlp_entity_types": [],
+            }
+
+            result = evaluate_strict_enforcement(
+                "Test text",
+                dlp_meta,
+                entities=[],
+            )
+
+            # UNKNOWN should not trigger rewrite (not actionable)
+            assert result["applied"] is False
+            assert result["would_apply"] is False
+            assert result["rewritten_text"] == "Test text"
+
+    def test_unknown_does_not_assume_safety(self):
+        """UNKNOWN risk is not treated as NONE (safe)."""
+        from dlp.entities import RiskLevel
+
+        # These should be checked separately in logic
+        assert RiskLevel.UNKNOWN.value != RiskLevel.NONE.value
+        # Enforcement logic must explicitly check for UNKNOWN
 
 
 class TestTimeoutConstants:

@@ -86,7 +86,23 @@ def evaluate_strict_enforcement(
     strict_enabled = is_strict_mode_enabled()
     server_risk = server_dlp_metadata.get("dlp_risk_level", "NONE")
 
-    # Simular ou aplicar rewrite
+    # UNKNOWN means analysis failed/incomplete - handle conservatively
+    if server_risk == "UNKNOWN":
+        # Cannot determine risk - do not assume safety
+        # In strict mode, UNKNOWN should NOT be treated as NONE
+        # Log for audit purposes
+        _log_event("dlp_strict_analysis_unavailable", {
+            "risk_level": server_risk,
+            "strict_enabled": strict_enabled,
+        })
+        return {
+            "would_apply": False,  # UNKNOWN is not actionable for rewrite
+            "applied": False,
+            "rewritten_text": input_text,
+            "sanitized": False,
+        }
+
+    # Only rewrite for definitive HIGH risk
     should_rewrite = server_risk == "HIGH"
 
     result = {

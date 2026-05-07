@@ -151,7 +151,7 @@ class DLPEngine:
             return result
 
         except asyncio.TimeoutError:
-            # Timeout: fail-safe return NONE risk
+            # Timeout: return UNKNOWN (analysis incomplete, not NONE)
             duration_ms = (time.perf_counter() - t0) * 1000
             if session_id:
                 telemetry.dlp_timeout(
@@ -161,7 +161,7 @@ class DLPEngine:
                     source=source,
                 )
             return AnalysisResult(
-                risk_level="NONE",
+                risk_level="UNKNOWN",
                 score=0,
                 entities=[],
                 entity_types=[],
@@ -173,7 +173,7 @@ class DLPEngine:
             )
 
         except Exception as e:
-            # Any other error: fail-safe return NONE risk
+            # Any other error: return UNKNOWN (analysis unavailable, not NONE)
             duration_ms = (time.perf_counter() - t0) * 1000
             if session_id:
                 telemetry.dlp_engine_error(
@@ -183,7 +183,7 @@ class DLPEngine:
                     duration_ms=duration_ms,
                 )
             return AnalysisResult(
-                risk_level="NONE",
+                risk_level="UNKNOWN",
                 score=0,
                 entities=[],
                 entity_types=[],
