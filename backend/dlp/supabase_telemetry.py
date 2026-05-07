@@ -28,7 +28,7 @@ class SupabaseTelemetryPersistence(TelemetryPersistence):
         supabase_url: Optional[str] = None,
         supabase_key: Optional[str] = None,
     ):
-        """Initialize Supabase client."""
+        """Initialize Supabase client with service role key for insert."""
         super().__init__()  # Keeps in-memory store as fallback
 
         self.supabase: Optional[Client] = None
@@ -37,8 +37,12 @@ class SupabaseTelemetryPersistence(TelemetryPersistence):
         # Get from environment if not provided
         if not supabase_url:
             supabase_url = os.getenv("SUPABASE_URL")
+
+        # Use SERVICE_ROLE_KEY for backend (bypasses RLS)
         if not supabase_key:
-            supabase_key = os.getenv("SUPABASE_ANON_KEY")
+            supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+            if not supabase_key:
+                supabase_key = os.getenv("SUPABASE_ANON_KEY")
 
         if supabase_url and supabase_key:
             try:
@@ -79,11 +83,34 @@ class SupabaseTelemetryPersistence(TelemetryPersistence):
         event_dict = event.to_dict()
         event_dict["user_id"] = user_id
 
+        # Map TelemetryEvent fields to dlp_events table columns
+        db_event = {
+            "user_id": user_id,
+            "event_type": event.event_type,
+            "risk_level": event.risk_level,
+            "entity_types": event.entity_types or [],
+            "entity_count": event.entity_count,
+            "was_rewritten": event.was_rewritten,
+            "had_mismatch": event.had_mismatch,
+            "timeout_occurred": event.timeout_occurred,
+            "error_occurred": event.error_occurred,
+            "duration_ms": event.duration_ms or 0,
+            "score": event.score,
+            "provider": event.source,
+            "endpoint": event.endpoint,
+            "session_id": event.session_id,
+            "hashed_payload_id": event.payload_hash,
+            "created_at": event.created_at.isoformat() if event.created_at else datetime.now(timezone.utc).isoformat(),
+        }
+
+        # Only include non-None values (except empty arrays and 0s which are valid)
+        db_event = {k: v for k, v in db_event.items() if v is not None and v != ""}
+
         # Try Supabase first
         if self.supabase and not self.fallback_mode:
             try:
                 response = self.supabase.table("dlp_events").insert(
-                    event_dict
+                    db_event
                 ).execute()
 
                 if response.data:
