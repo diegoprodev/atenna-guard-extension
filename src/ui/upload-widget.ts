@@ -14,6 +14,7 @@
  */
 
 import { trackEvent } from '../core/analytics';
+import { rewritePII } from '../dlp/rewriter';
 
 export interface DetectedEntity {
   type: string;
@@ -425,13 +426,7 @@ export class UploadWidget {
     protectBtn.addEventListener('click', () => {
       this.setState({ phase: 'rewriting' });
       this.renderRewritingState();
-      // TODO: Call rewrite endpoint
-      this.config.onReady(
-        this.state.extractedContent || '',
-        this.state.contentPreview || '',
-        'PROTECTED'
-      );
-      this.cleanup();
+      this.applyRewrite();
     });
 
     const sendBtn = document.createElement('button');
@@ -450,6 +445,35 @@ export class UploadWidget {
 
     this.container.appendChild(protectBtn);
     this.container.appendChild(sendBtn);
+  }
+
+  private applyRewrite(): void {
+    // Use local DLP rewriter to protect content
+    // The rewriter masks PII entities with generic placeholders
+    if (!this.state.extractedContent) {
+      this.setState({ phase: 'error', error: 'Conteúdo não disponível' });
+      this.renderErrorState();
+      return;
+    }
+
+    try {
+      // Call local rewriter (no network call needed)
+      const rewritten = rewritePII(this.state.extractedContent, []);
+      const previewRewritten = rewritten.substring(0, 500);
+
+      this.config.onReady(
+        rewritten,
+        previewRewritten,
+        'PROTECTED',
+        rewritten
+      );
+      void trackEvent('document_rewrite_applied');
+      this.cleanup();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Falha ao proteger';
+      this.setState({ phase: 'error', error: message });
+      this.renderErrorState();
+    }
   }
 
   private renderRewritingState(): void {
