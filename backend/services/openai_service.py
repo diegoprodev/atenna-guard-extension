@@ -9,9 +9,9 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
-# Use gpt-4o mini — much cheaper than gpt-4
-# gpt-4o-mini is $0.15 per 1M input tokens, $0.60 per 1M output tokens
-# That's roughly 10-20x cheaper than full gpt-4
+# Use gpt-4o-mini — most cost-effective and fastest modern model
+# gpt-4o-mini: $0.15 per 1M input tokens, $0.60 per 1M output tokens
+# Latest OpenAI model, 10-20x cheaper than full gpt-4, superior quality
 MODEL = "gpt-4o-mini"
 
 SYSTEM_PROMPT = """Você é um especialista em engenharia de prompts e estruturação de pensamento.
