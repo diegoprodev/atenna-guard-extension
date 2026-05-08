@@ -1,7 +1,9 @@
 import os
 import json
+import asyncio
 import httpx
 from dotenv import load_dotenv
+from services.openai_service import generate_prompts_openai
 
 load_dotenv()
 
@@ -137,20 +139,36 @@ async def generate_prompts(input_text: str, retry_count: int = 0, max_retries: i
 
         # Retry logic para erros temporários (503, 429)
         if status_code in (503, 429) and retry_count < max_retries:
-            import asyncio
             wait_time = 2 ** retry_count  # Exponential backoff: 1s, 2s, 4s
             print(f"[Atenna] Tentando novamente em {wait_time}s... (tentativa {retry_count + 1}/{max_retries})")
             await asyncio.sleep(wait_time)
             return await generate_prompts(input_text, retry_count + 1, max_retries)
 
         # Se não é erro temporário ou já atingiu max retries
-        print(f"[Atenna] HTTP {status_code} (error) — usando fallback")
+        # Tentar OpenAI como fallback inteligente
+        print(f"[Atenna] Gemini HTTP {status_code} — tentando OpenAI como fallback...")
+        openai_result = await generate_prompts_openai(input_text)
+        if openai_result:
+            return openai_result
+
+        # Se OpenAI também falhar, usar fallback local
+        print(f"[Atenna] OpenAI também falhou — usando fallback local")
         return _build_fallback(input_text)
 
     except (json.JSONDecodeError, KeyError, ValueError) as e:
-        print(f"[Atenna] Erro ao parsear resposta do Gemini: {e} — usando fallback")
+        print(f"[Atenna] Erro ao parsear resposta do Gemini: {e}")
+        # Tentar OpenAI como fallback
+        print(f"[Atenna] Tentando OpenAI como fallback...")
+        openai_result = await generate_prompts_openai(input_text)
+        if openai_result:
+            return openai_result
         return _build_fallback(input_text)
 
     except Exception as e:
-        print(f"[Atenna] Erro inesperado: {e} — usando fallback")
+        print(f"[Atenna] Erro inesperado do Gemini: {e}")
+        # Tentar OpenAI como fallback
+        print(f"[Atenna] Tentando OpenAI como fallback...")
+        openai_result = await generate_prompts_openai(input_text)
+        if openai_result:
+            return openai_result
         return _build_fallback(input_text)
