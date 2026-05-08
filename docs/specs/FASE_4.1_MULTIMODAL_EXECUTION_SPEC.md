@@ -430,6 +430,363 @@ T+final│ Cleanup
 
 ---
 
+## 5.1 Badge Upload Entry Point
+
+### Objetivo
+
+Expor o ponto de entrada para upload multimodal **sem poluir a interface** da extensão. A experiência deve ser:
+- **Compacta**: Badge padrão 42px circular (estado idle)
+- **Acessível**: Aparece ao hover, intuitiva
+- **Discreta**: Sem botões flutuantes adicionais, sem emoji grosseiro, sem aviso alarming
+- **Gated**: Feature flag controla visibilidade até implementação real
+
+---
+
+### Comportamento Visual
+
+#### Estado IDLE (Repouso)
+
+```
+Badge normal: 42px circular verde com ícone "shield"
+Posição: canto inferior direito da textarea (persistente)
+Visibilidade: Sempre visível (FASE 3.1B fix)
+Clicável: Abre modal principal de configurações
+```
+
+#### Estado HOVER (Mouse over badge)
+
+```
+Badge expande suavemente: 42px → 148px
+Transição: 150ms ease-out
+Conteúdo: [shield icon] "Atenna Guard"
+Novo elemento aparece: Ícone "+" (upload)
+  - Posição: lado direito do badge expandido
+  - Tamanho: 16px inline SVG
+  - Cor: rgba(34, 197, 94, 0.6) (verde suave)
+  - Label: "Analisar arquivo"
+  
+Comportamento:
+  • Badge clicável = abre modal (como agora)
+  • Ícone "+" clicável = abre fluxo upload FASE 4.1
+  
+Exemplo visual:
+┌─────────────────────────┐
+│ [shield] Atenna Guard [+]│
+└─────────────────────────┘
+```
+
+#### Click no Badge (Atual)
+
+- Abre modal Settings normal (comportamento não muda)
+- Se autenticado: Settings completa
+- Se não autenticado: Login view
+- Upload widget está em Settings → Documentos (quando MULTIMODAL_ENABLED=true)
+
+#### Click no Ícone "+" (Novo)
+
+- Abre fluxo específico de upload (não toca na modal principal)
+- Estado visual: Upload widget em overlay mínimo ou sheet deslizável
+- Feature flag: Botão invisible se MULTIMODAL_ENABLED=false
+- Fallback: Tooltip "Essa funcionalidade ainda está em desenvolvimento" (quando disabled)
+
+---
+
+### Regras Visuais
+
+#### NÃO USAR ❌
+
+- ❌ Emoji em título ("📎", "🔍", etc)
+- ❌ Símbolo "+" grosseiro ou bordão (usar SVG minimalista)
+- ❌ Badge grande ou sempre expandido
+- ❌ Botão flutuante adicional separado
+- ❌ Pulsing animation ou "chame atenção"
+- ❌ Popup/tooltip agressivo
+- ❌ Múltiplas cores (apenas verde #22c55e)
+
+#### USAR ✅
+
+- ✅ SVG inline simples (16px, stroke 2px)
+- ✅ Transição suave: `opacity 150ms ease` + `width 150ms ease-out`
+- ✅ Hover effect: cor sutil (rgba sem full opacity)
+- ✅ Area clicável clara (mínimo 40px × 40px)
+- ✅ Label texto simples: "Analisar arquivo"
+- ✅ Discreto até hover (ícone 60% opacity quando idle, 100% ao hover)
+- ✅ Acompanha motion do badge (sem elemento solto)
+
+#### Implementação CSS
+
+```css
+/* Quando MULTIMODAL_ENABLED = true */
+.atenna-btn:hover .atenna-btn__upload-icon {
+  opacity: 1;
+  transform: scale(1) translateX(0);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+/* Quando MULTIMODAL_ENABLED = false (feature flag) */
+.atenna-btn__upload-icon.disabled {
+  display: none;  /* ou podia ser opacity: 0.3 com tooltip "Em breve" */
+}
+```
+
+---
+
+### Acessibilidade
+
+#### Keyboard Navigation
+
+```
+Tab 1: Chega ao badge
+  → aria-label="Atenna Guard. Abrir configurações"
+  → Enter: abre modal
+  
+Tab 2 (ao hover): Ícone upload
+  → aria-label="Analisar arquivo"
+  → Enter: abre fluxo upload
+  
+Tab 3 (em modal): próximo elemento
+  
+Escape: fecha overlay se upload aberto
+```
+
+#### Screen Reader
+
+```html
+<button 
+  class="atenna-btn" 
+  aria-label="Atenna Guard. Abrir configurações. Dica: passe o mouse para analisar arquivo"
+  title="Atenna Guard — Clique para configurações"
+>
+  <svg class="atenna-btn__icon-wrap">...</svg>
+  <span class="atenna-btn__label">Atenna Guard</span>
+</button>
+
+<!-- Upload icon (dentro do badge ao hover) -->
+<button 
+  class="atenna-btn__upload-icon" 
+  aria-label="Analisar arquivo — Compartilhe documentos com segurança"
+  title="Analisar arquivo"
+>
+  <svg><!-- inline SVG "+" --></svg>
+</button>
+```
+
+#### Requisitos
+
+- ✅ `aria-label` explicativo em ambos botões
+- ✅ `title` attribute para tooltip nativo
+- ✅ Focus visible (outline ou ring)
+- ✅ Contraste WCAG AA mínimo
+- ✅ Min touch target 44×44px (mobile)
+- ✅ Sem hover-only disclosure (icon visível via keyboard)
+
+---
+
+### Feature Flag: MULTIMODAL_ENABLED
+
+#### Comportamento Controlado por Flag
+
+```python
+# backend/config/flags.py
+
+FLAGS = {
+    "MULTIMODAL_ENABLED": {
+        "default": False,  # CRÍTICO: false até FASE 4.1 final
+        "description": "Show upload icon on badge. Controls FASE 4.1 UI visibility",
+        "override": "admin",
+    },
+}
+```
+
+#### Quando MULTIMODAL_ENABLED = FALSE (Padrão)
+
+- Ícone "+" **não renderizado**
+- Badge comporta-se como v2.23.0 (sem mudanças)
+- Upload widget em Settings não aparece
+- Zero impacto visual
+
+#### Quando MULTIMODAL_ENABLED = TRUE (Rollout)
+
+- Ícone "+" aparece ao hover
+- Click icon abre fluxo upload
+- Upload widget em Settings visível
+- DLP scan disponível
+
+#### Frontend Detection
+
+```typescript
+// src/content/content.ts ou modal.ts
+
+const MULTIMODAL_ENABLED = await getFlag('MULTIMODAL_ENABLED');
+
+// Ao renderizar badge
+if (MULTIMODAL_ENABLED) {
+  injectUploadIcon(badge);
+}
+
+// Ao renderizar Settings
+if (MULTIMODAL_ENABLED) {
+  showUploadWidget();
+}
+```
+
+---
+
+### Event Tracking (Futuro)
+
+Quando upload implementado, rastrear (sem conteúdo do arquivo):
+
+#### Badge Events
+
+```javascript
+// upload_entry_hovered
+{
+  event: "upload_entry_hovered",
+  session_id: "...",
+  timestamp: "2026-05-08T10:30:00Z",
+  // SEM: nome do arquivo, conteúdo, metadata
+}
+
+// upload_entry_clicked (no ícone +)
+{
+  event: "upload_entry_clicked",
+  session_id: "...",
+  timestamp: "2026-05-08T10:31:00Z",
+}
+
+// upload_flow_opened
+{
+  event: "upload_flow_opened",
+  session_id: "...",
+  timestamp: "2026-05-08T10:31:02Z",
+  entry_point: "badge_icon",  // vs "settings_button"
+}
+```
+
+#### Regra Crítica
+
+- ❌ Nunca logar: conteúdo do arquivo, nome do arquivo, tamanho, tipo
+- ✅ Sempre logar: evento genérico, timestamp, session_id
+
+---
+
+### E2E Tests (Futuros)
+
+Após implementação FASE 4.1, adicionar testes de integração badge-upload:
+
+```typescript
+// tests/e2e/badge-upload-entry.spec.ts (novo arquivo)
+
+test.describe('Badge Upload Entry Point', () => {
+  
+  // A. Badge comportamento idle
+  test('✅ Badge não mostra ícone upload quando MULTIMODAL_ENABLED=false', async ({ page }) => {
+    // Configurar flag como false
+    // Abrir chat
+    // Assert: badge normal, sem ícone extra
+  });
+  
+  // B. Badge comportamento com flag enabled
+  test('✅ Badge mostra ícone upload ao hover com MULTIMODAL_ENABLED=true', async ({ page }) => {
+    // Configurar flag como true
+    // Abrir chat
+    // Hover badge
+    // Assert: ícone "+" visível, aria-label correto
+  });
+  
+  test('✅ Click badge abre Settings modal (atual)', async ({ page }) => {
+    // Badge com flag true
+    // Click badge
+    // Assert: modal Settings abre
+  });
+  
+  test('✅ Click ícone "+" abre fluxo upload (não modal Settings)', async ({ page }) => {
+    // Badge com flag true
+    // Hover para revelar ícone
+    // Click ícone
+    // Assert: modal Settings não abre, upload widget aparece
+    // Assert: foco em file input ou drag-drop area
+  });
+  
+  // C. Acessibilidade
+  test('✅ Keyboard Tab navega para badge e ícone', async ({ page }) => {
+    // Badge com flag true
+    // Tab até badge
+    // Assert: focus ring visível
+    // Tab novamente
+    // Assert: foco em ícone upload
+  });
+  
+  test('✅ Enter ativa badge, abre Settings', async ({ page }) => {
+    // Tab até badge
+    // Enter
+    // Assert: Settings abre
+  });
+  
+  test('✅ Enter ativa ícone upload, abre fluxo', async ({ page }) => {
+    // Tab até badge, Tab novamente (ícone)
+    // Enter
+    // Assert: upload flow abre
+  });
+  
+  test('✅ Escape fecha upload flow', async ({ page }) => {
+    // Hover/click ícone, upload abre
+    // Escape
+    // Assert: upload flow fecha, foco volta ao badge
+  });
+  
+  // D. Visual
+  test('✅ Badge expande suavemente ao hover', async ({ page }) => {
+    // Hover badge
+    // Assert: animação visível, duração ~150ms
+    // Assert: ícone não "pula", alinha-se com label
+  });
+  
+  test('✅ Ícone upload alinhado corretamente', async ({ page }) => {
+    // Badge expandido
+    // Assert: ícone direito do label
+    // Assert: tamanho 16px ✓
+    // Assert: cor verde suave
+  });
+  
+  // E. Responsividade
+  test('✅ Badge + ícone não causa overflow em viewport 360px', async ({ page }) => {
+    // Viewport: 360px × 640px
+    // Badge canto inferior direito
+    // Hover
+    // Assert: badge não sai da tela
+    // Assert: ícone visível (não cortado)
+  });
+  
+  // F. Feature Flag
+  test('✅ Toggle flag em runtime muda visibilidade', async ({ page, context }) => {
+    // Abrir Settings
+    // Flag: false → ícone escondido
+    // Toggle flag: true (admin endpoint ou localStorage mock)
+    // Refresh página
+    // Assert: ícone agora visível
+  });
+});
+```
+
+**Total de testes novos: 12**
+
+---
+
+### Critério de Aceitação
+
+A seção "Badge Upload Entry Point" é **CONCLUÍDA** quando:
+
+- [ ] Comportamento idle/hover documentado com exemplos visuais
+- [ ] Regras visuais (use/don't use) claras e sem ambiguidade
+- [ ] Acessibilidade: keyboard, screen reader, WCAG AA mínimo
+- [ ] Feature flag MULTIMODAL_ENABLED especificado (default=false)
+- [ ] Evento tracking não logar conteúdo sensível
+- [ ] E2E tests planejados (12 testes, referenciados acima)
+- [ ] Nenhuma implementação ainda (apenas spec)
+
+---
+
 ## 6. Arquitetura Frontend
 
 ### Component: `UploadWidget` (`src/ui/upload-widget.ts`)

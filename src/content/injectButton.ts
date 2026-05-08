@@ -5,6 +5,8 @@ import { rewritePII } from '../dlp/rewriter';
 import { incrementProtected, incrementScan } from '../core/dlpStats';
 import type { DetectedEntity, DlpMetadata } from '../dlp/types';
 import { getDotTooltip, getDotClass, shouldShowBanner, getBannerBackgroundColor } from '../dlp/advisory';
+import { getFlag } from '../core/featureFlags';
+import { trackEvent } from '../core/analytics';
 
 const INJECTED_ATTR      = 'data-atenna-injected';
 const BTN_ID             = 'atenna-guard-btn';
@@ -324,9 +326,46 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
 
   label.appendChild(name);
 
+  // Upload icon — appears on hover when MULTIMODAL_ENABLED flag is true
+  const uploadIcon = document.createElement('button');
+  uploadIcon.className = 'atenna-btn__upload-icon';
+  uploadIcon.setAttribute('aria-label', 'Analisar arquivo');
+  uploadIcon.setAttribute('title', 'Analisar arquivo');
+  uploadIcon.type = 'button';
+
+  // Inline SVG "+" icon (16px, stroke 2px, minimalist)
+  uploadIcon.innerHTML = `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <line x1="8" y1="3" x2="8" y2="13"></line>
+    <line x1="3" y1="8" x2="13" y2="8"></line>
+  </svg>`;
+
+  uploadIcon.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    // FASE 4.1: Trigger upload flow (to be implemented in #2)
+    void trackEvent('upload_entry_clicked');
+  });
+
   btn.appendChild(iconWrap);
   btn.appendChild(label);
+  btn.appendChild(uploadIcon);
   btn.appendChild(dot);
+
+  // Gate upload icon visibility by feature flag (MULTIMODAL_ENABLED)
+  Promise.resolve().then(async () => {
+    const multimodalEnabled = await getFlag('MULTIMODAL_ENABLED');
+    if (!multimodalEnabled) {
+      uploadIcon.style.display = 'none';
+    }
+
+    // Track hover event (only if flag enabled)
+    if (multimodalEnabled) {
+      btn.addEventListener('mouseenter', () => {
+        void trackEvent('upload_entry_hovered');
+      }, { once: false });
+    }
+  });
+
   addDragBehavior(btn, onToggle);
 
   document.body.appendChild(btn);

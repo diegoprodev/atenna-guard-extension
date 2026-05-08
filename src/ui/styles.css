@@ -509,3 +509,55 @@
 .atenna-protection-banner--dark .atenna-protection-banner__btn--primary:hover {
   background: #16a34a;
 }
+
+/* ── Upload Icon (FASE 4.1 Badge Entry Point) ─────────────────── */
+
+.atenna-btn__upload-icon {
+  position: absolute;
+  right: 50px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.6);
+  transition: opacity 150ms ease, color 150ms ease, transform 150ms ease;
+  padding: 0;
+  margin: 0;
+  z-index: 2;
+}
+
+.atenna-btn__upload-icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Show icon on badge hover */
+.atenna-btn:hover .atenna-btn__upload-icon {
+  opacity: 1;
+  pointer-events: auto;
+  color: rgba(255, 255, 255, 1);
+  transform: translateY(-50%) scale(1);
+}
+
+/* Hover state for the icon itself */
+.atenna-btn__upload-icon:hover {
+  color: #ffffff;
+  transform: translateY(-50%) scale(1.15);
+}
+
+/* Focus visible for keyboard navigation */
+.atenna-btn__upload-icon:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

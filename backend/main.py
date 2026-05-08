@@ -10,6 +10,7 @@ from routes.dlp import router as dlp_router
 from routes.retention import router as retention_router
 from routes.deletion import router as deletion_router
 from routes.export import router as export_router
+from routes.documents import router as documents_router
 from middleware.auth import require_auth
 from dlp.enforcement import evaluate_strict_enforcement
 from dlp import engine, telemetry
@@ -40,6 +41,7 @@ app.include_router(dlp_router)
 app.include_router(retention_router)
 app.include_router(deletion_router)
 app.include_router(export_router)
+app.include_router(documents_router)
 
 
 @app.get("/health", tags=["Health"])

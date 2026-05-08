@@ -11,6 +11,8 @@ import type { Advisory } from '../dlp/types';
 import { updateBadgeDotRisk, setAutoBanner, getDlpMetadata } from '../content/injectButton';
 import { getDlpStats, syncDlpStats } from '../core/dlpStats';
 import { renderPrivacyDataSection } from './privacy-data';
+import { UploadWidget } from './upload-widget';
+import { getFlag } from '../core/featureFlags';
 
 const OVERLAY_ID  = 'atenna-modal-overlay';
 const SUCCESS_MS  = 500;
@@ -553,6 +555,44 @@ function renderSettingsPage(
       toggleRow.appendChild(toggleInput);
       personalSection.appendChild(toggleRow);
       body.appendChild(personalSection);
+
+      // ── Seção: Documentos (FASE 4.1 Multimodal) ───────────
+      const multimodalEnabled = await getFlag('MULTIMODAL_ENABLED');
+      if (multimodalEnabled) {
+        body.appendChild(makeSectionTitle('📎 Documentos'));
+
+        const docSection = document.createElement('div');
+        docSection.className = 'atenna-settings__section';
+        docSection.id = 'upload-widget-container';
+
+        const uploadWidget = new UploadWidget({
+          targetElement: docSection,
+          maxSize: {
+            'txt': 1024 * 1024,
+            'md': 1024 * 1024,
+            'csv': 5 * 1024 * 1024,
+            'json': 1024 * 1024,
+          },
+          onReady: (content: string, preview: string, riskLevel: string, rewritten?: string) => {
+            // Document is ready to send to provider
+            void trackEvent('document_ready_to_send', {
+              content_length: content.length,
+              risk_level: riskLevel,
+              was_rewritten: !!rewritten,
+            });
+            // TODO: Open chat with document context
+            console.log('[FASE 4.1] Document ready:', { preview, riskLevel, contentLength: content.length });
+          },
+          onError: (error: string) => {
+            void trackEvent('document_upload_error', { error });
+          },
+          onCancel: () => {
+            void trackEvent('document_upload_cancelled');
+          },
+        });
+
+        body.appendChild(docSection);
+      }
 
       // ── Seção: Privacidade e Dados (FASE 3.1B) ──────
       body.appendChild(makeSectionTitle('🔐 Privacidade e Dados'));
