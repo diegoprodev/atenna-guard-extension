@@ -559,6 +559,47 @@ function renderSettingsPage(
       const privacySection = renderPrivacyDataSection(session, pro);
       body.appendChild(privacySection);
 
+      // ── Botão de Reativação (Troubleshooting) ──────────────
+      // Se badge desaparecer por qualquer motivo (offline, timeout, etc)
+      // user pode reativar via este botão
+      const troubleshootingSection = document.createElement('div');
+      troubleshootingSection.style.cssText = `
+        margin-top: 24px;
+        padding-top: 14px;
+        border-top: 1px solid var(--at-border);
+        display: flex;
+        justify-content: center;
+      `;
+
+      const reactivateBtn = document.createElement('button');
+      reactivateBtn.className = 'atenna-settings__reactivate';
+      reactivateBtn.innerHTML = '⟳ Reativar Atenna';
+      reactivateBtn.style.cssText = `
+        background: none;
+        border: none;
+        color: var(--at-text);
+        opacity: 0.5;
+        font-size: 11px;
+        font-family: inherit;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: all 150ms ease;
+      `;
+      reactivateBtn.onmouseover = function() {
+        this.style.opacity = '1';
+        this.style.background = 'rgba(34, 197, 94, 0.1)';
+      };
+      reactivateBtn.onmouseout = function() {
+        this.style.opacity = '0.5';
+        this.style.background = 'none';
+      };
+      reactivateBtn.addEventListener('click', () => {
+        window.location.reload();
+      });
+      troubleshootingSection.appendChild(reactivateBtn);
+      body.appendChild(troubleshootingSection);
+
     } catch {
       skeleton.textContent = 'Erro ao carregar dados.';
     }
