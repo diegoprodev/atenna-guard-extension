@@ -4,6 +4,93 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.23.0] — 2026-05-08 (FASE 3.1B-UI — Governed User Export Interface)
+
+### New — Privacy & Data Governance UI in Settings Dashboard
+
+**Institutional, minimal UI for user data export and account deletion governance within Settings page. No cybersecurity theater, clear control, Linear/Stripe/Arc design inspiration.**
+
+**Frontend Components:**
+- `src/ui/privacy-data.ts` — Privacy governance component (200+ lines)
+  - `renderPrivacyDataSection(session, pro)` — Main container with 2 cards
+  - `buildExportCard(token)` — Export request card with dynamic state
+  - `buildDeletionCard(token)` — Account deletion card with grace period countdown
+  - `updateExportCardState(card, token)` — State-driven rendering (idle → requested → ready → expired)
+  - `updateDeletionCardState(card, token)` — State-driven rendering (idle → pending_confirmation → deletion_scheduled)
+  - `handleRequestExport()`, `handleDownloadExport()` — Export lifecycle actions
+  - `handleRequestDeletion()`, `handleCancelDeletion()` — Deletion lifecycle actions
+  - `backendFetch()` helper — Authenticated calls to export/deletion endpoints
+
+- `src/ui/modal.css` — Privacy component styles (110+ lines)
+  - `.atenna-privacy__card` — Card container (border, rounded, padding)
+  - `.atenna-privacy__card-title` — Title (13px, 600w)
+  - `.atenna-privacy__card-desc` — Description (11px, muted)
+  - `.atenna-privacy__status-row` — Status indicator (dot + text)
+  - `.atenna-privacy__status-dot` — 6px circle, dynamic color by state
+  - `.atenna-privacy__status-text` — Status text (11px)
+  - `.atenna-privacy__meta` — Secondary info (expires_in, downloads remaining, grace period days)
+  - `.atenna-privacy__btn` — Border-only button (secondary style)
+  - `.atenna-privacy__danger-btn` — Red-border button for cancellation
+  - All classes use existing CSS variables (--at-bg, --at-text, --at-border, --at-card-bg, --at-green)
+  - Motion: opacity fade-in 150ms only
+
+- `src/ui/modal.ts` — Integration
+  - Imported `renderPrivacyDataSection` from privacy-data.ts
+  - Added "🔐 Privacidade e Dados" section in `renderSettingsPage()` after "Personalização"
+  - Initializes both Export and Deletion cards with async state updates
+
+**UI States — Export Card:**
+- **idle**: "Nenhuma solicitação ativa." + [Solicitar relatório]
+- **requested**: "Confirmação enviada para email@..." (gray dot, button disabled)
+- **ready**: "Relatório disponível." + "Disponível por mais Xh · Y/3 downloads" + [Fazer download]
+- **expired**: "Este relatório expirou." + [Solicitar novo]
+
+**UI States — Deletion Card:**
+- **idle**: "Nenhuma solicitação ativa." + [Solicitar exclusão]
+- **pending_confirmation**: "Confirmação enviada para email@..." (orange dot, button disabled)
+- **deletion_scheduled**: "Exclusão agendada para DD/MM/YYYY." + "Restam X dias para cancelar." + [Cancelar solicitação]
+
+**Copywriting:**
+- ✅ "Você pode solicitar..." (active, not passive)
+- ✅ "Disponível por mais X horas"
+- ✅ "Solicitações possuem período de reversão"
+- ❌ NO "Sua privacidade é nossa prioridade"
+- ❌ NO "100% seguro"
+- ❌ NO emojis in component logic
+
+**Endpoint Integration:**
+- `POST /user/export/request` — Initiate export (calls backendFetch)
+- `GET /user/export/status` — Check export state (fetches every card load)
+- `GET /user/export/download?token=...` — Download PDF via blob + trigger download
+- `POST /user/deletion/initiate` — Initiate deletion (calls backendFetch)
+- `GET /user/deletion/status` — Check deletion state (fetches every card load)
+- `POST /user/deletion/cancel` — Cancel deletion during grace period
+
+**Tests (12 new E2E):**
+- `tests/e2e/fase-3.1b-ui.spec.ts` — Playwright E2E tests
+  - ✅ Settings page opens with Privacy section
+  - ✅ Export card renders with "Seus dados" title
+  - ✅ Deletion card renders with "Exclusão de conta" title
+  - ✅ "Solicitar relatório" button exists and is clickable
+  - ✅ "Solicitar exclusão" button exists and is clickable
+  - ✅ Export card shows idle state ("Nenhuma solicitação ativa")
+  - ✅ Descriptions render correctly
+  - ✅ Status dot renders with dynamic background color
+  - ✅ Responsive (no horizontal overflow at 360px viewport)
+  - ✅ CSS classes present and correct
+  - ✅ Both cards visible together in same section
+  - ✅ Cards are properly ordered (export above deletion)
+
+**Design Principles:**
+- Institutional, minimal: Linear/Stripe/Arc inspiration (not gamified, not scary)
+- Zero emojis in interactive elements (only section titles get optional emoji)
+- Responsive to 360px (Chrome mobile extension window)
+- Transparent about timelines (48h expiry, 7-day grace period, 24h email validity)
+- Trust via clarity: "Confirmação enviada", "Disponível por mais Xh"
+- No "maximum security" language — focus on "control" and "reversibility"
+
+---
+
 ## [2.22.0] — 2026-05-08 (FASE 3.1B — Governed User Data Export)
 
 ### New — User Data Export with LGPD Art. 18 Compliance

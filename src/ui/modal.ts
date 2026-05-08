@@ -10,6 +10,7 @@ import { buildAdvisory } from '../dlp/advisory';
 import type { Advisory } from '../dlp/types';
 import { updateBadgeDotRisk, setAutoBanner, getDlpMetadata } from '../content/injectButton';
 import { getDlpStats, syncDlpStats } from '../core/dlpStats';
+import { renderPrivacyDataSection } from './privacy-data';
 
 const OVERLAY_ID  = 'atenna-modal-overlay';
 const SUCCESS_MS  = 500;
@@ -552,6 +553,11 @@ function renderSettingsPage(
       toggleRow.appendChild(toggleInput);
       personalSection.appendChild(toggleRow);
       body.appendChild(personalSection);
+
+      // ── Seção: Privacidade e Dados (FASE 3.1B) ──────
+      body.appendChild(makeSectionTitle('🔐 Privacidade e Dados'));
+      const privacySection = renderPrivacyDataSection(session, pro);
+      body.appendChild(privacySection);
 
     } catch {
       skeleton.textContent = 'Erro ao carregar dados.';
