@@ -361,7 +361,7 @@
 .atenna-modal__body {
   padding: 12px;
   flex: 1;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .atenna-modal__view--hidden { display: none; }
@@ -694,7 +694,14 @@
 
 .atenna-modal__builder { display: none; margin-top: 10px; }
 
-.atenna-modal__builder--open { display: flex; flex-direction: column; gap: 10px; }
+.atenna-modal__builder--open {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
 
 .atenna-modal__builder-hint {
   font-size: 11px;

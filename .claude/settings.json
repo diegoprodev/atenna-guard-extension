@@ -79,7 +79,9 @@
       "Bash(python dlp/benchmark_nlp.py)",
       "Bash(tee /tmp/benchmark_output.txt)",
       "PowerShell(pip install supabase)",
-      "Bash(dir /b c:\\\\projetos\\\\atenna-guard-extension)"
+      "Bash(dir /b c:\\\\projetos\\\\atenna-guard-extension)",
+      "Bash(xargs head -30)",
+      "PowerShell(head -5)"
     ],
     "additionalDirectories": [
       "C:\\Users\\dgapc\\.claude\\plans",

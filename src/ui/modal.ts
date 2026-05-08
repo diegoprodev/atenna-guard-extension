@@ -1064,12 +1064,22 @@ async function runFlow(
 
     if (!document.getElementById(OVERLAY_ID)) return;
 
+    if (!data._fromApi) {
+      // API failed — show error and don't decrement usage
+      console.error('[Atenna] API error: returning fallback, not decrementing usage');
+      void trackEvent('prompt_generate_api_failed', { origin, input_length: userText.length });
+      container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--at-text);">Erro ao refinar com IA. Tente novamente.<br><button onclick="location.reload()" style="margin-top: 10px; padding: 6px 12px; border: 1px solid var(--at-green); background: none; color: var(--at-green); border-radius: 4px; cursor: pointer;">Tentar novamente</button></div>';
+      return;
+    }
+
+    // Only decrement usage if API actually succeeded
+    const [newUsage, newTotalCount] = await Promise.all([incrementUsage(), incrementTotalCount(), incrementMonthlyUsage()]) as [Awaited<ReturnType<typeof incrementUsage>>, number, number];
+    await updateUsageBadge(usageBadge, newUsage.count, pro);
+
     await renderSuccess(container);
 
     if (!document.getElementById(OVERLAY_ID)) return;
 
-    const [newUsage, newTotalCount] = await Promise.all([incrementUsage(), incrementTotalCount(), incrementMonthlyUsage()]) as [Awaited<ReturnType<typeof incrementUsage>>, number, number];
-    await updateUsageBadge(usageBadge, newUsage.count, pro);
     void trackEvent('prompt_generate_success', { input_length: userText.length, output_length: JSON.stringify(data).length, origin });
 
     // Save to history (direct as primary)
@@ -1910,16 +1920,26 @@ function buildStructuredInput(objetivo: string, contexto: string, formato: strin
   return lines.join('\n');
 }
 
-export async function fetchPrompts(inputText: string): Promise<PromptData> {
-  const fallback: PromptData = {
+export interface PromptResponse extends PromptData {
+  _fromApi?: boolean;
+}
+
+export async function fetchPrompts(inputText: string): Promise<PromptResponse> {
+  const fallback: PromptResponse = {
     direct:      `Explique de forma clara e objetiva:\n\n${inputText}`,
     technical:   `Você é um especialista. Analise profundamente:\n\n${inputText}`,
     structured:  `Responda com contexto, solução e conclusão:\n\n${inputText}`,
+    _fromApi: false,
   };
   try {
     const response = await sendToBackground(inputText);
-    if (!response || !response.ok) throw new Error('backend error');
-    return response.data as PromptData;
+    if (!response || !response.ok) {
+      console.warn('[Atenna] backend response not ok:', response);
+      throw new Error('backend error');
+    }
+    const data = response.data as PromptResponse;
+    data._fromApi = true;
+    return data;
   } catch (err) {
     console.warn('[Atenna] erro backend:', err);
     return fallback;
