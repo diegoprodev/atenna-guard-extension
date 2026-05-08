@@ -4,6 +4,148 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.24.0] — 2026-05-08 (FASE 4.1 — Multimodal DLP — Arquivos Leves)
+
+### New — Document Upload with Real-time DLP Scanning
+
+**Secure, lightweight multimodal document processing with TXT/MD/CSV/JSON support, local DLP scanning, and optional PII masking. Zero file persistence, memory-only processing, sanitized provider boundary.**
+
+**Key Features:**
+- **Badge Upload Entry Point** — SVG icon on hover, feature-flagged (`MULTIMODAL_ENABLED`)
+- **Upload Widget** (`src/ui/upload-widget.ts`) — File selection, drag-drop, progress, DLP scanning
+- **File Validation** — Extension (TXT/MD/CSV/JSON), MIME type, magic bytes, UTF-8 encoding, size limits (1-5 MB)
+- **Content Extraction** — Safe extraction in memory, normalization, encoding detection
+- **DLP Documental** — Uses existing `engine.analyze()` for consistency, risk scoring (NONE/LOW/HIGH)
+- **Rewrite Documental** — Local masking via `rewritePII()` when user clicks [Proteger dados]
+- **Settings Integration** — "Documentos" section in Settings → Documentos (when flag enabled)
+- **Feature Flags** — `MULTIMODAL_ENABLED`, `DOCUMENT_DLP_ENABLED`, `STRICT_DOCUMENT_MODE`
+- **Telemetry** — Event logging without content (file_type, size, dlp_risk, entity_count only)
+- **Error Handling** — Clear UX for invalid format, oversized files, encoding errors, timeout, extraction failure
+
+**Frontend Components:**
+- `src/ui/upload-widget.ts` — Main upload component (500+ lines)
+  - `UploadWidget` class with config, state management, event handlers
+  - `handleFileSelect()` — Client-side validation + upload + DLP scan
+  - `uploadFile()` — Async pipeline: read → validate encoding → extract → scan → show result
+  - `validateFile()` — Type, size, encoding checks
+  - `extractContent()` — Normalization for TXT/MD/CSV/JSON
+  - `scanWithDlp()` — Backend POST to `/user/upload-document`
+  - `renderUploadingState()`, `renderScanningState()`, `renderReadyState()`, `renderErrorState()`
+  - `applyRewrite()` — Local PII masking via `rewritePII()`
+  - `cleanup()` — Explicit memory wipe (content, preview, file cleared)
+
+- `src/ui/modal.ts` — Settings integration
+  - Imported `UploadWidget` and `getFlag`
+  - Added "📎 Documentos" section in `renderSettingsPage()`
+  - Instantiated widget with `onReady` (document ready to send), `onError`, `onCancel` handlers
+  - Gated by `MULTIMODAL_ENABLED` flag
+
+- `src/ui/styles.css` — Badge upload icon styling
+  - `.atenna-btn__upload-icon` — 16px SVG, appears on hover, opacity-driven
+  - `atenna-upload-widget__*` — Widget CSS classes (dashed border, progress bar, result states)
+
+- `src/content/injectButton.ts` — Badge integration
+  - Added upload icon to badge (inline SVG "+" with aria-label)
+  - Feature flag gate: icon hidden if `MULTIMODAL_ENABLED = false`
+  - Hover tracking: `upload_entry_hovered` event
+  - Click tracking: `upload_entry_clicked` event
+
+**Backend Routes:**
+- `backend/routes/documents.py` — New route for document upload (`POST /user/upload-document`)
+  - Validation: extension, size, MIME type, UTF-8 encoding
+  - Extraction: content normalization (remove control chars, normalize JSON/Markdown)
+  - DLP Scan: uses `engine.analyze()` (same as text DLP)
+  - Response: risk_level, entity_count, entity_types, preview, char_count, hash (no entity values, no persistence)
+  - Memory cleanup: explicit `del content`, `gc.collect()`
+  - Telemetry: file_type, size, char_count, dlp_risk_level, entity_count logged (no content)
+
+**Feature Flags (`src/core/featureFlags.ts`):**
+```python
+FLAGS = {
+  "MULTIMODAL_ENABLED": { default: False, description: "Enable upload widget + badge icon" },
+  "DOCUMENT_DLP_ENABLED": { default: True, description: "Run DLP on documents" },
+  "STRICT_DOCUMENT_MODE": { default: True, description: "HIGH risk requires protect before send" },
+}
+```
+
+**Security — Provider Boundary:**
+- ✅ Raw file never persists on backend or frontend (except in widget memory during session)
+- ✅ Content never persists to DB (only hash for audit)
+- ✅ Entity VALUES never in response (TYPES only)
+- ✅ Provider receives: sanitized content (if [Proteger dados]) OR original (if [Enviar original])
+- ✅ Memory freed immediately: `del content`, `gc.collect()` in backend; `cleanup()` in frontend
+- ✅ No raw file upload to provider (content sent as text, not File object)
+
+**Supported File Types (FASE 4.1 Only):**
+| Type | Extension | Max Size | Encoding |
+|---|---|---|---|
+| Text | .txt | 1 MB | UTF-8 |
+| Markdown | .md | 1 MB | UTF-8 |
+| CSV | .csv | 5 MB | UTF-8 |
+| JSON | .json | 1 MB | UTF-8 |
+
+**Unsupported (Future Phases):**
+- ❌ PDF (FASE 4.2)
+- ❌ DOCX (FASE 4.2)
+- ❌ OCR (FASE 4.3)
+- ❌ Images (FASE 4.3+)
+
+**Flow — Normal Path (NONE/LOW Risk):**
+```
+1. User opens Settings → Documentos
+2. Selects or drags file
+3. Widget validates + extracts + uploads
+4. Backend scans with DLP (no entities sent back)
+5. If NONE/LOW: show [Enviar para IA]
+6. User clicks → content sent to provider
+```
+
+**Flow — High Risk Path:**
+```
+1-4. [Same as above]
+5. If HIGH: show [Proteger dados] + [Enviar original]
+6a. User clicks [Proteger dados]:
+    - Frontend applies rewritePII() locally
+    - CPF → [CPF], Email → [EMAIL], etc
+    - Sanitized content shown
+    - Click [Enviar conteúdo protegido] → send rewritten to provider
+6b. User clicks [Enviar original]:
+    - Raw content sent to provider (user informed of risk)
+```
+
+**Limits & Timeouts:**
+- Max file size: 1 MB (TXT/MD/JSON), 5 MB (CSV)
+- Max chars extracted: 100,000
+- DLP scan timeout: 10 seconds (returns UNKNOWN if exceeded)
+- No concurrent uploads (1 per session)
+
+**Tests — Future (E2E Coverage Planned):**
+- ✅ Spec sections 5.1 + 22 (E2E test placeholders)
+- 12+ Playwright tests for:
+  - Badge hover shows upload icon
+  - Widget drag-drop, file input
+  - Validation (invalid type, oversized, bad encoding)
+  - DLP scanning + risk scoring
+  - Rewrite + masking
+  - Provider interception (no raw file sent)
+  - Cleanup verification
+
+**Rollback Safety:**
+- `MULTIMODAL_ENABLED = false` → upload widget hidden, badge upload icon hidden
+- If backend crashes: feature flag disables endpoint, graceful fallback
+- If DLP times out: returns UNKNOWN risk (safe default, user can still send)
+
+**Performance:**
+- No UI freeze: async file read, non-blocking DLP scan
+- Memory safe: explicit cleanup after upload
+- Responsive: 150ms transitions (hover expand)
+
+**Commits:**
+- `3f79a82` — FASE 4.1 core implementation
+- `fad43a9` — Rewrite documental with PII masking
+
+---
+
 ## [2.23.0] — 2026-05-08 (FASE 3.1B-UI — Governed User Export Interface)
 
 ### New — Privacy & Data Governance UI in Settings Dashboard
