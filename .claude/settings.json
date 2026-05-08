@@ -81,7 +81,11 @@
       "PowerShell(pip install supabase)",
       "Bash(dir /b c:\\\\projetos\\\\atenna-guard-extension)",
       "Bash(xargs head -30)",
-      "PowerShell(head -5)"
+      "PowerShell(head -5)",
+      "Bash(python test_gemini_integration.py)",
+      "Bash(sed -i 's/═══/[/g; s/═══/]/g' test_gemini_integration.py)",
+      "Bash(sed -i 's/═\\\\+/-----/g' test_gemini_integration.py)",
+      "Bash(python check_gemini_config.py)"
     ],
     "additionalDirectories": [
       "C:\\Users\\dgapc\\.claude\\plans",

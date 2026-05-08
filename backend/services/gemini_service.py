@@ -55,12 +55,17 @@ def _build_fallback(input_text: str) -> dict:
     }
 
 
-async def generate_prompts(input_text: str) -> dict:
+async def generate_prompts(input_text: str, retry_count: int = 0, max_retries: int = 2) -> dict:
     """
     Chama Gemini Flash 1.5 para gerar 3 versões otimizadas do prompt do usuário.
-    Retorna fallback local em caso de erro.
+    Retorna fallback local em caso de erro após retries.
+
+    Retry logic:
+    - Max 2 retries para erros temporários (503, 429)
+    - Espera exponencial entre retries (1s, 2s)
     """
-    print("[Atenna] Input recebido:", input_text)
+    if retry_count == 0:
+        print("[Atenna] Input recebido:", input_text)
 
     if not GEMINI_API_KEY or GEMINI_API_KEY == "cole_sua_chave_aqui":
         print("[Atenna] GEMINI_API_KEY não configurada — usando fallback")
@@ -127,7 +132,19 @@ async def generate_prompts(input_text: str) -> dict:
         return _build_fallback(input_text)
 
     except httpx.HTTPStatusError as e:
-        print(f"[Atenna] HTTP {e.response.status_code} do Gemini — usando fallback")
+        status_code = e.response.status_code
+        print(f"[Atenna] HTTP {status_code} do Gemini")
+
+        # Retry logic para erros temporários (503, 429)
+        if status_code in (503, 429) and retry_count < max_retries:
+            import asyncio
+            wait_time = 2 ** retry_count  # Exponential backoff: 1s, 2s, 4s
+            print(f"[Atenna] Tentando novamente em {wait_time}s... (tentativa {retry_count + 1}/{max_retries})")
+            await asyncio.sleep(wait_time)
+            return await generate_prompts(input_text, retry_count + 1, max_retries)
+
+        # Se não é erro temporário ou já atingiu max retries
+        print(f"[Atenna] HTTP {status_code} (error) — usando fallback")
         return _build_fallback(input_text)
 
     except (json.JSONDecodeError, KeyError, ValueError) as e:
