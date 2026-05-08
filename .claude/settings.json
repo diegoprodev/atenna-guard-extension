@@ -78,11 +78,13 @@
       "Bash(python -m pip install spacy --quiet)",
       "Bash(python dlp/benchmark_nlp.py)",
       "Bash(tee /tmp/benchmark_output.txt)",
-      "PowerShell(pip install supabase)"
+      "PowerShell(pip install supabase)",
+      "Bash(dir /b c:\\\\projetos\\\\atenna-guard-extension)"
     ],
     "additionalDirectories": [
       "C:\\Users\\dgapc\\.claude\\plans",
-      "\\tmp"
+      "\\tmp",
+      "c:\\Users\\dgapc\\.claude\\projects\\c--projetos-atenna-guard-extension\\memory"
     ]
   }
 }

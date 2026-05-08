@@ -4,6 +4,117 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.21.0] — 2026-05-07 (FASE 3.1A — Account Deletion Governance)
+
+### New — Account Deletion Governance (Soft Delete + Grace Period)
+
+**Secure, reversible account deletion lifecycle with mandatory email confirmation and 7-day grace period.**
+
+**Database Migrations:**
+- `supabase/migrations/20260507_account_deletion_governance.sql` — Complete deletion infrastructure
+  - `user_deletion_requests` table: Tracks deletion lifecycle (id, user_id, email, status, confirmation_token, confirmation_expires_at, deletion_scheduled_at, purge_completed_at, anonymized_at, cancelled_at)
+  - Status enum: `pending_confirmation`, `confirmed`, `deletion_scheduled`, `purging`, `purged`, `anonymized`, `cancelled`
+  - `account_status_history` table: Audit trail of status transitions (user_id nullable for anonimization, status_before, status_after, reason, triggered_by, created_at)
+  - `anonymization_log` table: Records of anonimization operations (user_id_hash, operation, tables_affected, records_anonymized, created_at)
+  - 5 PostgreSQL functions:
+    - `initiate_account_deletion(user_id, email, reason)` — generates secure token, returns confirmation details
+    - `confirm_account_deletion(token, grace_period_days)` — validates token, schedules deletion for grace_period_days later
+    - `execute_account_purge(user_id)` — deletes dlp_events, user_dlp_stats, retention logs, anonimizes audit trails, deletes auth account, logs anonymization
+    - `cancel_account_deletion(user_id, reason)` — cancels deletion if grace period not elapsed
+    - `anonimize_account_data(user_id)` — removes PII from logs while preserving audit trail
+  - RLS policies for security and data isolation
+  - Indexes on user_id, status, confirmation_expires_at for performance
+
+**Backend:**
+- `backend/dlp/deletion_manager.py` — Python deletion engine
+  - `DeletionStatus` enum with lifecycle states (PENDING_CONFIRMATION, DELETION_SCHEDULED, PURGING, PURGED, ANONYMIZED)
+  - `DeletionManager` class:
+    - `initiate_deletion(user_id, email, reason)` — creates deletion request, generates secure token, sends confirmation email
+    - `confirm_deletion(token, grace_period_days)` — confirms deletion, schedules purge after grace period
+    - `cancel_deletion(user_id, reason)` — cancels pending deletion (reversible)
+    - `execute_purge(user_id)` — executes actual data deletion after grace period expires
+    - `get_deletion_status(user_id)` — returns current deletion state and grace period remaining
+    - `get_anonymization_summary()` — fetches anonymization logs for compliance
+  - Constants: DEFAULT_GRACE_PERIOD_DAYS=7, TOKEN_VALIDITY_HOURS=24, MAX_DELETION_REQUESTS=1
+  - Fallback mode (works without Supabase)
+  - Safe error handling with structured responses
+
+- `backend/routes/deletion.py` — REST API endpoints for deletion lifecycle
+  - `POST /user/deletion/initiate?reason=...` — initiate deletion request (sends email)
+  - `POST /user/deletion/confirm?token=...&grace_period_days=7` — confirm via email link
+  - `GET /user/deletion/status` — check deletion status and grace period remaining
+  - `POST /user/deletion/cancel?reason=...` — cancel pending deletion (only during grace period)
+  - `GET /user/deletion/lifecycle` — public endpoint explaining the process (LGPD transparency)
+  - `GET /user/deletion/anonymization-summary` — compliance view of anonimization operations
+
+**Tests (30 new):**
+- `backend/dlp/test_deletion_manager.py` — Comprehensive unit tests
+  - TestDeletionInitiation: Initiating deletion without/with credentials, email/user_id validation
+  - TestGracePeriod: Default grace period (7 days), cancellation allowed, early purge prevented
+  - TestSessionRevocation: Token validity (24 hours), login blocking after confirmation
+  - TestAnonimization: Preservation of compliance, audit trail maintained, PII removed
+  - TestSoftDelete: Lifecycle progression, cancellation reversibility, no immediate deletion
+  - TestErrorHandling: Fallback mode graceful, invalid tokens rejected, purge retry safe
+  - TestSecurityProperties: No password required, unique tokens, concurrent deletion protection, grace period min/max
+  - TestComplianceFeatures: Audit trail preserved, user right to cancel, lifecycle reversible, email confirmation required
+  - TestDataDeletion: dlp_events deleted, user stats deleted, sessions revoked, retention logs deleted
+
+- `tests/e2e/fase-3.1a-account-deletion.spec.ts` — 12 E2E tests
+  - Deletion lifecycle documentation
+  - Deletion initiation with email confirmation
+  - Status retrieval and grace period tracking
+  - Cancellation during grace period
+  - Token expiration (24 hours)
+  - Grace period enforcement (7 days)
+  - Anonimization with compliance preservation
+  - Soft delete validation (no immediate deletion)
+  - Reversibility during grace period
+  - Email confirmation requirement (no 1-click deletion)
+  - LGPD Art. 17 compliance documentation
+  - Purge engine resilience and retry safety
+
+**Governance Features:**
+- ✅ Soft delete architecture (NOT immediate deletion)
+- ✅ Mandatory email confirmation (24-hour token validity)
+- ✅ Grace period enforcement (7 days configurable, 1-30 days)
+- ✅ Reversibility (user can cancel anytime before purge)
+- ✅ Anonimization strategy (user_id → null, email → null, but action + timestamp preserved)
+- ✅ Audit trail preservation (logs maintained without PII for compliance)
+- ✅ Session revocation (all active sessions terminated)
+- ✅ Batch-safe purging (prevents database locks)
+- ✅ Idempotent execution (safe for cron retry)
+- ✅ Telemetry events (deletion events without PII)
+- ✅ Concurrent deletion protection (max 1 active request per user)
+
+**Email Flow (3 emails):**
+1. **Confirmation Email**: Link with 24-hour token for confirming deletion
+2. **Scheduled Email**: Confirmation of deletion scheduled, grace period starts, option to cancel
+3. **Completion Email**: Confirmation of deletion completed, data purged, logs anonimized
+
+**LGPD Compliance:**
+- ✅ LGPD Art. 17 (Direito ao Esquecimento) — Right to be forgotten
+- ✅ Mandatory email confirmation (prevents accidental deletion)
+- ✅ Grace period (reversibility guarantee)
+- ✅ Anonimization (audit trail preserved without PII)
+- ✅ Audit trail (compliance records maintained)
+- ✅ Transparency (public lifecycle explanation endpoint)
+
+**Execution Options:**
+1. User-initiated via UI — email confirmation required
+2. Admin-initiated via API — direct purge with audit trail
+3. Automated via cron — scheduled based on grace period expiry
+
+**Integration:**
+- `backend/main.py`: Added deletion router
+- `requirements.txt`: No new dependencies
+
+**Tests Status:**
+- ✅ 30/30 unit tests passing
+- ✅ 12/12 E2E tests ready (need backend running)
+- ✅ Zero regressions (154+ total tests still passing)
+
+---
+
 ## [2.20.0] — 2026-05-07 (FASE 2.4 — Retention & Operational Governance)
 
 ### New — Retention & Operational Governance
