@@ -4,6 +4,89 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.25.0] — 2026-05-08 (Multi-LLM Fallback Architecture & VPS Deployment)
+
+### Backend — Intelligent LLM Fallback Cascade
+
+**Three-tier fallback architecture eliminates single-point-of-failure on Gemini, ensuring prompts are always AI-generated.**
+
+**New Services:**
+- `backend/services/openai_service.py` — OpenAI gpt-4o-mini integration (15s timeout, async)
+- Enhanced `backend/services/gemini_service.py` — Exponential backoff retry logic + OpenAI fallback
+- New test suite: `backend/test_openai_fallback.py` — Full cascade validation (3/3 tests passing)
+
+**LLM Stack:**
+```
+PRIMARY: Gemini (gemini-2.5-flash-lite)
+  ├─ Retry 1: wait 1s (on 503/429)
+  ├─ Retry 2: wait 2s (exponential backoff)
+  └─ FALLBACK 1: OpenAI gpt-4o-mini
+      ├─ Cost: $0.15 per 1M input tokens (10-20x cheaper than gpt-4)
+      └─ Model: gpt-4o-mini (latest, fastest OpenAI model)
+         └─ FALLBACK 2: Local template prompts (always available)
+```
+
+**Reliability Improvements:**
+- ✅ Exponential backoff: 1s, 2s delays on transient errors
+- ✅ Automatic cascade: Gemini → OpenAI → Template (user unaware)
+- ✅ Consistent prompt template across both LLMs
+- ✅ JSON parsing error handling with intelligent retry
+- ✅ Timeout protection (10s per API call)
+
+**Test Results:**
+- ✅ Gemini integration: 5/5 tests passing
+- ✅ OpenAI fallback: 3/3 tests passing (actively proven when Gemini fails)
+- ✅ Multi-LLM cascade: End-to-end validation passing
+- ✅ Build: Zero TypeScript errors
+
+**Configuration:**
+- `backend/.env.example` — Updated with both GEMINI_API_KEY and OPENAI_API_KEY
+- VPS backend: Both keys configured and loaded in Docker container
+- Environment validation: `docker exec atenna-backend-backend-1 python3 -c "import os; print('[OPENAI]:', 'FOUND' if os.getenv('OPENAI_API_KEY') else 'MISSING')"`
+
+**Commits:**
+- `099e35a` — feat: Multi-LLM fallback architecture for prompt generation
+- `ca6af72` — chore: confirm gpt-4o-mini as OpenAI fallback model (no regression)
+
+### VPS Deployment & Operations
+
+**Documentation Added:**
+- `docs/VPS_ACCESS_GUIDE.md` — Complete guide for SSH access, Docker management, monitoring
+  - SSH connection: `ssh -i /c/Users/dgapc/.ssh/atenna-vps root@157.90.246.156`
+  - Health endpoint: `curl http://localhost:8000/health`
+  - Backend path: `/root/atenna-backend/`
+  - Docker commands: restart, logs, status monitoring
+
+**Backend Deployment:**
+- ✅ VPS: 157.90.246.156 (Debian, Docker-based)
+- ✅ Backend: Running in Docker (uvicorn on 127.0.0.1:8000)
+- ✅ Nginx: Reverse proxy on 80/443
+- ✅ Health check: Configured and responding
+
+**Environment Validation:**
+- ✅ GEMINI_API_KEY: Configured
+- ✅ OPENAI_API_KEY: Configured (added 2026-05-08)
+- ✅ SUPABASE_URL: Configured
+- ✅ SUPABASE Keys: Configured (ANON + SERVICE_ROLE)
+- ✅ Docker container: Environment variables loaded correctly
+
+**Deployment Process:**
+```bash
+# Connect to VPS
+ssh -i /c/Users/dgapc/.ssh/atenna-vps root@157.90.246.156
+
+# Check backend status
+docker ps --format 'table {{.Names}}\t{{.Status}}'
+
+# View logs
+docker logs --tail 50 -f atenna-backend-backend-1
+
+# Restart if needed
+cd /root/atenna-backend && docker compose down && docker compose up -d
+```
+
+---
+
 ## [2.24.1] — 2026-05-08 (FASE 4.1B — Leak-Proof Validation Complete)
 
 ### Test Execution & Validation ✅
