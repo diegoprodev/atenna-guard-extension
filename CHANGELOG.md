@@ -4,6 +4,117 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.22.0] — 2026-05-08 (FASE 3.1B — Governed User Data Export)
+
+### New — User Data Export with LGPD Art. 18 Compliance
+
+**Secure, auditable data export as institutional report (not dump) with mandatory email confirmation and 48-hour download window.**
+
+**Database Migrations:**
+- `supabase/migrations/20260508_user_data_export.sql` — Export request infrastructure
+  - `user_export_requests` table: Tracks export lifecycle (id, user_id, status, requested_at, confirmed_at, processing_started_at, completed_at, expires_at, download_token, download_count, max_downloads=3)
+  - Status enum: `requested`, `confirmed`, `processing`, `ready`, `expired`, `purged`, `failed`
+  - 7 PostgreSQL functions:
+    - `initiate_export_request(user_id, download_token)` — creates export request in 'requested' state
+    - `confirm_export_request(token, expires_in_hours)` — validates token, transitions to 'confirmed', sets expiration
+    - `mark_export_ready(token)` — marks PDF as ready for download
+    - `record_export_download(token)` — increments download counter, validates max_downloads
+    - `expire_export_request(token)` — marks expired exports as such
+    - `purge_expired_exports()` — automated purge job for expired/expired exports
+    - `get_export_status(user_id)` / `get_export_summary()` — query functions for status and compliance
+  - RLS policies: users read own exports, service_role full access
+  - Indexes on user_id, status, download_token, expires_at
+
+**Backend:**
+- `backend/dlp/export_manager.py` — Python export engine (fpdf2-based)
+  - `ExportStatus` enum with lifecycle states (REQUESTED, CONFIRMED, PROCESSING, READY, EXPIRED, PURGED, FAILED)
+  - `ExportManager` class:
+    - `request_export(user_id, email)` — initiates export, generates secure token, sends confirmation email
+    - `confirm_export(token, expires_in_hours)` — validates token, confirms export, schedules PDF generation
+    - `generate_pdf(user_id, email, account_created_at, plan)` — generates institutional PDF report (4 pages max, institutional layout)
+    - `mark_export_ready(token)` — transitions export to 'ready' state
+    - `get_download_stream(token)` — validates token, increments download_count, returns PDF bytes
+    - `get_export_status(user_id)` — returns current export state and remaining downloads
+    - `purge_expired_exports()` — triggers purge of expired exports
+    - `get_export_summary()` — compliance view of all exports
+  - Constants: DEFAULT_EXPIRY_HOURS=48, TOKEN_VALIDITY_HOURS=24, MAX_DOWNLOADS=3, MIN_REQUEST_INTERVAL_HOURS=24
+  - Fallback mode (works without Supabase)
+  - PDF generation with fpdf2 (pure Python, zero native dependencies)
+
+- `backend/routes/export.py` — REST API endpoints for export lifecycle
+  - `POST /user/export/request` — initiate export request (rate-limited to 1 per 24h)
+  - `POST /user/export/confirm?token=...&expires_in_hours=48` — confirm via email link
+  - `GET /user/export/status` — check export status and remaining downloads
+  - `GET /user/export/download?token=...` — download PDF with token validation
+  - `POST /user/export/purge` — admin: purge expired exports
+  - `GET /user/export/summary` — admin: compliance summary of all exports
+
+**Dependency:**
+- Added `fpdf2>=2.7.0` to requirements.txt (pure Python, no system dependencies like Pango/GTK)
+
+**PDF Architecture (Secure Report, Not Dump):**
+- ✅ Email of account holder (not raw user_id)
+- ✅ Account creation date, plan type
+- ✅ Counts of events per entity category (no raw values)
+- ✅ Entity types detected: "CPF", "EMAIL", "API_KEY" (categories only)
+- ✅ Dates of protection events (no payloads)
+- ✅ Retention policies in effect
+- ✅ LGPD rights documentation (Art. 17, 18, 20)
+- ❌ NO complete CPF/API_KEY/JWT values
+- ❌ NO full prompt content
+- ❌ NO raw payloads, stack traces, internal logs
+- ❌ NO infrastructure details
+
+**Tests (30+ new):**
+- `backend/dlp/test_export_manager.py` — Comprehensive unit tests
+  - TestExportRequest: initiation, rate-limit, email validation
+  - TestExportConfirm: token validation, expiration, confirmation flow
+  - TestPdfGeneration: structure validation, zero PII leakage, bytes verification
+  - TestDownloadSecurity: token validation, max downloads, expiration
+  - TestRateLimiting: 1 per 24h enforcement
+  - TestPurge: idempotent purge, fallback behavior
+  - TestFallback: graceful degradation without Supabase
+
+- `tests/e2e/fase-3.1b-user-data-export.spec.ts` — 12 E2E tests
+  - Lifecycle documentation, request initiation, status retrieval
+  - Token expiration (24h), PDF expiration (48h)
+  - Download validation, max 3 downloads
+  - Rate limiting, unauthorized access blocking
+  - PDF without sensitive data validation
+  - Purge of expired exports
+
+**Governance Features:**
+- ✅ Secure export request (email confirmation mandatory)
+- ✅ Rate limiting (1 per 24h per user)
+- ✅ Expirat ion (48h download window)
+- ✅ Download limit (max 3 per export)
+- ✅ Token-based security (unique, random, non-reusable)
+- ✅ Institutional PDF report (no technical jargon)
+- ✅ Zero sensitive data in report (categories, not values)
+- ✅ Audit trail (timestamps, download count, expiration tracking)
+- ✅ Automatic purge (expired exports removed by cron)
+- ✅ Fallback mode (works without Supabase)
+
+**LGPD Compliance:**
+- ✅ LGPD Art. 18 (Direito ao Acesso) — Right to Access
+- ✅ Mandatory email confirmation (prevents accidental access)
+- ✅ Limited download window (48h, max 3 downloads)
+- ✅ Data minimization (categories, not values)
+- ✅ Institutional report (executive summary, not technical dump)
+- ✅ Audit trail (compliance view available)
+- ✅ Transparency (PDF includes rights information)
+
+**Integration:**
+- `backend/main.py`: Added export_router
+- `requirements.txt`: Added fpdf2>=2.7.0
+
+**Tests Status:**
+- ✅ 30+/30+ unit tests passing
+- ✅ 12/12 E2E tests ready (need backend running)
+- ✅ Zero regressions (184+ total tests still passing)
+
+---
+
 ## [2.21.0] — 2026-05-07 (FASE 3.1A — Account Deletion Governance)
 
 ### New — Account Deletion Governance (Soft Delete + Grace Period)

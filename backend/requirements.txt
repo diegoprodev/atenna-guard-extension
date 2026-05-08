@@ -6,3 +6,4 @@ presidio-analyzer
 presidio-anonymizer
 spacy
 supabase
+fpdf2>=2.7.0
