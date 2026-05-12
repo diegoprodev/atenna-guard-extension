@@ -44,6 +44,36 @@ All notable changes to **Atenna Guard Extension** are documented here.
 - Coverage: section visibility, state transitions, button functionality, responsive layout
 - All tests passing
 
+### Extension Popup Implementation (Critical UX Fix)
+
+**Problem:** Clicking extension icon did nothing — modal only appeared via DLP badge in page
+
+**Root Cause:** No `popup.html` defined in manifest's `action.default_popup`
+
+**Solution:**
+- `popup.html` — New popup UI (400px minimum, auto-opens modal)
+- `src/popup.ts` — Calls `toggleModal()` on popup open
+- `manifest.json` — Added `"default_popup": "popup.html"` to action
+- `vite.popup.config.ts` — Separate build config for popup bundle
+- Build script updated: Now compiles 3 bundles (content, popup, background)
+
+**User Flow After Fix:**
+```
+User clicks extension icon
+   ↓
+popup.html loads (400px popup window)
+   ↓
+popup.ts triggers toggleModal()
+   ↓
+Modal checks authentication via getActiveSession()
+   ├─ Unauthenticated → Show login/onboarding screen
+   └─ Authenticated → Show full modal (prompts/history/settings)
+```
+
+**Build Artifacts (New):**
+- `dist/popup.js` (86.21 kB, gzip 23.57 kB)
+- `dist/popup.html` (auto-copied)
+
 ### Test Synchronization Fix
 
 **Root Cause:** 7 tests failing due to async/await mismatch in modal lifecycle
