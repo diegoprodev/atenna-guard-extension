@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/generate-icons.mjs && vite build && vite build --config vite.bg.config.ts",
+    "build": "node scripts/generate-icons.mjs && vite build && vite build --config vite.popup.config.ts && vite build --config vite.bg.config.ts",
     "dev": "vite build --watch",
     "test": "vitest run",
     "test:watch": "vitest",
