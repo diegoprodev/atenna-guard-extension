@@ -17,9 +17,8 @@ async function checkAuth(): Promise<boolean> {
 }
 
 function tryInject(): void {
-  // CHANGE: Inject ALWAYS, even if not authenticated
-  // If not authed, clicking badge shows login modal
-  // This prevents badge from disappearing on reload/offline/timeout
+  // Only inject badge if user is authenticated — DLP must not run without login
+  if (!_isAuthenticated) return;
 
   const config = detectPlatform();
   if (!config) return;
@@ -32,17 +31,13 @@ function tryInject(): void {
 
 async function init(): Promise<void> {
   const authed = await checkAuth();
-  // Still check auth, but don't gate badge injection
-  // (badge is always shown, functionality depends on auth)
 
-  // CHANGE: Always inject badge immediately
-  // Prevents disappearing on auth check failure, offline, or timeout
-  tryInject();
+  // Only inject if authenticated
+  if (authed) tryInject();
 
   // Re-inject on DOM changes (SPA navigation, conversation switch)
   const observer = new MutationObserver(() => {
-    // Always try to inject (auth state doesn't matter for visibility)
-    tryInject();
+    if (_isAuthenticated) tryInject();
   });
   observer.observe(document.body, { childList: true, subtree: true });
 

@@ -4,9 +4,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const JWT_KEY           = 'atenna_jwt';
 
 export interface Session {
-  access_token: string;
-  email:        string;
-  expires_at:   number; // unix seconds
+  access_token:  string;
+  refresh_token?: string;
+  email:         string;
+  expires_at:    number; // unix seconds
 }
 
 // ─── Storage helpers ──────────────────────────────────────
@@ -32,7 +33,16 @@ export async function storeSession(session: Session): Promise<void> {
 export async function clearSession(): Promise<void> {
   return new Promise(resolve => {
     try {
+      // Clear session but keep onboarding_seen so it doesn't re-show on every logout
       chrome.storage.local.remove(JWT_KEY, () => resolve());
+    } catch { resolve(); }
+  });
+}
+
+export async function resetOnboarding(): Promise<void> {
+  return new Promise(resolve => {
+    try {
+      chrome.storage.local.remove('atenna_onboarding_seen', () => resolve());
     } catch { resolve(); }
   });
 }
@@ -41,10 +51,41 @@ export function isSessionValid(session: Session): boolean {
   return Date.now() / 1000 < session.expires_at - 60; // 60s buffer
 }
 
+// ─── Token refresh ────────────────────────────────────────
+
+async function refreshSession(session: Session): Promise<Session | null> {
+  if (!session.refresh_token) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+      body:    JSON.stringify({ refresh_token: session.refresh_token }),
+    });
+    if (!res.ok) return null;
+    const body = await res.json() as Record<string, unknown>;
+    const newSession: Session = {
+      access_token:  body.access_token as string,
+      refresh_token: (body.refresh_token as string) || session.refresh_token,
+      email:         session.email,
+      expires_at:    Math.floor(Date.now() / 1000) + ((body.expires_in as number) || 3600),
+    };
+    await storeSession(newSession);
+    return newSession;
+  } catch {
+    return null;
+  }
+}
+
 export async function getActiveSession(): Promise<Session | null> {
   const session = await getStoredSession();
   if (!session) return null;
-  if (!isSessionValid(session)) { await clearSession(); return null; }
+
+  // Token expired or near expiry — try to refresh silently
+  if (!isSessionValid(session)) {
+    const refreshed = await refreshSession(session);
+    if (!refreshed) { await clearSession(); return null; }
+    return refreshed;
+  }
 
   // Verify user still exists in Supabase (catches deleted accounts)
   try {
@@ -55,8 +96,10 @@ export async function getActiveSession(): Promise<Session | null> {
       },
     });
     if (res.status === 401 || res.status === 403) {
-      await clearSession();
-      return null;
+      // Try refresh before giving up
+      const refreshed = await refreshSession(session);
+      if (!refreshed) { await clearSession(); return null; }
+      return refreshed;
     }
   } catch {
     // Offline — trust cached session to avoid locking out users without internet
@@ -91,14 +134,16 @@ export async function signInWithPassword(email: string, password: string): Promi
 
     const body = await res.json() as Record<string, unknown>;
     const accessToken = body.access_token as string;
+    const refreshToken = body.refresh_token as string | undefined;
     const expiresIn = body.expires_in as number || 3600;
     const payload = decodeJwtPayload(accessToken);
     const userEmail = (payload.email as string) || email;
 
     const session: Session = {
-      access_token: accessToken,
-      email: userEmail,
-      expires_at: Math.floor(Date.now() / 1000) + expiresIn,
+      access_token:  accessToken,
+      refresh_token: refreshToken,
+      email:         userEmail,
+      expires_at:    Math.floor(Date.now() / 1000) + expiresIn,
     };
     await storeSession(session);
     return { session };
