@@ -1,227 +1,216 @@
-/**
- * FASE 3.1B-UI: Governed User Export Interface E2E Tests
- *
- * Valida:
- * - Renderização de componentes na Settings page
- * - Estados visuais (idle, requested, ready, expired)
- * - Interações de botões (solicitar, download, cancelar)
- * - Responsividade (sem overflow horizontal em 360px)
- */
+﻿import { test, expect } from '@playwright/test';
 
-import { test, expect } from '@playwright/test';
-
-test.describe('FASE 3.1B-UI: Privacy & Data Governance', () => {
-  const SETTINGS_SELECTOR = '[data-gear]';
-  const PRIVACY_SECTION_SELECTOR = '.atenna-privacy';
-  const EXPORT_CARD_SELECTOR = '[data-card-type="export"]';
-  const DELETION_CARD_SELECTOR = '[data-card-type="deletion"]';
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Teste 1: Settings page abre com seção "Privacidade e Dados"
-  // ══════════════════════════════════════════════════════════════════════════
-  test('Settings page renderiza com seção Privacidade e Dados', async ({ page }) => {
-    // Abrir Settings
-    const gearBtn = page.locator(SETTINGS_SELECTOR);
-    await gearBtn.click();
-
-    // Verificar que section title existe
-    const sectionTitle = page.locator('text=🔐 Privacidade e Dados');
-    await expect(sectionTitle).toBeVisible();
-
-    console.log('✅ TESTE 1: Settings page renderiza privacidade');
+test.describe('FASE 3.1B — Privacy & Data Governance UI', () => {
+  test.beforeEach(async ({ page }) => {
+    // Navigate to extension page
+    await page.goto('chrome-extension://placeholder/popup.html');
+    
+    // Mock authenticated session
+    await page.evaluate(() => {
+      localStorage.setItem('atenna_jwt', JSON.stringify({
+        email: 'test@example.com',
+        access_token: 'mock_token_xyz',
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+      }));
+    });
   });
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // Teste 2: Export card renderiza com título correto
-  // ══════════════════════════════════════════════════════════════════════════
-  test('Export card renderiza com título "Seus dados"', async ({ page }) => {
-    const gearBtn = page.locator(SETTINGS_SELECTOR);
-    await gearBtn.click();
+  test('1. Settings page opens with "Privacidade e Dados" section', async ({ page }) => {
+    const settingsBtn = page.locator('[data-testid="settings-button"]');
+    await expect(settingsBtn).toBeVisible();
+    await settingsBtn.click();
 
-    const exportCard = page.locator(EXPORT_CARD_SELECTOR);
-    await expect(exportCard).toBeVisible();
-
-    const title = exportCard.locator('.atenna-privacy__card-title');
-    await expect(title).toHaveText('Seus dados');
-
-    console.log('✅ TESTE 2: Export card renderizado');
-  });
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Teste 3: Deletion card renderiza com título correto
-  // ══════════════════════════════════════════════════════════════════════════
-  test('Deletion card renderiza com título "Exclusão de conta"', async ({ page }) => {
-    const gearBtn = page.locator(SETTINGS_SELECTOR);
-    await gearBtn.click();
-
-    const deletionCard = page.locator(DELETION_CARD_SELECTOR);
-    await expect(deletionCard).toBeVisible();
-
-    const title = deletionCard.locator('.atenna-privacy__card-title');
-    await expect(title).toHaveText('Exclusão de conta');
-
-    console.log('✅ TESTE 3: Deletion card renderizado');
-  });
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Teste 4: Botão "Solicitar relatório" existe e é clicável
-  // ══════════════════════════════════════════════════════════════════════════
-  test('Botão "Solicitar relatório" é renderizado e clicável', async ({ page }) => {
-    const gearBtn = page.locator(SETTINGS_SELECTOR);
-    await gearBtn.click();
-
-    const exportCard = page.locator(EXPORT_CARD_SELECTOR);
-    const requestBtn = exportCard.locator('button:has-text("Solicitar relatório")');
-
-    await expect(requestBtn).toBeVisible();
-    await expect(requestBtn).toBeEnabled();
-
-    console.log('✅ TESTE 4: Botão "Solicitar relatório" clicável');
-  });
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Teste 5: Botão "Solicitar exclusão" existe e é clicável
-  // ══════════════════════════════════════════════════════════════════════════
-  test('Botão "Solicitar exclusão" é renderizado e clicável', async ({ page }) => {
-    const gearBtn = page.locator(SETTINGS_SELECTOR);
-    await gearBtn.click();
-
-    const deletionCard = page.locator(DELETION_CARD_SELECTOR);
-    const requestBtn = deletionCard.locator('button:has-text("Solicitar exclusão")');
-
-    await expect(requestBtn).toBeVisible();
-    await expect(requestBtn).toBeEnabled();
-
-    console.log('✅ TESTE 5: Botão "Solicitar exclusão" clicável');
-  });
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Teste 6: Estado idle é exibido inicialmente
-  // ══════════════════════════════════════════════════════════════════════════
-  test('Export card mostra estado "idle" — "Nenhuma solicitação ativa"', async ({ page }) => {
-    const gearBtn = page.locator(SETTINGS_SELECTOR);
-    await gearBtn.click();
-
-    const exportCard = page.locator(EXPORT_CARD_SELECTOR);
-    const statusText = exportCard.locator('.atenna-privacy__status-text');
-
-    // Status inicial pode ser "Nenhuma solicitação ativa" ou "Carregando..."
-    const text = await statusText.first().textContent();
-    const isIdleOrLoading = text?.includes('Nenhuma solicitação ativa') || text?.includes('Carregando');
-    expect(isIdleOrLoading).toBeTruthy();
-
-    console.log('✅ TESTE 6: Estado idle exibido (ou carregando)');
-  });
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Teste 7: Description text é exibido
-  // ══════════════════════════════════════════════════════════════════════════
-  test('Export card exibe descrição informativa', async ({ page }) => {
-    const gearBtn = page.locator(SETTINGS_SELECTOR);
-    await gearBtn.click();
-
-    const exportCard = page.locator(EXPORT_CARD_SELECTOR);
-    const desc = exportCard.locator('.atenna-privacy__card-desc');
-
-    await expect(desc).toContainText('Você pode solicitar uma cópia estruturada');
-
-    console.log('✅ TESTE 7: Descrição exibida');
-  });
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Teste 8: Deletion card description é diferente
-  // ══════════════════════════════════════════════════════════════════════════
-  test('Deletion card exibe descrição sobre reversão', async ({ page }) => {
-    const gearBtn = page.locator(SETTINGS_SELECTOR);
-    await gearBtn.click();
-
-    const deletionCard = page.locator(DELETION_CARD_SELECTOR);
-    const desc = deletionCard.locator('.atenna-privacy__card-desc');
-
-    await expect(desc).toContainText('período de reversão de 7 dias');
-
-    console.log('✅ TESTE 8: Descrição de reversão exibida');
-  });
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Teste 9: Status dot renderiza com cor dinâmica
-  // ══════════════════════════════════════════════════════════════════════════
-  test('Status dot renderiza e possui cor (background-color)', async ({ page }) => {
-    const gearBtn = page.locator(SETTINGS_SELECTOR);
-    await gearBtn.click();
-
-    const exportCard = page.locator(EXPORT_CARD_SELECTOR);
-    const statusDot = exportCard.locator('.atenna-privacy__status-dot').first();
-
-    // Verificar que dot existe e tem estilo
-    const bgColor = await statusDot.evaluate((el) => window.getComputedStyle(el).backgroundColor);
-    expect(bgColor).toBeTruthy();
-
-    console.log('✅ TESTE 9: Status dot renderizado com cor');
-  });
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Teste 10: Responsividade: sem overflow horizontal em 360px
-  // ══════════════════════════════════════════════════════════════════════════
-  test('Responsividade: sem overflow horizontal em 360px', async ({ page }) => {
-    await page.setViewportSize({ width: 360, height: 640 });
-
-    const gearBtn = page.locator(SETTINGS_SELECTOR);
-    await gearBtn.click();
-
-    const privacySection = page.locator(PRIVACY_SECTION_SELECTOR);
+    const privacySection = page.locator('.atenna-privacy');
     await expect(privacySection).toBeVisible();
 
-    // Verificar que não há overflow horizontal
-    const overflowX = await privacySection.evaluate((el) => {
-      const rect = el.getBoundingClientRect();
-      return window.innerWidth < rect.right;
+    const sectionTitle = page.locator('text=Privacidade e Dados');
+    await expect(sectionTitle).toBeVisible();
+  });
+
+  test('2. Export card renders with correct title', async ({ page }) => {
+    await page.locator('[data-testid="settings-button"]').click();
+
+    const exportCard = page.locator('.atenna-privacy__card').first();
+    const title = exportCard.locator('.atenna-privacy__card-title');
+    
+    await expect(title).toHaveText('Seus dados');
+  });
+
+  test('3. Deletion card renders with correct title', async ({ page }) => {
+    await page.locator('[data-testid="settings-button"]').click();
+
+    const deletionCard = page.locator('.atenna-privacy__card').nth(1);
+    const title = deletionCard.locator('.atenna-privacy__card-title');
+    
+    await expect(title).toHaveText('Exclusão de conta');
+  });
+
+  test('4. "Solicitar relatório" button exists and is clickable', async ({ page }) => {
+    await page.locator('[data-testid="settings-button"]').click();
+
+    const exportBtn = page.locator('button:has-text("Solicitar relatório")');
+    await expect(exportBtn).toBeVisible();
+    await expect(exportBtn).toBeEnabled();
+  });
+
+  test('5. "Solicitar exclusão" button exists and is clickable', async ({ page }) => {
+    await page.locator('[data-testid="settings-button"]').click();
+
+    const deletionBtn = page.locator('button:has-text("Solicitar exclusão")').first();
+    await expect(deletionBtn).toBeVisible();
+    await expect(deletionBtn).toBeEnabled();
+  });
+
+  test('6. Export card shows idle status initially', async ({ page }) => {
+    await page.locator('[data-testid="settings-button"]').click();
+
+    const exportCard = page.locator('.atenna-privacy__card').first();
+    const statusText = exportCard.locator('[data-export-status]');
+    
+    await expect(statusText).toContainText('Nenhuma solicitação ativa');
+  });
+
+  test('7. Export card shows "requested" state after clicking button', async ({ page }) => {
+    await page.route('**/user/export/status', async route => {
+      if (route.request().method() === 'GET') {
+        await route.abort();
+      } else {
+        await route.continue();
+      }
     });
 
-    expect(overflowX).toBe(false);
+    await page.locator('[data-testid="settings-button"]').click();
 
-    console.log('✅ TESTE 10: Responsividade OK em 360px');
+    const exportCard = page.locator('.atenna-privacy__card').first();
+    const requestBtn = exportCard.locator('button:has-text("Solicitar relatório")');
+    
+    // Mock backend response for request
+    await page.route('**/user/export/request', async route => {
+      await route.respond({
+        status: 200,
+        body: JSON.stringify({
+          success: true,
+          message: 'Email de confirmação enviado',
+        }),
+      });
+    });
+
+    await requestBtn.click();
+    
+    // After request, should show email confirmation state
+    const statusText = exportCard.locator('[data-export-status]');
+    await expect(statusText).toContainText('Confirmação enviada');
   });
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // Teste 11: Cards possuem CSS classes esperadas
-  // ══════════════════════════════════════════════════════════════════════════
-  test('Cards possuem classes CSS esperadas', async ({ page }) => {
-    const gearBtn = page.locator(SETTINGS_SELECTOR);
-    await gearBtn.click();
+  test('8. Export card shows "ready" state with download button', async ({ page }) => {
+    // Mock backend response for ready status
+    await page.route('**/user/export/status', async route => {
+      await route.respond({
+        status: 200,
+        body: JSON.stringify({
+          has_pending_request: true,
+          status: 'ready',
+          expires_at: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
+          download_count: 3,
+          max_downloads: 3,
+        }),
+      });
+    });
 
-    const exportCard = page.locator(EXPORT_CARD_SELECTOR);
-    const hasCardClass = await exportCard.evaluate((el) => el.classList.contains('atenna-privacy__card'));
-    expect(hasCardClass).toBe(true);
+    await page.locator('[data-testid="settings-button"]').click();
 
-    const actionRow = exportCard.locator('.atenna-privacy__actions');
-    await expect(actionRow).toBeVisible();
+    const exportCard = page.locator('.atenna-privacy__card').first();
+    const statusText = exportCard.locator('[data-export-status]');
+    
+    await expect(statusText).toContainText('Relatório disponível');
 
-    console.log('✅ TESTE 11: Classes CSS corretas');
+    const downloadBtn = exportCard.locator('button:has-text("Fazer download")');
+    await expect(downloadBtn).toBeVisible();
   });
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // Teste 12: Ambas as cards estão presentes na mesma seção
-  // ══════════════════════════════════════════════════════════════════════════
-  test('Ambas as cards (export + deletion) estão visíveis juntas', async ({ page }) => {
-    const gearBtn = page.locator(SETTINGS_SELECTOR);
-    await gearBtn.click();
+  test('9. Export card shows "expired" state with new request button', async ({ page }) => {
+    await page.route('**/user/export/status', async route => {
+      await route.respond({
+        status: 200,
+        body: JSON.stringify({
+          has_pending_request: true,
+          status: 'expired',
+          expires_at: new Date(Date.now() - 1000).toISOString(),
+        }),
+      });
+    });
 
-    const privacySection = page.locator(PRIVACY_SECTION_SELECTOR);
-    const exportCard = privacySection.locator(EXPORT_CARD_SELECTOR);
-    const deletionCard = privacySection.locator(DELETION_CARD_SELECTOR);
+    await page.locator('[data-testid="settings-button"]').click();
 
-    await expect(exportCard).toBeVisible();
-    await expect(deletionCard).toBeVisible();
+    const exportCard = page.locator('.atenna-privacy__card').first();
+    const statusText = exportCard.locator('[data-export-status]');
+    
+    await expect(statusText).toContainText('Este relatório expirou');
 
-    // Verificar que export vem antes de deletion
-    const exportBox = await exportCard.boundingBox();
-    const deletionBox = await deletionCard.boundingBox();
+    const newBtn = exportCard.locator('button:has-text("Solicitar novo")');
+    await expect(newBtn).toBeVisible();
+  });
 
-    if (exportBox && deletionBox) {
-      expect(exportBox.y).toBeLessThan(deletionBox.y);
-    }
+  test('10. Deletion card shows grace period days remaining', async ({ page }) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 5);
 
-    console.log('✅ TESTE 12: Ambas as cards visíveis e ordenadas');
+    await page.route('**/user/deletion/status', async route => {
+      await route.respond({
+        status: 200,
+        body: JSON.stringify({
+          has_pending_request: true,
+          status: 'deletion_scheduled',
+          deletion_scheduled_at: futureDate.toISOString(),
+          grace_period_remaining_days: 5,
+        }),
+      });
+    });
+
+    await page.locator('[data-testid="settings-button"]').click();
+
+    const deletionCard = page.locator('.atenna-privacy__card').nth(1);
+    const statusText = deletionCard.locator('[data-deletion-status]');
+    
+    await expect(statusText).toContainText('Exclusão agendada');
+    await expect(statusText).toContainText('dias para cancelar');
+  });
+
+  test('11. "Cancelar solicitação" button appears in grace period', async ({ page }) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 3);
+
+    await page.route('**/user/deletion/status', async route => {
+      await route.respond({
+        status: 200,
+        body: JSON.stringify({
+          has_pending_request: true,
+          status: 'deletion_scheduled',
+          deletion_scheduled_at: futureDate.toISOString(),
+          grace_period_remaining_days: 3,
+        }),
+      });
+    });
+
+    await page.locator('[data-testid="settings-button"]').click();
+
+    const deletionCard = page.locator('.atenna-privacy__card').nth(1);
+    const cancelBtn = deletionCard.locator('button:has-text("Cancelar solicitação")');
+    
+    await expect(cancelBtn).toBeVisible();
+    await expect(cancelBtn).toBeEnabled();
+  });
+
+  test('12. Privacy section has no horizontal overflow (responsive)', async ({ page }) => {
+    // Set viewport to mobile width
+    await page.setViewportSize({ width: 360, height: 600 });
+
+    await page.locator('[data-testid="settings-button"]').click();
+
+    const privacySection = page.locator('.atenna-privacy');
+    const boundingBox = await privacySection.boundingBox();
+
+    // Ensure no overflow
+    expect(boundingBox?.width).toBeLessThanOrEqual(360);
   });
 });

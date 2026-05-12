@@ -1,58 +1,179 @@
-/**
- * FASE 3.1B-UI: Privacy Data Governance Component
- * - Export request, confirmation, download
- * - Account deletion request, grace period, cancellation
- * - State-driven rendering (idle, requested, ready, scheduled, etc.)
+﻿/**
+ * FASE 3.1B — Privacy & Data Governance UI
+ *
+ * Two-card interface for user data export and account deletion requests.
+ * All operations require authentication and follow LGPD Art. 17 (right to be forgotten).
  */
 
-const BACKEND_URL = 'https://atennaplugin.maestro-n8n.site';
+interface Session {
+  email: string;
+  access_token: string;
+}
 
-// ─── Authenticated fetch helper ────────────────────────────
+const BACKEND = 'https://atennaplugin.maestro-n8n.site';
+
 async function backendFetch(
   path: string,
-  method: 'GET' | 'POST',
+  method: string,
   token: string,
   body?: unknown,
 ): Promise<Response> {
-  const opts: RequestInit = {
+  const url = `${BACKEND}${path}`;
+  const options: RequestInit = {
     method,
     headers: {
-      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
     },
   };
-  if (body) opts.body = JSON.stringify(body);
-  return fetch(`${BACKEND_URL}${path}`, opts);
+
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+
+  try {
+    return await fetch(url, options);
+  } catch (e) {
+    console.error(`[privacy-data] fetch error: ${path}`, e);
+    throw e;
+  }
 }
 
-// ─── Render main privacy section ────────────────────────────
-export function renderPrivacyDataSection(
-  session: { email: string; access_token: string },
-  pro: boolean,
-): HTMLElement {
-  const container = document.createElement('div');
-  container.className = 'atenna-privacy';
+function formatTimeRemaining(expiresAt: string | number): string {
+  const expiresDate = typeof expiresAt === 'string' ? new Date(expiresAt) : new Date(expiresAt);
+  const now = new Date();
+  const diff = expiresDate.getTime() - now.getTime();
+  const hours = Math.floor(diff / (1000 * 60 * 60));
 
-  // Export Card
-  const exportCard = buildExportCard(session.access_token, session.email);
-  container.appendChild(exportCard);
-
-  // Deletion Card
-  const deletionCard = buildDeletionCard(session.access_token, session.email);
-  container.appendChild(deletionCard);
-
-  // Load initial state async
-  void updateExportCardState(exportCard, session.access_token);
-  void updateDeletionCardState(deletionCard, session.access_token);
-
-  return container;
+  if (hours <= 0) return 'Expirou';
+  if (hours < 1) return 'Menos de 1 hora';
+  if (hours === 1) return 'Mais de 1 hora';
+  if (hours <= 24) return `Mais de ${hours} horas`;
+  const days = Math.ceil(hours / 24);
+  return `Mais de ${days} dias`;
 }
 
-// ─── Build Export Card ────────────────────────────────────────
-function buildExportCard(token: string, email: string): HTMLElement {
+function formatDaysRemaining(scheduledAt: string | number): string {
+  const scheduledDate = typeof scheduledAt === 'string' ? new Date(scheduledAt) : new Date(scheduledAt);
+  const now = new Date();
+  const diff = scheduledDate.getTime() - now.getTime();
+  const daysRemaining = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+  if (daysRemaining <= 0) return 'Agora';
+  if (daysRemaining === 1) return '1 dia';
+  return `${daysRemaining} dias`;
+}
+
+function setCardLoading(card: HTMLElement, isLoading: boolean): void {
+  const btn = card.querySelector('.atenna-privacy__btn') as HTMLButtonElement;
+  if (btn) {
+    btn.disabled = isLoading;
+    btn.style.opacity = isLoading ? '0.6' : '1';
+  }
+}
+
+async function updateExportCardState(card: HTMLElement, token: string): Promise<void> {
+  try {
+    const res = await backendFetch('/user/export/status', 'GET', token);
+
+    if (!res.ok) {
+      console.error(`[privacy-data] export status failed: ${res.status}`);
+      return;
+    }
+
+    const data = await res.json() as Record<string, unknown>;
+    const hasPending = data.has_pending_request as boolean;
+    const status = data.status as string | null;
+    const expiresAt = data.expires_at as string | null;
+    const downloadCount = data.download_count as number | null;
+
+    const statusEl = card.querySelector('[data-export-status]') as HTMLElement;
+    const actionEl = card.querySelector('[data-export-action]') as HTMLElement;
+
+    if (!statusEl || !actionEl) return;
+
+    if (!hasPending) {
+      statusEl.innerHTML = '<div class="atenna-privacy__status-text" style="color: var(--at-muted);">Nenhuma solicitação ativa.</div>';
+      actionEl.innerHTML = '<button class="atenna-privacy__btn">Solicitar relatório</button>';
+      const btn = actionEl.querySelector('button') as HTMLButtonElement;
+      btn?.addEventListener('click', () => void handleRequestExport(card, token));
+    } else if (status === 'requested') {
+      statusEl.innerHTML = '<div class="atenna-privacy__status-text">Confirmação enviada para seu email.<br><span style="font-size: 11px; color: var(--at-muted);">Verifique sua caixa de entrada.</span></div>';
+      actionEl.innerHTML = '';
+    } else if (status === 'ready') {
+      const remaining = formatTimeRemaining(expiresAt || '');
+      const downloads = `${downloadCount} download${(downloadCount ?? 0) !== 1 ? 's' : ''} restante${(downloadCount ?? 0) !== 1 ? 's' : ''}`;
+      statusEl.innerHTML = `<div class="atenna-privacy__status-text">Relatório disponível.<br><span style="font-size: 11px; color: var(--at-muted);">Disponível por mais ${remaining} · ${downloads}</span></div>`;
+      actionEl.innerHTML = '<button class="atenna-privacy__btn">Fazer download</button>';
+      const btn = actionEl.querySelector('button') as HTMLButtonElement;
+      btn?.addEventListener('click', () => void handleDownloadExport(card, token));
+    } else if (status === 'expired') {
+      statusEl.innerHTML = '<div class="atenna-privacy__status-text" style="color: var(--at-muted);">Este relatório expirou.</div>';
+      actionEl.innerHTML = '<button class="atenna-privacy__btn">Solicitar novo</button>';
+      const btn = actionEl.querySelector('button') as HTMLButtonElement;
+      btn?.addEventListener('click', () => void handleRequestExport(card, token));
+    }
+  } catch (e) {
+    console.error('[privacy-data] updateExportCardState error:', e);
+  }
+}
+
+async function handleRequestExport(card: HTMLElement, token: string): Promise<void> {
+  setCardLoading(card, true);
+
+  try {
+    const res = await backendFetch('/user/export/request', 'POST', token);
+    if (!res.ok) {
+      console.error(`[privacy-data] export request failed: ${res.status}`);
+      return;
+    }
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await updateExportCardState(card, token);
+  } catch (e) {
+    console.error('[privacy-data] handleRequestExport error:', e);
+  } finally {
+    setCardLoading(card, false);
+  }
+}
+
+async function handleDownloadExport(card: HTMLElement, token: string): Promise<void> {
+  setCardLoading(card, true);
+
+  try {
+    const statusRes = await backendFetch('/user/export/status', 'GET', token);
+    if (!statusRes.ok) {
+      console.error(`[privacy-data] failed to get download token`);
+      return;
+    }
+
+    const statusData = await statusRes.json() as Record<string, unknown>;
+    const downloadToken = (statusData as Record<string, unknown>).download_token as string | undefined;
+
+    if (!downloadToken) {
+      console.error(`[privacy-data] no download token in status`);
+      return;
+    }
+
+    const downloadUrl = `${BACKEND}/user/export/download?token=${encodeURIComponent(downloadToken)}`;
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = `relatorio-dados-${new Date().toISOString().split('T')[0]}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await updateExportCardState(card, token);
+  } catch (e) {
+    console.error('[privacy-data] handleDownloadExport error:', e);
+  } finally {
+    setCardLoading(card, false);
+  }
+}
+
+function buildExportCard(token: string): HTMLElement {
   const card = document.createElement('div');
   card.className = 'atenna-privacy__card';
-  card.dataset.cardType = 'export';
 
   const title = document.createElement('div');
   title.className = 'atenna-privacy__card-title';
@@ -62,43 +183,108 @@ function buildExportCard(token: string, email: string): HTMLElement {
   desc.className = 'atenna-privacy__card-desc';
   desc.textContent = 'Você pode solicitar uma cópia estruturada dos dados associados à sua conta.';
 
-  const status = document.createElement('div');
-  status.className = 'atenna-privacy__status-row';
-  status.innerHTML = `
-    <span class="atenna-privacy__status-dot" style="background: #d1d5db;"></span>
-    <span class="atenna-privacy__status-text">Carregando...</span>
-  `;
+  const statusRow = document.createElement('div');
+  statusRow.setAttribute('data-export-status', '');
+  statusRow.style.marginTop = '12px';
 
-  const actions = document.createElement('div');
-  actions.className = 'atenna-privacy__actions';
-
-  const requestBtn = document.createElement('button');
-  requestBtn.className = 'atenna-privacy__btn';
-  requestBtn.textContent = 'Solicitar relatório';
-  requestBtn.addEventListener('click', () => {
-    requestBtn.disabled = true;
-    void handleRequestExport(card, token, email, requestBtn);
-  });
-  actions.appendChild(requestBtn);
+  const actionRow = document.createElement('div');
+  actionRow.setAttribute('data-export-action', '');
+  actionRow.style.marginTop = '8px';
+  actionRow.style.display = 'flex';
+  actionRow.style.justifyContent = 'flex-end';
 
   card.appendChild(title);
   card.appendChild(desc);
-  card.appendChild(status);
-  card.appendChild(actions);
+  card.appendChild(statusRow);
+  card.appendChild(actionRow);
 
-  // Store references
-  (card as any)._statusEl = status;
-  (card as any)._actionsEl = actions;
-  (card as any)._requestBtn = requestBtn;
-
+  void updateExportCardState(card, token);
   return card;
 }
 
-// ─── Build Deletion Card ──────────────────────────────────────
-function buildDeletionCard(token: string, email: string): HTMLElement {
+async function updateDeletionCardState(card: HTMLElement, token: string): Promise<void> {
+  try {
+    const res = await backendFetch('/user/deletion/status', 'GET', token);
+
+    if (!res.ok) {
+      console.error(`[privacy-data] deletion status failed: ${res.status}`);
+      return;
+    }
+
+    const data = await res.json() as Record<string, unknown>;
+    const hasPending = data.has_pending_request as boolean;
+    const status = data.status as string | null;
+    const scheduledAt = data.deletion_scheduled_at as string | null;
+
+    const statusEl = card.querySelector('[data-deletion-status]') as HTMLElement;
+    const actionEl = card.querySelector('[data-deletion-action]') as HTMLElement;
+
+    if (!statusEl || !actionEl) return;
+
+    if (!hasPending) {
+      statusEl.innerHTML = '<div class="atenna-privacy__status-text" style="color: var(--at-muted);">Nenhuma solicitação ativa.</div>';
+      actionEl.innerHTML = '<button class="atenna-privacy__btn atenna-privacy__danger-btn">Solicitar exclusão</button>';
+      const btn = actionEl.querySelector('button') as HTMLButtonElement;
+      btn?.addEventListener('click', () => void handleRequestDeletion(card, token));
+    } else if (status === 'pending_confirmation') {
+      statusEl.innerHTML = '<div class="atenna-privacy__status-text">Confirmação enviada para seu email.<br><span style="font-size: 11px; color: var(--at-muted);">Esta solicitação pode ser cancelada.</span></div>';
+      actionEl.innerHTML = '';
+    } else if (status === 'deletion_scheduled') {
+      const daysRemaining = formatDaysRemaining(scheduledAt || '');
+      const formattedDate = scheduledAt
+        ? new Date(scheduledAt).toLocaleDateString('pt-BR')
+        : 'data desconhecida';
+
+      statusEl.innerHTML = `<div class="atenna-privacy__status-text">Exclusão agendada para ${formattedDate}.<br><span style="font-size: 11px; color: var(--at-muted);">Restam ${daysRemaining} para cancelar.</span></div>`;
+      actionEl.innerHTML = '<button class="atenna-privacy__btn">Cancelar solicitação</button>';
+      const btn = actionEl.querySelector('button') as HTMLButtonElement;
+      btn?.addEventListener('click', () => void handleCancelDeletion(card, token));
+    }
+  } catch (e) {
+    console.error('[privacy-data] updateDeletionCardState error:', e);
+  }
+}
+
+async function handleRequestDeletion(card: HTMLElement, token: string): Promise<void> {
+  setCardLoading(card, true);
+
+  try {
+    const res = await backendFetch('/user/deletion/initiate', 'POST', token);
+    if (!res.ok) {
+      console.error(`[privacy-data] deletion initiate failed: ${res.status}`);
+      return;
+    }
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await updateDeletionCardState(card, token);
+  } catch (e) {
+    console.error('[privacy-data] handleRequestDeletion error:', e);
+  } finally {
+    setCardLoading(card, false);
+  }
+}
+
+async function handleCancelDeletion(card: HTMLElement, token: string): Promise<void> {
+  setCardLoading(card, true);
+
+  try {
+    const res = await backendFetch('/user/deletion/cancel', 'POST', token);
+    if (!res.ok) {
+      console.error(`[privacy-data] deletion cancel failed: ${res.status}`);
+      return;
+    }
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await updateDeletionCardState(card, token);
+  } catch (e) {
+    console.error('[privacy-data] handleCancelDeletion error:', e);
+  } finally {
+    setCardLoading(card, false);
+  }
+}
+
+function buildDeletionCard(token: string): HTMLElement {
   const card = document.createElement('div');
   card.className = 'atenna-privacy__card';
-  card.dataset.cardType = 'deletion';
+  card.style.borderTop = '1px solid var(--at-border)';
 
   const title = document.createElement('div');
   title.className = 'atenna-privacy__card-title';
@@ -108,329 +294,34 @@ function buildDeletionCard(token: string, email: string): HTMLElement {
   desc.className = 'atenna-privacy__card-desc';
   desc.textContent = 'Solicitações de exclusão possuem período de reversão de 7 dias.';
 
-  const status = document.createElement('div');
-  status.className = 'atenna-privacy__status-row';
-  status.innerHTML = `
-    <span class="atenna-privacy__status-dot" style="background: #d1d5db;"></span>
-    <span class="atenna-privacy__status-text">Carregando...</span>
-  `;
+  const statusRow = document.createElement('div');
+  statusRow.setAttribute('data-deletion-status', '');
+  statusRow.style.marginTop = '12px';
 
-  const actions = document.createElement('div');
-  actions.className = 'atenna-privacy__actions';
-
-  const requestBtn = document.createElement('button');
-  requestBtn.className = 'atenna-privacy__btn';
-  requestBtn.textContent = 'Solicitar exclusão';
-  requestBtn.addEventListener('click', () => {
-    requestBtn.disabled = true;
-    void handleRequestDeletion(card, token, email, requestBtn);
-  });
-  actions.appendChild(requestBtn);
+  const actionRow = document.createElement('div');
+  actionRow.setAttribute('data-deletion-action', '');
+  actionRow.style.marginTop = '8px';
+  actionRow.style.display = 'flex';
+  actionRow.style.justifyContent = 'flex-end';
 
   card.appendChild(title);
   card.appendChild(desc);
-  card.appendChild(status);
-  card.appendChild(actions);
+  card.appendChild(statusRow);
+  card.appendChild(actionRow);
 
-  // Store references
-  (card as any)._statusEl = status;
-  (card as any)._actionsEl = actions;
-  (card as any)._requestBtn = requestBtn;
-
+  void updateDeletionCardState(card, token);
   return card;
 }
 
-// ─── Update Export Card State ──────────────────────────────────
-async function updateExportCardState(card: HTMLElement, token: string): Promise<void> {
-  const statusEl = (card as any)._statusEl as HTMLElement;
-  const actionsEl = (card as any)._actionsEl as HTMLElement;
-  const requestBtn = (card as any)._requestBtn as HTMLButtonElement;
+export function renderPrivacyDataSection(session: Session, _pro: boolean): HTMLElement {
+  const section = document.createElement('div');
+  section.className = 'atenna-privacy';
 
-  try {
-    const response = await backendFetch('/user/export/status', 'GET', token);
-    if (!response.ok) {
-      statusEl.innerHTML = `
-        <span class="atenna-privacy__status-dot" style="background: #d1d5db;"></span>
-        <span class="atenna-privacy__status-text">Nenhuma solicitação ativa.</span>
-      `;
-      requestBtn.disabled = false;
-      return;
-    }
+  const exportCard = buildExportCard(session.access_token);
+  const deletionCard = buildDeletionCard(session.access_token);
 
-    const status = await response.json();
+  section.appendChild(exportCard);
+  section.appendChild(deletionCard);
 
-    if (!status.has_pending_request) {
-      // idle
-      statusEl.innerHTML = `
-        <span class="atenna-privacy__status-dot" style="background: #d1d5db;"></span>
-        <span class="atenna-privacy__status-text">Nenhuma solicitação ativa.</span>
-      `;
-      requestBtn.disabled = false;
-      requestBtn.textContent = 'Solicitar relatório';
-    } else if (status.status === 'requested') {
-      // waiting for confirmation
-      statusEl.innerHTML = `
-        <span class="atenna-privacy__status-dot" style="background: #f59e0b;"></span>
-        <span class="atenna-privacy__status-text">Confirmação enviada para seu email. Verifique sua caixa de entrada.</span>
-      `;
-      requestBtn.disabled = true;
-      requestBtn.textContent = 'Aguardando confirmação...';
-    } else if (status.status === 'processing' || status.status === 'ready') {
-      // processing or ready for download
-      const expiresAt = new Date(status.expires_at);
-      const now = new Date();
-      const hoursLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60));
-
-      statusEl.innerHTML = `
-        <span class="atenna-privacy__status-dot" style="background: #22c55e;"></span>
-        <span class="atenna-privacy__status-text">Relatório disponível.</span>
-      `;
-
-      const meta = document.createElement('div');
-      meta.className = 'atenna-privacy__meta';
-      meta.textContent = `Disponível por mais ${hoursLeft}h • ${status.download_count}/${status.max_downloads} downloads`;
-      statusEl.appendChild(meta);
-
-      // Replace button with download
-      actionsEl.innerHTML = '';
-      const downloadBtn = document.createElement('button');
-      downloadBtn.className = 'atenna-privacy__btn';
-      downloadBtn.textContent = 'Fazer download';
-      downloadBtn.addEventListener('click', () => {
-        void handleDownloadExport(card, token, status.download_token);
-      });
-      actionsEl.appendChild(downloadBtn);
-    } else if (status.status === 'expired') {
-      // expired
-      statusEl.innerHTML = `
-        <span class="atenna-privacy__status-dot" style="background: #ef4444;"></span>
-        <span class="atenna-privacy__status-text">Este relatório expirou.</span>
-      `;
-      actionsEl.innerHTML = '';
-      requestBtn.disabled = false;
-      requestBtn.textContent = 'Solicitar novo';
-      actionsEl.appendChild(requestBtn);
-    }
-  } catch {
-    statusEl.innerHTML = `
-      <span class="atenna-privacy__status-dot" style="background: #d1d5db;"></span>
-      <span class="atenna-privacy__status-text">Nenhuma solicitação ativa.</span>
-    `;
-    requestBtn.disabled = false;
-  }
-}
-
-// ─── Update Deletion Card State ────────────────────────────────
-async function updateDeletionCardState(card: HTMLElement, token: string): Promise<void> {
-  const statusEl = (card as any)._statusEl as HTMLElement;
-  const actionsEl = (card as any)._actionsEl as HTMLElement;
-  const requestBtn = (card as any)._requestBtn as HTMLButtonElement;
-
-  try {
-    const response = await backendFetch('/user/deletion/status', 'GET', token);
-    if (!response.ok) {
-      statusEl.innerHTML = `
-        <span class="atenna-privacy__status-dot" style="background: #d1d5db;"></span>
-        <span class="atenna-privacy__status-text">Nenhuma solicitação ativa.</span>
-      `;
-      requestBtn.disabled = false;
-      return;
-    }
-
-    const status = await response.json();
-
-    if (!status.has_pending_request) {
-      // idle
-      statusEl.innerHTML = `
-        <span class="atenna-privacy__status-dot" style="background: #d1d5db;"></span>
-        <span class="atenna-privacy__status-text">Nenhuma solicitação ativa.</span>
-      `;
-      requestBtn.disabled = false;
-      requestBtn.textContent = 'Solicitar exclusão';
-    } else if (status.status === 'pending_confirmation') {
-      // waiting for email confirmation
-      statusEl.innerHTML = `
-        <span class="atenna-privacy__status-dot" style="background: #f59e0b;"></span>
-        <span class="atenna-privacy__status-text">Confirmação enviada para seu email. Esta solicitação pode ser cancelada.</span>
-      `;
-      requestBtn.disabled = true;
-      requestBtn.textContent = 'Aguardando confirmação...';
-    } else if (status.status === 'deletion_scheduled') {
-      // grace period active
-      const scheduledDate = new Date(status.scheduled_deletion_at);
-      const now = new Date();
-      const daysLeft = Math.ceil((scheduledDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-      const formattedDate = scheduledDate.toLocaleDateString('pt-BR');
-
-      statusEl.innerHTML = `
-        <span class="atenna-privacy__status-dot" style="background: #ef4444;"></span>
-        <span class="atenna-privacy__status-text">Exclusão agendada para ${formattedDate}.</span>
-      `;
-
-      const meta = document.createElement('div');
-      meta.className = 'atenna-privacy__meta';
-      meta.textContent = `Restam ${daysLeft} dias para cancelar.`;
-      statusEl.appendChild(meta);
-
-      // Replace with cancel button
-      actionsEl.innerHTML = '';
-      const cancelBtn = document.createElement('button');
-      cancelBtn.className = 'atenna-privacy__danger-btn';
-      cancelBtn.textContent = 'Cancelar solicitação';
-      cancelBtn.addEventListener('click', () => {
-        void handleCancelDeletion(card, token, cancelBtn);
-      });
-      actionsEl.appendChild(cancelBtn);
-    }
-  } catch {
-    statusEl.innerHTML = `
-      <span class="atenna-privacy__status-dot" style="background: #d1d5db;"></span>
-      <span class="atenna-privacy__status-text">Nenhuma solicitação ativa.</span>
-    `;
-    requestBtn.disabled = false;
-  }
-}
-
-// ─── Handle Request Export ─────────────────────────────────────
-async function handleRequestExport(
-  card: HTMLElement,
-  token: string,
-  email: string,
-  button: HTMLButtonElement,
-): Promise<void> {
-  try {
-    const response = await backendFetch('/user/export/request', 'POST', token);
-
-    if (response.ok) {
-      // Success - update state to "requested"
-      const statusEl = (card as any)._statusEl as HTMLElement;
-      statusEl.innerHTML = `
-        <span class="atenna-privacy__status-dot" style="background: #f59e0b;"></span>
-        <span class="atenna-privacy__status-text">Confirmação enviada para ${email}. Verifique sua caixa de entrada.</span>
-      `;
-      button.disabled = true;
-      button.textContent = 'Aguardando confirmação...';
-    } else {
-      const err = await response.json();
-      alert(`Erro: ${err.message || 'Falha ao solicitar export'}`);
-      button.disabled = false;
-    }
-  } catch (err) {
-    alert('Erro de conexão. Tente novamente.');
-    button.disabled = false;
-  }
-}
-
-// ─── Handle Download Export ────────────────────────────────────
-async function handleDownloadExport(
-  card: HTMLElement,
-  token: string,
-  downloadToken: string,
-): Promise<void> {
-  try {
-    const response = await backendFetch(
-      `/user/export/download?token=${encodeURIComponent(downloadToken)}`,
-      'GET',
-      token,
-    );
-
-    if (response.ok) {
-      // Trigger download
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `relatorio_dados_${Date.now()}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-
-      // Refresh card state
-      const accessToken = token;
-      void updateExportCardState(card, accessToken);
-    } else {
-      const err = await response.json();
-      alert(`Erro: ${err.message || 'Falha ao fazer download'}`);
-    }
-  } catch (err) {
-    alert('Erro de conexão. Tente novamente.');
-  }
-}
-
-// ─── Handle Request Deletion ───────────────────────────────────
-async function handleRequestDeletion(
-  card: HTMLElement,
-  token: string,
-  email: string,
-  button: HTMLButtonElement,
-): Promise<void> {
-  try {
-    const response = await backendFetch('/user/deletion/initiate', 'POST', token);
-
-    if (response.ok) {
-      // Success - update state to "pending_confirmation"
-      const statusEl = (card as any)._statusEl as HTMLElement;
-      statusEl.innerHTML = `
-        <span class="atenna-privacy__status-dot" style="background: #f59e0b;"></span>
-        <span class="atenna-privacy__status-text">Confirmação enviada para ${email}. Esta solicitação pode ser cancelada.</span>
-      `;
-      button.disabled = true;
-      button.textContent = 'Aguardando confirmação...';
-    } else {
-      const err = await response.json();
-      alert(`Erro: ${err.message || 'Falha ao solicitar exclusão'}`);
-      button.disabled = false;
-    }
-  } catch (err) {
-    alert('Erro de conexão. Tente novamente.');
-    button.disabled = false;
-  }
-}
-
-// ─── Handle Cancel Deletion ────────────────────────────────────
-async function handleCancelDeletion(
-  card: HTMLElement,
-  token: string,
-  button: HTMLButtonElement,
-): Promise<void> {
-  const confirmed = window.confirm(
-    'Tem certeza que deseja cancelar a solicitação de exclusão da conta?',
-  );
-  if (!confirmed) return;
-
-  button.disabled = true;
-  button.textContent = 'Cancelando...';
-
-  try {
-    const response = await backendFetch('/user/deletion/cancel', 'POST', token);
-
-    if (response.ok) {
-      // Success - back to idle state
-      const statusEl = (card as any)._statusEl as HTMLElement;
-      const actionsEl = (card as any)._actionsEl as HTMLElement;
-      statusEl.innerHTML = `
-        <span class="atenna-privacy__status-dot" style="background: #22c55e;"></span>
-        <span class="atenna-privacy__status-text">Solicitação de exclusão cancelada.</span>
-      `;
-      actionsEl.innerHTML = '';
-      const newBtn = document.createElement('button');
-      newBtn.className = 'atenna-privacy__btn';
-      newBtn.textContent = 'Solicitar exclusão';
-      newBtn.addEventListener('click', () => {
-        newBtn.disabled = true;
-        void handleRequestDeletion(card, token, '', newBtn);
-      });
-      actionsEl.appendChild(newBtn);
-    } else {
-      const err = await response.json();
-      alert(`Erro: ${err.message || 'Falha ao cancelar exclusão'}`);
-      button.disabled = false;
-      button.textContent = 'Cancelar solicitação';
-    }
-  } catch (err) {
-    alert('Erro de conexão. Tente novamente.');
-    button.disabled = false;
-    button.textContent = 'Cancelar solicitação';
-  }
+  return section;
 }
