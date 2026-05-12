@@ -717,10 +717,10 @@ function isDark(): boolean {
 
 // ─── Public ───────────────────────────────────────────────
 
-export function toggleModal(): void {
+export function toggleModal(): Promise<void> | void {
   const existing = document.getElementById(OVERLAY_ID);
   if (existing) { clearMsgInterval(); existing.remove(); return; }
-  void openModal();
+  return openModal();
 }
 
 // ─── Build modal skeleton ──────────────────────────────────

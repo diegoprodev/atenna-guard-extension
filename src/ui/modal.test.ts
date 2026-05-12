@@ -1,7 +1,21 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import * as planManager from '../core/planManager';
+
+// CRITICAL: Mock auth BEFORE importing modal, since modal has direct import of getActiveSession
+vi.mock('../core/auth', () => ({
+  getActiveSession: vi.fn(),
+  signInWithPassword: vi.fn(),
+  signUpWithPassword: vi.fn(),
+  resetPassword: vi.fn(),
+  decodeJwtPayload: vi.fn(),
+  storeSession: vi.fn(),
+  getStoredSession: vi.fn(),
+  clearSession: vi.fn(),
+  isSessionValid: vi.fn(),
+}));
+
 import { toggleModal, fetchPrompts, clearPromptCache } from './modal';
 import * as auth from '../core/auth';
-import * as planManager from '../core/planManager';
 
 // ── Shared state ───────────────────────────────────────────
 
@@ -95,8 +109,8 @@ describe('toggleModal', () => {
     vi.spyOn(window, 'getComputedStyle').mockReturnValue(
       { backgroundColor: 'rgb(255, 255, 255)' } as CSSStyleDeclaration
     );
-    // Mock auth functions so tests skip the session check logic
-    vi.spyOn(auth, 'getActiveSession').mockResolvedValue({
+    // Configure mocked auth functions so tests skip the session check logic
+    vi.mocked(auth.getActiveSession).mockResolvedValue({
       access_token: 'test-token',
       email: 'test@example.com',
       expires_at: Math.floor(Date.now() / 1000) + 3600,
@@ -245,14 +259,14 @@ describe('toggleModal', () => {
 
   it('renders 3 cards after flow completes', async () => {
     addTextarea('algum texto');
-    toggleModal();
+    await toggleModal();
     await waitForFlow();
     expect(document.querySelectorAll('.atenna-modal__card').length).toBe(3);
   });
 
   it('each card has readonly textarea', async () => {
     addTextarea('algum texto');
-    toggleModal();
+    await toggleModal();
     await waitForFlow();
     const textareas = document.querySelectorAll<HTMLTextAreaElement>('.atenna-modal__card-textarea');
     expect(textareas.length).toBe(3);
@@ -261,7 +275,7 @@ describe('toggleModal', () => {
 
   it('each card has copy icon and USAR button', async () => {
     addTextarea('algum texto');
-    toggleModal();
+    await toggleModal();
     await waitForFlow();
     expect(document.querySelectorAll('.atenna-modal__btn-copy').length).toBe(3);
     expect(document.querySelectorAll('.atenna-modal__btn-use').length).toBe(3);
@@ -269,7 +283,7 @@ describe('toggleModal', () => {
 
   it('cards are filled with backend-generated text', async () => {
     addTextarea('algum texto');
-    toggleModal();
+    await toggleModal();
     await waitForFlow();
     const ta = document.querySelector<HTMLTextAreaElement>('.atenna-modal__card-textarea')!;
     expect(ta.value).toContain('gerado pela IA');
@@ -279,7 +293,7 @@ describe('toggleModal', () => {
 
   it('reopening with same text shows cached prompts without calling backend again', async () => {
     addTextarea('texto cacheado');
-    toggleModal();
+    await toggleModal();
     await waitForFlow();
     // Count only ATENNA_FETCH calls (analytics ATENNA_TRACK calls are also present)
     const fetchCallsAfterFirst = (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls
@@ -290,7 +304,7 @@ describe('toggleModal', () => {
     stubChrome(); // re-stub so we can track calls
     document.body.innerHTML = '';
     addTextarea('texto cacheado');
-    toggleModal();
+    await toggleModal();
     // Cache hit renders after full modal init
     for (let i = 0; i < 16; i++) await Promise.resolve();
 
@@ -347,7 +361,7 @@ describe('toggleModal', () => {
 
   it('USAR fills platform input and closes modal', async () => {
     const ta = addTextarea('texto original');
-    toggleModal();
+    await toggleModal();
     await waitForFlow();
     document.querySelector<HTMLButtonElement>('.atenna-modal__btn-use')!.click();
     expect(document.getElementById('atenna-modal-overlay')).toBeNull();
@@ -359,7 +373,7 @@ describe('toggleModal', () => {
 
   it('Copiar calls clipboard.writeText', async () => {
     addTextarea('algum texto');
-    toggleModal();
+    await toggleModal();
     await waitForFlow();
     document.querySelector<HTMLButtonElement>('.atenna-modal__btn-copy')!.click();
     await Promise.resolve();

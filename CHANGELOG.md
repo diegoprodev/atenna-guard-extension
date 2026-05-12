@@ -4,6 +4,95 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.26.0] — 2026-05-12 (FASE 3.1B-UI — Privacy & Data Governance + Test Synchronization)
+
+### FASE 3.1B-UI: Privacy & Data Governance Interface
+
+**User-facing privacy controls for LGPD compliance (Art. 17, 18).**
+
+**New Component: `src/ui/privacy-data.ts`**
+- **Export Card** — Request & download personal data export (PDF format)
+  - States: idle → requested → processing → ready → expired
+  - Download window: 48 hours, max 3 downloads
+  - Token-based access control
+- **Deletion Card** — Request account deletion with grace period
+  - States: idle → pending_confirmation → deletion_scheduled
+  - Grace period: 7 days (configurable 1-30 days)
+  - Cancellable during grace period, auto-purges after expiry
+
+**Integration Points:**
+- Settings page: New "Privacidade e Dados" section (2 cards, side-by-side)
+- Backend endpoints: `/user/export/*` and `/user/deletion/*` (already implemented)
+- Authentication: JWT Bearer token required for all operations
+- LGPD compliance: All operations logged for audit trail
+
+**UI/UX:**
+- Institutional design (Linear/Stripe inspired, no emojis)
+- State-driven rendering (cards update in-place)
+- Responsive layout (360px minimum width)
+- Minimal motion (opacity transitions only)
+- Clear action buttons with disable states during operations
+
+**CSS Classes Added:**
+- `.atenna-privacy`, `.atenna-privacy__card`, `.atenna-privacy__card-title`
+- `.atenna-privacy__status-row`, `.atenna-privacy__status-dot`
+- `.atenna-privacy__btn`, `.atenna-privacy__danger-btn`
+- All classes use existing CSS variables (`--at-*`), no new colors
+
+**Test Coverage:**
+- 12 E2E tests in `tests/e2e/fase-3.1b-ui.spec.ts`
+- Coverage: section visibility, state transitions, button functionality, responsive layout
+- All tests passing
+
+### Test Synchronization Fix
+
+**Root Cause:** 7 tests failing due to async/await mismatch in modal lifecycle
+
+**Problem:**
+- `toggleModal()` returns `Promise<void>` for async init
+- Tests called `toggleModal()` without awaiting it
+- Microtask flushes in `waitForFlow()` insufficient for full promise chain completion
+- Modal cards never rendered, assertions failed with `expected 0 to be 3`
+
+**Failing Tests (now fixed):**
+1. renders 3 cards after flow completes
+2. each card has readonly textarea
+3. each card has copy icon and USAR button
+4. cards are filled with backend-generated text
+5. reopening with same text shows cached prompts
+6. USAR fills platform input and closes modal
+7. Copiar calls clipboard.writeText
+
+**Solution:**
+- Updated all 7 tests to properly await `toggleModal()`
+- Ensures `openModal()` async chain completes before assertions
+- Chain includes: session check, plan sync, DOM rendering
+
+**Before:**
+```typescript
+toggleModal();           // ← Promise dropped
+await waitForFlow();     // ← Microtask flush insufficient
+```
+
+**After:**
+```typescript
+await toggleModal();     // ← Promise awaited, chain completes
+await waitForFlow();     // ← Additional flushes for safety
+```
+
+**Test Results:**
+- ✅ 133/133 tests passing (0 failures)
+- ✅ No regressions in pre-existing tests
+- ✅ Build succeeds (zero TypeScript errors)
+
+### Related Features (Already Implemented)
+
+- **Auth Gate** (`src/content/content.ts`) — DLP badge hidden until user logs in
+- **Token Refresh** (`src/core/auth.ts`) — Session persists beyond 1 hour expiry
+- **Privacy Component** (`src/ui/modal.ts:597-600`) — Integrated in Settings page
+
+---
+
 ## [2.25.0] — 2026-05-08 (Multi-LLM Fallback Architecture & VPS Deployment)
 
 ### Backend — Intelligent LLM Fallback Cascade
