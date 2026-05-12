@@ -1609,149 +1609,184 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 20px 24px;
+  padding: 32px 24px 28px;
   gap: 0;
+  background: linear-gradient(180deg, #fafafa 0%, #fff 100%);
+  min-height: 100vh;
 }
 
 .atenna-modal__onb-hero {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  animation: slideUp 500ms ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .atenna-modal__onb-wordmark {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--at-green);
-  margin-bottom: 12px;
-  opacity: 0.85;
+  color: #22c55e;
+  margin-bottom: 14px;
+  opacity: 0.9;
+  display: block;
 }
 
 .atenna-modal__onb-headline {
-  font-size: 23px;
-  font-weight: 800;
-  color: var(--at-text);
-  line-height: 1.15;
-  letter-spacing: -0.025em;
-  margin-bottom: 10px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
 }
 
 .atenna-modal__onb-sub {
   font-size: 13px;
-  color: var(--at-text);
-  opacity: 0.55;
-  line-height: 1.55;
+  color: #666;
+  line-height: 1.6;
   margin: 0;
-  max-width: 300px;
+  max-width: 340px;
+  font-weight: 400;
 }
 
 .atenna-modal__onb-features {
   list-style: none;
-  margin: 0 0 18px;
+  margin: 0 0 24px;
   padding: 0;
   width: 100%;
-  max-width: 320px;
+  max-width: 380px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .atenna-modal__onb-features li {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: flex-start;
+  gap: 14px;
   font-size: 13px;
   text-align: left;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  transition: all 200ms ease;
+}
+
+.atenna-modal__onb-features li:hover {
+  border-color: #22c55e;
+  background: #f0fdf4;
+  transform: translateY(-1px);
 }
 
 .atenna-modal__onb-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  background: var(--at-card-bg);
-  border: 1px solid var(--at-border);
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #f0fdf4;
   flex-shrink: 0;
-  color: var(--at-green);
+  color: #22c55e;
   line-height: 0;
+  font-size: 18px;
 }
 
 .atenna-modal__onb-features strong {
   display: block;
   font-weight: 600;
-  color: var(--at-text);
+  color: #1a1a1a;
   font-size: 13px;
+  margin-bottom: 2px;
 }
 
 .atenna-modal__onb-features span {
-  font-size: 11px;
-  color: var(--at-text);
-  opacity: 0.5;
+  font-size: 12px;
+  color: #888;
+  line-height: 1.5;
 }
 
 .atenna-modal__onb-free-tag {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  color: #16a34a;
-  background: rgba(34,197,94,0.09);
-  border: 1px solid rgba(34,197,94,0.2);
-  border-radius: 20px;
-  padding: 4px 14px;
-  margin-bottom: 16px;
-  letter-spacing: 0.02em;
+  color: #22c55e;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 16px;
+  padding: 6px 16px;
+  margin-bottom: 20px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  animation: slideUp 500ms ease-out 100ms both;
 }
 
 .atenna-modal__onb-cta {
   width: 100%;
-  max-width: 320px;
-  padding: 13px;
-  background: #1a1a1a;
+  max-width: 380px;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
   color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  margin-bottom: 10px;
-  transition: background 180ms ease, transform 150ms ease, box-shadow 150ms ease;
+  margin-bottom: 12px;
+  transition: all 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
   letter-spacing: 0.01em;
+  box-shadow: 0 2px 8px rgba(34,197,94,0.2);
+  animation: slideUp 500ms ease-out 200ms both;
 }
 
 .atenna-modal--dark .atenna-modal__onb-cta {
-  background: rgba(255,255,255,0.9);
+  background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
   color: #111;
 }
 
 .atenna-modal__onb-cta:hover {
-  background: #000;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(34,197,94,0.3);
 }
 
 .atenna-modal--dark .atenna-modal__onb-cta:hover {
-  background: #fff;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
 }
 
-.atenna-modal__onb-cta:active { transform: translateY(0); box-shadow: none; }
+.atenna-modal__onb-cta:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(34,197,94,0.15);
+}
 
 .atenna-modal__onb-login {
   background: none;
   border: none;
   font-family: inherit;
   font-size: 13px;
-  color: var(--at-text);
-  opacity: 0.5;
+  color: #666;
   cursor: pointer;
-  padding: 4px;
-  transition: opacity 150ms ease;
+  padding: 8px 12px;
+  transition: all 150ms ease;
+  text-decoration: none;
+  animation: slideUp 500ms ease-out 300ms both;
 }
 
-.atenna-modal__onb-login:hover { opacity: 0.85; }
+.atenna-modal__onb-login:hover {
+  color: #22c55e;
+}
 
 /* ── DLP Advisory (LAYER 3 UX) ──────────────────────────── */
 

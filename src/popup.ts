@@ -1,4 +1,7 @@
 import { toggleModal } from './ui/modal';
 
-// Abre o modal quando o popup da extensão é exibido
-void toggleModal();
+// Reset onboarding on every popup open to ensure fresh experience
+// TODO: Remove this after first user interaction testing
+chrome.storage.local.remove('atenna_onboarding_seen', () => {
+  void toggleModal();
+});
