@@ -22,13 +22,13 @@ for (const size of sizes) {
     .png()
     .toBuffer();
 
-  // White owl on transparent background — CSS provides the green circle
-  const whiteLogo = await sharp({
+  // Green owl on transparent background (#22c55e)
+  const greenLogo = await sharp({
     create: { width: size, height: size, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
   })
     .composite([{
       input: await sharp({
-        create: { width: logoSize, height: logoSize, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
+        create: { width: logoSize, height: logoSize, channels: 4, background: { r: 34, g: 197, b: 94, alpha: 1 } },
       })
         .composite([{ input: logoBuffer, blend: 'dest-in' }])
         .png()
@@ -50,8 +50,8 @@ const promoLogoBuffer = await sharp(srcLogo)
   .png()
   .toBuffer();
 
-const whitePromoLogo = await sharp({
-  create: { width: promoLogoSize, height: promoLogoSize, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
+const greenPromoLogo = await sharp({
+  create: { width: promoLogoSize, height: promoLogoSize, channels: 4, background: { r: 34, g: 197, b: 94, alpha: 1 } },
 })
   .composite([{ input: promoLogoBuffer, blend: 'dest-in' }])
   .png()
@@ -60,7 +60,7 @@ const whitePromoLogo = await sharp({
 await sharp({
   create: { width: 1280, height: 800, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 1 } },
 })
-  .composite([{ input: whitePromoLogo, top: 200, left: 440 }])
+  .composite([{ input: greenPromoLogo, top: 200, left: 440 }])
   .png()
   .toFile(resolve(projectRoot, 'public/store-promo-1280x800.png'));
 
