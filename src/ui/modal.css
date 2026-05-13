@@ -1830,14 +1830,14 @@
   min-height: 100vh;
 }
 
-/* In popup context, onboarding adjusts to natural height - NO SCROLL */
+/* In popup context, onboarding ajustado para caber sem scroll */
 #atenna-popup .atenna-modal__onboarding {
   min-height: auto !important;
-  max-height: 100% !important;
+  max-height: none !important;
   height: auto !important;
-  padding: 16px;
+  padding: 12px 16px 8px !important;
   background: #fff;
-  gap: 16px;
+  gap: 10px !important;
   overflow: hidden !important;
   overflow-y: hidden !important;
   overflow-x: hidden !important;
@@ -1846,8 +1846,36 @@
   align-items: center;
 }
 
-#atenna-popup .atenna-modal__onboarding * {
-  overflow: hidden !important;
+#atenna-popup .atenna-modal__onb-hero {
+  margin-bottom: 8px !important;
+}
+
+#atenna-popup .atenna-modal__onb-wordmark {
+  margin-bottom: 6px !important;
+}
+
+#atenna-popup .atenna-modal__onb-headline {
+  font-size: 22px !important;
+  margin-bottom: 6px !important;
+}
+
+#atenna-popup .atenna-modal__onb-sub {
+  font-size: 12px !important;
+  margin-bottom: 0 !important;
+}
+
+#atenna-popup .atenna-modal__onb-features {
+  gap: 6px !important;
+  margin: 0 0 8px !important;
+}
+
+#atenna-popup .atenna-modal__onb-features li {
+  padding: 8px 10px !important;
+}
+
+#atenna-popup .atenna-modal__onb-cta {
+  padding: 10px 16px !important;
+  margin-top: 4px !important;
 }
 
 /* Entire onboarding page fades in as a single unit */
