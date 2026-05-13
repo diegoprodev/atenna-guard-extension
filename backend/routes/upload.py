@@ -24,6 +24,7 @@ from document.sanitizer import validate_upload, chunk_text, cleanup_buffers, bui
 from document.parsers.pdf_parser import parse_pdf
 from document.parsers.docx_parser import parse_docx
 from dlp.policy import evaluate
+import document.observability as obs
 
 router = APIRouter(prefix="/document", tags=["Document DLP"])
 
@@ -57,6 +58,20 @@ class DocumentScanResponse(BaseModel):
 
 
 # ── Endpoint ──────────────────────────────────────────────────────────────────
+
+@router.get("/metrics")
+async def document_metrics(
+    _user: dict[str, Any] = Depends(require_auth),
+) -> dict:
+    """
+    Métricas internas do pipeline de documentos.
+    Auth-gated — nunca exposto sem JWT válido.
+    Usado para profiling VPS antes do rollout gradual.
+    """
+    if not _ENABLED:
+        return {"status": "disabled", "metrics": {}}
+    return {"status": "ok", "metrics": obs.snapshot()}
+
 
 @router.post("/upload", response_model=DocumentScanResponse)
 async def upload_document(
@@ -102,35 +117,43 @@ async def upload_document(
     validation = validate_upload(filename, file_bytes)
     if not validation.valid:
         del file_bytes
+        obs.record_rejection(validation.error_code or "unknown")
         _status = 413 if validation.error_code == DocumentErrorCode.FILE_TOO_LARGE else 422
         raise HTTPException(
             status_code=_status,
             detail={"error": validation.error_code, "message": validation.error_message},
         )
 
-    # ── Parse com semáforo de concorrência ────────────────────────────────────
+    filetype = validation.filetype or "unknown"
+
+    # ── Parse com semáforo de concorrência + observabilidade ─────────────────
     async with _semaphore:
-        if validation.filetype == "pdf":
-            parse_result: Any = await parse_pdf(file_bytes)
-            pages_parsed  = parse_result.pages_parsed
-            total_pages   = parse_result.total_pages
-            truncated     = parse_result.truncated
-            scan_only     = parse_result.scan_only
-            extracted_text = parse_result.text
-        else:
-            parse_result = await parse_docx(file_bytes)
-            pages_parsed  = 1
-            total_pages   = 1
-            truncated     = parse_result.truncated
-            scan_only     = False
-            extracted_text = parse_result.text
+        with obs.parse_context(filetype):
+            if filetype == "pdf":
+                parse_result: Any = await parse_pdf(file_bytes)
+                pages_parsed  = parse_result.pages_parsed
+                total_pages   = parse_result.total_pages
+                truncated     = parse_result.truncated
+                scan_only     = parse_result.scan_only
+                extracted_text = parse_result.text
+            else:
+                parse_result = await parse_docx(file_bytes)
+                pages_parsed  = 1
+                total_pages   = 1
+                truncated     = parse_result.truncated
+                scan_only     = False
+                extracted_text = parse_result.text
 
     # ── Liberar buffer original imediatamente ─────────────────────────────────
-    del file_bytes
-    cleanup_buffers()
+    with obs.cleanup_context():
+        del file_bytes
+        cleanup_buffers()
 
     # ── Tratar erros de parse ─────────────────────────────────────────────────
     if parse_result.error_code:
+        obs.record_rejection(parse_result.error_code)
+        if parse_result.error_code == DocumentErrorCode.TIMEOUT:
+            obs.record_timeout()
         _status_map = {
             DocumentErrorCode.ENCRYPTED_PDF:    422,
             DocumentErrorCode.RESTRICTED_PDF:   422,
@@ -194,6 +217,9 @@ async def upload_document(
         del extracted_text
 
     findings_list = list(findings_agg.values())
+
+    # Registrar chars extraídos para observabilidade
+    obs.record_extraction(chars_extracted)
 
     # Resumo seguro — nunca inclui texto original
     masked_summary = build_safe_summary(

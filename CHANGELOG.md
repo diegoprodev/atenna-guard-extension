@@ -4,6 +4,40 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.29.0] — 2026-05-13 (FASE 4.2C — Stress Harness + Observabilidade)
+
+### FASE 4.2C: Adversarial Hardening, Observabilidade e Profiling VPS
+
+**24/24 adversarial + stress tests GREEN. Pipeline pronto para profiling VPS antes de rollout gradual.**
+
+**Observabilidade (`backend/document/observability.py`):**
+- `_Histogram` thread-safe com rolling window de 1000 amostras — percentis p50/p95/p99
+- Métricas: parse_duration_ms, memory_delta_mb, extraction_chars, cleanup_latency_ms
+- Contadores: total_parses, concurrent_peak, timeout_count, orphan_buffer_warnings, rejection_by_code, upload_type_distribution
+- Context managers: `parse_context(filetype)` e `cleanup_context()` integrados ao pipeline
+- `obs.snapshot()` retorna snapshot completo para endpoint /document/metrics
+
+**Adversarial Fixtures (`backend/tests/fixtures/adversarial/generators.py`):**
+- 13 geradores em memória (nunca persistem em disco): partially_corrupt_pdf, truncated_pdf, hybrid_pdf, encrypted_malformed_pdf, xml_nesting_docx (500 levels), fake_mime_pdf, fake_mime_docx, giant_metadata_pdf (200KB metadata), embedded_payload_docx (path traversal), zero_pages_pdf, null_bytes_pdf, oversized_object_pdf (600KB), unicode_bomb
+
+**Stress Harness (`backend/tests/test_document_stress.py` — 24 testes):**
+- Adversarial PDFs (8): corrupt, truncated, hybrid, encrypted malformed, zero pages, null bytes, oversized, giant metadata
+- Adversarial DOCXs (3): XML nesting, embedded payload (path traversal), unicode bomb
+- MIME spoof (2): fake PDF e fake DOCX rejeitados antes do parse
+- Concorrência (2): sem deadlock com MAX_CONCURRENT+2 simultâneos; concurrent_peak registrado
+- Observabilidade (5): rejection_by_code, timeout_count, percentis histograma, upload_type distribution, orphan buffer warning
+- Performance local (2): parse < MAX_EXTRACTION_TIME_S+1s; GC delta < 5000 objetos
+- Chunking (2): Unicode multibyte sem quebra; múltiplos exatos sem chunk vazio
+
+**Profiling Script (`scripts/profile_vps_document.py`):**
+- CLI: --token, --url, --rounds, --concurrent
+- Mede p50/p95/p99 de latência real, rejection rate por código, timeout rate
+- Adversarial cases a cada 5 rounds
+- Consome /document/metrics após profiling
+- Critérios de aprovação para rollout gradual: p95<8s, p99<10s, orphans=0, timeout_rate<5%, 0 crashes
+
+---
+
 ## [2.28.0] — 2026-05-13 (FASE 4.2B — Document Pipeline: Security-First, Feature Flag OFF)
 
 ### FASE 4.2B: Document DLP Pipeline — Implementação com Harness Completo
