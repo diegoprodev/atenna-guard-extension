@@ -1317,7 +1317,7 @@ function renderPreLoginOnboarding(container: HTMLElement, switchView: (view: str
     logoOnlyDiv.appendChild(logodiv);
     container.appendChild(logoOnlyDiv);
 
-    // After logo animation (10000ms), replace with content
+    // After logo animation (4000ms), replace with content
     setTimeout(() => {
       container.innerHTML = '';
 
@@ -1366,7 +1366,7 @@ function renderPreLoginOnboarding(container: HTMLElement, switchView: (view: str
       wrap.appendChild(ctaBtn);
       wrap.appendChild(loginLink);
       container.appendChild(wrap);
-    }, 10000);
+    }, 4000);
   } else {
     // Fallback for non-popup contexts: render with logo and content together
     const wrap = document.createElement('div');
