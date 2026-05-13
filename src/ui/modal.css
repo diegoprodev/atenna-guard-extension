@@ -127,7 +127,7 @@
 
 /* In popup context, allow modal to expand freely without height constraints */
 #atenna-popup .atenna-modal {
-  max-height: 100vh !important;
+  max-height: none !important;
   height: auto !important;
   max-width: 100%;
   width: 100%;
