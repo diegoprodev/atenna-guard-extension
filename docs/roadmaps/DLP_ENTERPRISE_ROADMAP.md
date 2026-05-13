@@ -1,6 +1,6 @@
 # ATENNA DLP ENTERPRISE ROADMAP
 
-**Last Updated:** 2026-05-07  
+**Last Updated:** 2026-05-13  
 **Version:** 1.0 (Official Source of Truth)  
 **Approval:** Required for any changes
 
@@ -788,6 +788,14 @@ A principal métrica do Atenna DLP é:
 | PDF/DOCX parsing | 4 | 📋 ROADMAP | PyMuPDF + python-docx |
 | OCR + image DLP | 5 | 📋 ROADMAP | Phase 5 |
 | Compliance dashboard | 6 | 📋 ROADMAP | Phase 6 |
+| **DLP types/scanner/classification** | **4.2A** | **✅ IMPLEMENTADO** | **v2.27.0 — 18 entidades, validadores aritméticos** |
+| **DLP policy engine** | **4.2A** | **✅ IMPLEMENTADO** | **v2.27.0 — block/mask/alert, strict_mode, combined risk** |
+| **DLP governance matrix** | **4.2A** | **✅ IMPLEMENTADO** | **v2.27.0 — 5 níveis LGPD, ModelConstraint, AuditLevel** |
+| **Audit hash chain** | **4.2A** | **✅ IMPLEMENTADO** | **v2.27.0 — SHA-256 encadeado, 9 event types** |
+| **Outbound security allowlist** | **4.2A** | **✅ IMPLEMENTADO** | **v2.27.0 — assert_safe_llm_url em openai+gemini** |
+| **Placeholders canônicos (frontend)** | **4.2A** | **✅ IMPLEMENTADO** | **v2.27.0 — rewriter.ts alinhado com types.py** |
+| **79 testes unitários DLP** | **4.2A** | **✅ IMPLEMENTADO** | **v2.27.0 — 79/79 GREEN** |
+| PDF/DOCX pipeline com DLP | 4.2B | ⏳ PRÓXIMA FASE | pdf_parser + docx_parser + endpoint + rewrite |
 
 ---
 
