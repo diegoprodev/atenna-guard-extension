@@ -40,10 +40,11 @@ describe('injectButton', () => {
     expect(document.querySelectorAll('.atenna-btn').length).toBe(1);
   });
 
-  it('button label contains "ATENNA"', () => {
+  it('badge has action buttons panel', () => {
     injectButton(chatgpt, () => {});
     const btn = document.getElementById('atenna-guard-btn') as HTMLButtonElement;
-    expect(btn.textContent).toContain('ATENNA');
+    expect(btn.querySelector('.atenna-btn__actions')).not.toBeNull();
+    expect(btn.querySelectorAll('.atenna-btn__action').length).toBeGreaterThanOrEqual(2);
   });
 
   it('button contains logo img', () => {

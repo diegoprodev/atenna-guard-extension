@@ -7,6 +7,7 @@ import type { DetectedEntity, DlpMetadata } from '../dlp/types';
 import { getDotTooltip, getDotClass, shouldShowBanner, getBannerBackgroundColor } from '../dlp/advisory';
 import { getFlag } from '../core/featureFlags';
 import { trackEvent } from '../core/analytics';
+import { openSettingsOverlay } from '../ui/modal';
 
 const INJECTED_ATTR      = 'data-atenna-injected';
 const BTN_ID             = 'atenna-guard-btn';
@@ -296,7 +297,7 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   btn.className = BTN_CLASS;
   btn.setAttribute('aria-label', 'Atenna Prompt');
 
-  // ── Retractable badge: icon (always visible) + label (hover only) ──
+  // ── Badge: ícone coruja (sempre visível) + painel de ações (hover) ──
   const iconWrap = document.createElement('span');
   iconWrap.className = 'atenna-btn__icon-wrap';
 
@@ -311,57 +312,80 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
     iconWrap.appendChild(img);
   }
 
-  // Status dot — on btn directly so it stays visible when owl zooms out
+  // Status dot — sempre visível, mostra risco DLP
   const dot = document.createElement('span');
   dot.className = 'atenna-btn__dot';
 
-  // Expandable label (hidden by default, revealed on hover)
-  const label = document.createElement('span');
-  label.className = 'atenna-btn__label';
+  // ── Painel de ações — aparece no hover substituindo o texto "ATENNA" ──
+  const actionsBar = document.createElement('span');
+  actionsBar.className = 'atenna-btn__actions';
 
-  const name = document.createElement('span');
-  name.className = 'atenna-btn__name';
-  name.textContent = 'ATENNA';
+  function makeAction(
+    label: string,
+    svgPath: string,
+    onClick: (e: MouseEvent) => void,
+  ): HTMLButtonElement {
+    const b = document.createElement('button');
+    b.className = 'atenna-btn__action';
+    b.type = 'button';
+    b.setAttribute('aria-label', label);
+    b.setAttribute('data-tip', label);
+    b.innerHTML = svgPath;
+    b.addEventListener('click', (e) => { e.stopPropagation(); onClick(e); });
+    return b;
+  }
 
-  label.appendChild(name);
+  // Ação 1: Abrir prompt (modal principal)
+  const promptBtn = makeAction(
+    'Abrir Atenna',
+    `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-3 2v-2H3a1 1 0 0 1-1-1V3z"/>
+    </svg>`,
+    () => {
+      void trackEvent('badge_action_prompt');
+      onToggle();
+    },
+  );
 
-  // Upload icon — appears on hover when MULTIMODAL_ENABLED flag is true
-  const uploadIcon = document.createElement('button');
-  uploadIcon.className = 'atenna-btn__upload-icon';
-  uploadIcon.setAttribute('aria-label', 'Analisar arquivo');
-  uploadIcon.setAttribute('title', 'Analisar arquivo');
-  uploadIcon.type = 'button';
+  // Ação 2: Analisar arquivo — gated por feature flag
+  const uploadBtn = makeAction(
+    'Analisar arquivo',
+    `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+      <line x1="8" y1="2" x2="8" y2="11"/><polyline points="5,5 8,2 11,5"/>
+      <path d="M3 13h10"/>
+    </svg>`,
+    () => {
+      void trackEvent('upload_entry_clicked');
+    },
+  );
+  uploadBtn.style.display = 'none'; // oculto até flag ser verificada
 
-  // Inline SVG "+" icon (16px, stroke 2px, minimalist)
-  uploadIcon.innerHTML = `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-    <line x1="8" y1="3" x2="8" y2="13"></line>
-    <line x1="3" y1="8" x2="13" y2="8"></line>
-  </svg>`;
+  // Ação 3: Configurações
+  const settingsBtn = makeAction(
+    'Configurações',
+    `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="8" cy="8" r="2.2"/>
+      <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.2 3.2l1.4 1.4M11.4 11.4l1.4 1.4M3.2 12.8l1.4-1.4M11.4 4.6l1.4-1.4"/>
+    </svg>`,
+    () => {
+      void trackEvent('badge_action_settings');
+      void openSettingsOverlay();
+    },
+  );
 
-  uploadIcon.addEventListener('click', (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    // FASE 4.1: Trigger upload flow (to be implemented in #2)
-    void trackEvent('upload_entry_clicked');
-  });
+  actionsBar.appendChild(promptBtn);
+  actionsBar.appendChild(uploadBtn);
+  actionsBar.appendChild(settingsBtn);
 
+  btn.appendChild(actionsBar);
   btn.appendChild(iconWrap);
-  btn.appendChild(label);
-  btn.appendChild(uploadIcon);
   btn.appendChild(dot);
 
-  // Gate upload icon visibility by feature flag (MULTIMODAL_ENABLED)
+  // Gate upload action por feature flag
   Promise.resolve().then(async () => {
     const multimodalEnabled = await getFlag('MULTIMODAL_ENABLED');
-    if (!multimodalEnabled) {
-      uploadIcon.style.display = 'none';
-    }
-
-    // Track hover event (only if flag enabled)
     if (multimodalEnabled) {
-      btn.addEventListener('mouseenter', () => {
-        void trackEvent('upload_entry_hovered');
-      }, { once: false });
+      uploadBtn.style.display = '';
     }
   });
 
