@@ -3,6 +3,7 @@ import json
 import asyncio
 import httpx
 from dotenv import load_dotenv
+from security.outbound import assert_safe_llm_url
 
 load_dotenv()
 
@@ -56,6 +57,7 @@ async def generate_prompts_gemini(input_text: str, retry_count: int = 0, max_ret
         print("[Atenna] GEMINI_API_KEY não configurada")
         return None
 
+    assert_safe_llm_url(GEMINI_URL)
     prompt_text = SYSTEM_PROMPT.format(input_text=input_text)
 
     payload = {

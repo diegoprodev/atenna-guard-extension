@@ -3,6 +3,7 @@ import os
 import json
 import httpx
 from dotenv import load_dotenv
+from security.outbound import assert_safe_llm_url
 
 load_dotenv()
 
@@ -53,6 +54,7 @@ async def generate_prompts_openai(input_text: str) -> dict | None:
         return None
 
     try:
+        assert_safe_llm_url(OPENAI_URL)
         print(f"[Atenna] Tentando OpenAI ({MODEL}) como fallback...")
 
         payload = {

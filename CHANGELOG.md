@@ -4,6 +4,33 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.27.0] — 2026-05-13 (FASE 4.2A — DLP Alignment: Atenna Platform Architecture)
+
+### FASE 4.2A: DLP Enterprise — Backend Realinhamento Arquitetural
+
+**Reaproveitamento da arquitetura DLP madura da Atenna Plataforma no Atenna Safe backend.**
+
+**Novos módulos backend:**
+- `backend/dlp/types.py` — Contratos canônicos: EntityType (18), RiskLevel (6), ClassificationLevel (5), DlpFinding, DlpScanResult, PLACEHOLDERS, RISK_ORDER, CLASSIFICATION_ORDER
+- `backend/dlp/scanner.py` — Scanner com 18 padrões, validadores aritméticos (CPF/CNPJ/Luhn/PIS), guards (year_guard, min_digits, overlap)
+- `backend/dlp/classification.py` — resolve_classification, resolve_max, requires_acknowledgment
+- `backend/dlp/policy.py` — evaluate(text, strict_mode) → PolicyResult; combinação de dados pessoais → block
+- `backend/dlp/governance.py` — GovernanceConstraints, CLASSIFICATION_GOVERNANCE, ModelConstraint, AuditLevel, provider_allowed
+- `backend/dlp/audit_policy.py` — AuditConfig, resolve_audit_config, build_audit_event (record_prompt=False sempre — LGPD Art. 46)
+- `backend/audit/hash_chain.py` — GENESIS_HASH, compute_hash, build_event, verify_chain; 9 event types
+- `backend/security/outbound.py` — ALLOWED_LLM_HOSTS allowlist, assert_safe_llm_url antes de cada chamada httpx
+
+**Integrações:**
+- `backend/services/openai_service.py` — assert_safe_llm_url(OPENAI_URL) adicionado
+- `backend/services/gemini_service.py` — assert_safe_llm_url(GEMINI_URL) adicionado
+- `src/dlp/rewriter.ts` — Placeholders canônicos alinhados com backend/dlp/types.py PLACEHOLDERS
+
+**Testes:** 79/79 unitários GREEN cobrindo todos os 8 componentes
+
+**Docs:** `docs/specs/FASE_4.2A_REAPROVEITAMENTO_DLP_ATENNA_PLATFORM_PARA_ATENNA_SAFE.md` — PRD/SPEC completo
+
+---
+
 ## [2.26.0] — 2026-05-12 (FASE 3.1B-UI — Privacy & Data Governance + Test Synchronization)
 
 ### FASE 3.1B-UI: Privacy & Data Governance Interface

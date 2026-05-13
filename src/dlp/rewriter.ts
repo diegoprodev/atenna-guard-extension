@@ -1,21 +1,32 @@
 import type { DetectedEntity } from './types';
 
-// Semantic replacement tokens — descriptive, not alarming
+// Placeholders canônicos — devem coincidir exatamente com backend/dlp/types.py PLACEHOLDERS.
+// Qualquer divergência entre frontend e backend quebra a rastreabilidade dos findings.
 const ENTITY_TOKEN: Partial<Record<string, string>> = {
-  CPF:         '[CPF]',
-  CNPJ:        '[CNPJ]',
-  EMAIL:       '[EMAIL]',
-  PHONE:       '[TELEFONE]',
-  API_KEY:     '[API_KEY]',
-  TOKEN:       '[TOKEN]',
-  PASSWORD:    '[SENHA]',
-  CREDIT_CARD: '[CARTAO]',
-  ADDRESS:     '[ENDERECO]',
-  PROCESS_NUM: '[PROCESSO]',
-  MEDICAL:     '[DADO_MEDICO]',
-  LEGAL:       '[DADO_LEGAL]',
-  GENERIC_PII: '[DADO]',
-  NAME:        '[NOME]',
+  CPF:                   '[CPF]',
+  CNPJ:                  '[CNPJ]',
+  RG:                    '[RG]',
+  PIS_PASEP:             '[PIS_PASEP]',
+  TITULO_ELEITOR:        '[TITULO_ELEITOR]',
+  EMAIL:                 '[EMAIL]',
+  PHONE:                 '[TELEFONE]',
+  API_KEY:               '[API_KEY]',
+  JWT:                   '[TOKEN]',
+  TOKEN:                 '[TOKEN]',
+  SECRET:                '[SEGREDO]',
+  PASSWORD:              '[SEGREDO]',
+  CREDIT_CARD:           '[CARTAO]',
+  ADDRESS:               '[ENDERECO]',
+  VEHICLE_PLATE:         '[PLACA]',
+  PROCESS_NUM:           '[PROCESSO_JUDICIAL]',
+  PROCESS_NUMBER:        '[PROCESSO_JUDICIAL]',
+  MEDICAL:               '[DADO_MEDICO]',
+  MEDICAL_DATA:          '[DADO_MEDICO]',
+  LEGAL:                 '[CONTEXTO_JURIDICO]',
+  LEGAL_CONTEXT:         '[CONTEXTO_JURIDICO]',
+  CONFIDENTIAL_DOCUMENT: '[DOCUMENTO_CONFIDENCIAL]',
+  NAME:                  '[NOME]',
+  GENERIC_PII:           '[DADO]',
 };
 
 export function rewritePII(text: string, entities: DetectedEntity[]): string {
