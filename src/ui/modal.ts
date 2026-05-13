@@ -839,12 +839,14 @@ async function openModal(): Promise<void> {
   const editSelected    = String(defaultTab === 'edit');
   const promptsSelected = String(defaultTab === 'prompts');
 
+  const builderLogoImg = logoUrl ? `<img src="${logoUrl}" width="14" height="14" alt="" aria-hidden="true" style="border-radius:50%;vertical-align:middle;filter:none;opacity:0.9;"/>` : '✦';
+
   modal.innerHTML = `
     <div class="atenna-modal__header">
       <span class="atenna-modal__title">${logoImg}Atenna</span>
       <div class="atenna-modal__toggle" role="tablist">
-        <button class="atenna-modal__tab${editActive}"    data-tab="edit"    role="tab" aria-selected="${editSelected}">Refinar</button>
-        <button class="atenna-modal__tab${promptsActive}" data-tab="prompts" role="tab" aria-selected="${promptsSelected}">Histórico</button>
+        <button class="atenna-modal__tab atenna-modal__tab--active" data-tab="edit"    role="tab" aria-selected="true">Refinar</button>
+        <button class="atenna-modal__tab"                           data-tab="history" role="tab" aria-selected="false">Histórico</button>
       </div>
       <div class="atenna-modal__header-right">
         <span class="atenna-modal__usage" aria-label="Uso diário">…</span>
@@ -855,12 +857,11 @@ async function openModal(): Promise<void> {
       </div>
     </div>
     <div class="atenna-modal__body">
-      <div class="atenna-modal__view${defaultTab === 'prompts' ? '' : ' atenna-modal__view--hidden'}" data-view="prompts"></div>
-      <div class="atenna-modal__view${defaultTab === 'edit'    ? '' : ' atenna-modal__view--hidden'}" data-view="edit">
+      <div class="atenna-modal__view" data-view="edit">
         <div class="atenna-modal__edit-label">Seu texto</div>
         <textarea class="atenna-modal__editor" placeholder="Digite ou edite seu texto aqui..."></textarea>
         <button class="atenna-modal__builder-toggle" type="button">
-          <span class="atenna-modal__builder-toggle-icon">✦</span>
+          <span class="atenna-modal__builder-toggle-icon">${builderLogoImg}</span>
           Builder Inteligente
           <span class="atenna-modal__builder-toggle-arrow">›</span>
         </button>
@@ -910,14 +911,17 @@ async function openModal(): Promise<void> {
           </div>
         </div>
         <button class="atenna-modal__regen">Refinar</button>
+        <div class="atenna-modal__results" data-results></div>
       </div>
+      <div class="atenna-modal__view atenna-modal__view--hidden" data-view="history"></div>
     </div>
   `;
 
   const editorEl    = modal.querySelector<HTMLTextAreaElement>('.atenna-modal__editor')!;
   editorEl.value    = platformInput ? getInputText(platformInput) : '';
 
-  const promptsView = modal.querySelector<HTMLElement>('[data-view="prompts"]')!;
+  const resultsView = modal.querySelector<HTMLElement>('[data-results]')!;
+  const historyView = modal.querySelector<HTMLElement>('[data-view="history"]')!;
   const usageBadge  = modal.querySelector<HTMLElement>('.atenna-modal__usage')!;
 
   modal.querySelector('.atenna-modal__close')!.addEventListener('click', close);
@@ -937,10 +941,8 @@ async function openModal(): Promise<void> {
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       switchTab(tab.dataset.tab!);
-      if (tab.dataset.tab === 'edit') {
-        editorEl.focus();
-      } else if (tab.dataset.tab === 'prompts') {
-        void renderMeusPrompts(promptsView, platformInput, overlay);
+      if (tab.dataset.tab === 'history') {
+        void renderMeusPrompts(historyView, platformInput, overlay);
       }
     });
   });
@@ -986,7 +988,7 @@ async function openModal(): Promise<void> {
     }
     const origin: PromptOrigin = isBuilderOpen ? 'builder' : 'manual';
     void trackEvent('prompt_generate_clicked', { input_length: text.length, origin });
-    switchTab('prompts');
+    // results stay in edit tab;
 
     // Layer 1 — local DLP scan (<50ms, non-blocking)
     const scanResult = scan(text);
@@ -998,9 +1000,9 @@ async function openModal(): Promise<void> {
     }
 
     // Layer 3 — UX decision: show advisory if needed, then proceed
-    void showDlpAdvisory(advisory, promptsView).then(proceed => {
+    void showDlpAdvisory(advisory, resultsView).then(proceed => {
       if (!proceed) return;
-      void isPro().then(pro => runFlow(promptsView, usageBadge, text, platformInput, overlay, origin, pro));
+      void isPro().then(pro => runFlow(resultsView, usageBadge, text, platformInput, overlay, origin, pro));
     });
   });
 
@@ -1025,29 +1027,29 @@ async function openModal(): Promise<void> {
   }
 
   if (cacheHit) {
-    renderPrompts(promptsView, promptCache!.data, platformInput, overlay, 'manual');
+    renderPrompts(resultsView, promptCache!.data, platformInput, overlay, 'manual');
   } else if (userText !== '') {
-    renderLoading(promptsView);
+    renderLoading(resultsView);
     const shouldShowSuggestion = pro && (isVagueInput(userText) || shouldSuggestBuilder(userText));
     if (shouldShowSuggestion) {
       void trackEvent('auto_suggestion_shown');
       renderSuggestion(
-        promptsView,
+        resultsView,
         () => {
           void trackEvent('auto_suggestion_accepted');
           switchTab('edit');
           builderEl.classList.add('atenna-modal__builder--open');
           builderToggleEl.classList.add('atenna-modal__builder-toggle--open');
         },
-        () => runFlow(promptsView, usageBadge, userText, platformInput, overlay, 'auto', pro),
+        () => runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'auto', pro),
       );
     } else {
-      void runFlow(promptsView, usageBadge, userText, platformInput, overlay, 'auto', pro);
+      void runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'auto', pro);
     }
   } else {
     // Always show onboarding when no text — guides first-timers and returning users
     switchTab('edit');
-    renderOnboarding(promptsView, (example: string) => {
+    renderOnboarding(resultsView, (example: string) => {
       editorEl.value = example;
       editorEl.focus();
     });
@@ -1234,6 +1236,11 @@ function renderLoading(container: HTMLElement): void {
   }
 
   container.appendChild(wrap);
+
+  // Scroll to loading indicator
+  requestAnimationFrame(() => {
+    container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
 
   let i = 0;
   msgIntervalId = setInterval(() => {
@@ -1957,6 +1964,11 @@ function renderPrompts(
   }
 
   container.appendChild(cards);
+
+  // Scroll results into view after rendering
+  requestAnimationFrame(() => {
+    container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
 }
 
 function buildCard(

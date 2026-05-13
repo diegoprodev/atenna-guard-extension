@@ -557,6 +557,16 @@
 
 .atenna-modal__limit-icon { font-size: 34px; }
 
+/* ── Results container (below Refinar button) ─────────────── */
+
+.atenna-modal__results {
+  margin-top: 8px;
+}
+
+.atenna-modal__results:empty {
+  display: none;
+}
+
 /* ── Prompt cards ────────────────────────────────────────── */
 
 .atenna-modal__cards {

@@ -190,7 +190,7 @@ describe('toggleModal', () => {
     const tabs = document.querySelectorAll<HTMLButtonElement>('.atenna-modal__tab');
     expect(tabs[0].dataset.tab).toBe('edit');
     expect(tabs[0].textContent).toBe('Refinar');
-    expect(tabs[1].dataset.tab).toBe('prompts');
+    expect(tabs[1].dataset.tab).toBe('history');
     expect(tabs[1].textContent).toBe('Histórico');
   });
 
@@ -201,12 +201,12 @@ describe('toggleModal', () => {
     expect(active?.dataset.tab).toBe('edit');
   });
 
-  it('"Histórico" tab is active when input has text', async () => {
+  it('"Refinar" tab stays active when input has text', async () => {
     addTextarea('algum texto');
     toggleModal();
     await flushModalInit();
     const active = document.querySelector<HTMLButtonElement>('.atenna-modal__tab--active');
-    expect(active?.dataset.tab).toBe('prompts');
+    expect(active?.dataset.tab).toBe('edit');
   });
 
   // ── Dark mode ────────────────────────────────────────────
@@ -414,7 +414,7 @@ describe('toggleModal', () => {
     editor.value = 'meu texto para gerar';
     document.querySelector<HTMLButtonElement>('.atenna-modal__regen')!.click();
     const activeTab = document.querySelector<HTMLButtonElement>('.atenna-modal__tab--active');
-    expect(activeTab?.dataset.tab).toBe('prompts');
+    expect(activeTab?.dataset.tab).toBe('edit');
     await waitForFlow();
     expect(document.querySelectorAll('.atenna-modal__card').length).toBe(3);
   });
