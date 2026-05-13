@@ -489,7 +489,7 @@
 }
 }
 
-.atenna-modal__view--hidden { display: none; }
+.atenna-modal__view--hidden { display: none !important; }
 
 #atenna-popup .atenna-modal__view {
   width: 100%;

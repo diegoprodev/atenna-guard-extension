@@ -54,6 +54,7 @@ def _build_fallback(input_text: str) -> dict:
         "direct": f"Explique de forma clara e objetiva:\n\n{input_text}",
         "technical": f"Você é um especialista. Analise profundamente:\n\n{input_text}",
         "structured": f"Responda com contexto, solução e conclusão:\n\n{input_text}",
+        "_is_fallback": True,
     }
 
 
