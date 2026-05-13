@@ -139,7 +139,8 @@
       "PowerShell(ssh -i \"C:\\\\Users\\\\dgapc\\\\.ssh\\\\atenna-vps\" root@157.90.246.156 \"sleep 5 && echo '=== Container Status ===' && docker ps --format 'table {{.Names}}\\\\t{{.Status}}' && echo '' && echo '=== Health Check ===' && curl -s http://localhost:8000/health && echo '' && echo '' && echo '=== Data Volume Verification ===' && ls -la /root/atenna-backend/data/ | head -10\")",
       "PowerShell(ssh -i \"C:\\\\Users\\\\dgapc\\\\.ssh\\\\atenna-vps\" root@157.90.246.156 \"sleep 8 && docker ps --format 'table {{.Names}}\\\\t{{.Status}}' && echo '' && echo 'V Backend healthy with curl installed' && docker exec atenna-backend-backend-1 curl --version | head -2\")",
       "Bash(Get-ChildItem -Path \"c:\\\\projetos\\\\atenna-guard-extension\\\\public\\\\icons\" -Force -ErrorAction SilentlyContinue)",
-      "Bash(Select-Object Name, LastWriteTime)"
+      "Bash(Select-Object Name, LastWriteTime)",
+      "Bash(python3 -c \"import json,sys; m=json.load\\(sys.stdin\\); print\\(json.dumps\\(m.get\\('content_scripts', []\\), indent=2\\)\\)\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\dgapc\\.claude\\plans",

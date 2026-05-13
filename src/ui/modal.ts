@@ -809,8 +809,20 @@ async function openModal(): Promise<void> {
     return;
   }
 
-  // ── Session exists: Render full app ──────────────────
+  // ── Session exists: Check post-login onboarding ──────
   await syncPlanFromSupabase(session);
+
+  const appOnboardingSeen = await new Promise<boolean>(resolve => {
+    try { chrome.storage.local.get('atenna_app_onboarding_seen', r => resolve(!!r['atenna_app_onboarding_seen'])); }
+    catch { resolve(true); }
+  });
+
+  if (!appOnboardingSeen) {
+    chrome.storage.local.set({ atenna_app_onboarding_seen: true });
+    renderPostLoginOnboarding(modal, close);
+    modal.querySelector('.atenna-modal__close')?.addEventListener('click', close);
+    return;
+  }
 
   const platformInput = getCurrentInput();
   const userText      = platformInput ? getInputText(platformInput).trim() : '';
@@ -1292,6 +1304,54 @@ function renderLimitReached(container: HTMLElement): void {
 const ONB_ICON_CLARITY = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`;
 const ONB_ICON_SHIELD  = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
 const ONB_ICON_FLOW    = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
+
+function renderPostLoginOnboarding(modal: HTMLElement, close: () => void): void {
+  const logoUrl = getLogoUrl();
+  const logoImg = logoUrl ? `<img src="${logoUrl}" width="22" height="22" alt="" aria-hidden="true"/>` : '';
+
+  modal.innerHTML = `
+    <div class="atenna-modal__header">
+      <span class="atenna-modal__title">${logoImg}Atenna</span>
+      <button class="atenna-modal__close" aria-label="Fechar">×</button>
+    </div>
+    <div class="atenna-modal__body">
+      <div class="atenna-modal__onboarding atenna-modal__onboarding--fade-in">
+        <div class="atenna-modal__onb-hero">
+          <div class="atenna-modal__onb-wordmark">Como usar</div>
+          <div class="atenna-modal__onb-headline">Tudo pronto.</div>
+          <p class="atenna-modal__onb-sub">Veja como o Atenna funciona na prática.</p>
+        </div>
+        <ul class="atenna-modal__onb-features">
+          <li>
+            <span class="atenna-modal__onb-icon">${ONB_ICON_CLARITY}</span>
+            <div>
+              <strong>Badge verde acima do input</strong>
+              <span>Clique no ícone verde que aparece acima do campo de texto do ChatGPT, Claude ou Gemini para abrir o painel.</span>
+            </div>
+          </li>
+          <li>
+            <span class="atenna-modal__onb-icon">${ONB_ICON_FLOW}</span>
+            <div>
+              <strong>Digite e refine seu prompt</strong>
+              <span>Escreva sua solicitação no campo, clique em Refinar — o Atenna gera versões mais claras e precisas.</span>
+            </div>
+          </li>
+          <li>
+            <span class="atenna-modal__onb-icon">${ONB_ICON_SHIELD}</span>
+            <div>
+              <strong>Alerta automático de dados sensíveis</strong>
+              <span>O ponto colorido no badge muda de cor se detectar CPF, senha, chave de API ou qualquer dado pessoal antes do envio.</span>
+            </div>
+          </li>
+        </ul>
+        <button class="atenna-modal__onb-cta atenna-modal__onb-cta--start">Entendido, vamos começar</button>
+      </div>
+    </div>
+  `;
+
+  modal.querySelector('.atenna-modal__close')!.addEventListener('click', close);
+  modal.querySelector('.atenna-modal__onb-cta--start')!.addEventListener('click', close);
+}
 
 function renderPreLoginOnboarding(container: HTMLElement, switchView: (view: string) => void): void {
   void trackEvent('onboarding_shown');

@@ -43,6 +43,10 @@ function stubChrome(sendMsgResponse: unknown = PROMPT_RESPONSE) {
   if (!chromeStore['atenna_jwt']) {
     chromeStore['atenna_jwt'] = defaultSession;
   }
+  // Skip post-login onboarding in tests — treat as already seen
+  if (!('atenna_app_onboarding_seen' in chromeStore)) {
+    chromeStore['atenna_app_onboarding_seen'] = true;
+  }
 
   vi.stubGlobal('chrome', {
     runtime: {
