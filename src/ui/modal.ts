@@ -723,6 +723,22 @@ export function toggleModal(): Promise<void> | void {
   return openModal();
 }
 
+export async function openSettingsOverlay(): Promise<void> {
+  const existing = document.getElementById('atenna-settings-overlay');
+  if (existing) { existing.remove(); return; }
+
+  const session = await getActiveSession();
+  if (!session) return;
+
+  const pro = await isPro();
+  const settingsPage = renderSettingsPage(
+    session,
+    pro,
+    () => document.getElementById('atenna-settings-overlay')?.remove(),
+  );
+  document.body.appendChild(settingsPage);
+}
+
 // ─── Build modal skeleton ──────────────────────────────────
 
 async function openModal(): Promise<void> {

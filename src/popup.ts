@@ -1,20 +1,59 @@
 import { getActiveSession, clearSession } from './core/auth';
 import { toggleModal } from './ui/modal';
 
+async function getChromeProfileEmail(): Promise<string | null> {
+  return new Promise(resolve => {
+    try {
+      chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' as chrome.identity.AccountStatus }, info => {
+        resolve(info?.email || null);
+      });
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function sendToActiveTab(msg: object): Promise<void> {
+  return new Promise(resolve => {
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+      const tab = tabs[0];
+      if (tab?.id) {
+        chrome.tabs.sendMessage(tab.id, msg, () => {
+          // Suppress error if tab has no content script (non-supported page)
+          void chrome.runtime.lastError;
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
 async function initPopup(): Promise<void> {
   const session = await getActiveSession();
 
   if (!session) {
-    // Not logged in — show onboarding/login flow via modal
     chrome.storage.local.remove('atenna_onboarding_seen', () => {
       void toggleModal();
     });
     return;
   }
 
-  // Logged in — show simple account view directly in popup (no editor)
-  const container = document.getElementById('atenna-popup')!;
+  // ── Enterprise profile isolation ──────────────────────────────────────
+  // Chrome signs each profile into a Google account. If the stored Atenna
+  // session belongs to a different user than the active Chrome identity,
+  // clear it so the correct user authenticates fresh.
+  const chromeEmail = await getChromeProfileEmail();
+  if (chromeEmail && chromeEmail !== session.email) {
+    await clearSession();
+    chrome.storage.local.remove('atenna_onboarding_seen', () => {
+      void toggleModal();
+    });
+    return;
+  }
 
+  const container = document.getElementById('atenna-popup')!;
   const logoUrl = chrome.runtime.getURL('icons/icon128.png');
 
   container.innerHTML = `
@@ -53,8 +92,11 @@ async function initPopup(): Promise<void> {
     });
   });
 
-  document.getElementById('atenna-settings-btn')!.addEventListener('click', () => {
-    void toggleModal();
+  document.getElementById('atenna-settings-btn')!.addEventListener('click', async () => {
+    // Send OPEN_SETTINGS to the active tab's content script, then close popup.
+    // The content script renders renderSettingsPage() on the page — not the editor.
+    await sendToActiveTab({ type: 'OPEN_SETTINGS' });
+    window.close();
   });
 }
 

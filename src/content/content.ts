@@ -1,6 +1,6 @@
 import { detectPlatform } from './detectInput';
 import { injectButton, removeButton } from './injectButton';
-import { toggleModal } from '../ui/modal';
+import { toggleModal, openSettingsOverlay } from '../ui/modal';
 import { getActiveSession } from '../core/auth';
 
 // Cached session state — avoids re-checking on every MutationObserver tick
@@ -60,6 +60,15 @@ async function init(): Promise<void> {
     });
   } catch { /* non-extension env */ }
 }
+
+// Listen for messages from popup
+try {
+  chrome.runtime.onMessage.addListener((msg: { type?: string }) => {
+    if (msg?.type === 'OPEN_SETTINGS') {
+      void openSettingsOverlay();
+    }
+  });
+} catch { /* non-extension env */ }
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => void init());
