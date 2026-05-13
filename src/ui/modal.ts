@@ -1430,7 +1430,7 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
   if (logoUrl && document.getElementById('atenna-popup')) {
     const logoDiv = document.createElement('div');
     logoDiv.style.cssText = 'width:100%;display:flex;justify-content:center;margin-bottom:8px;';
-    logoDiv.innerHTML = `<img src="${logoUrl}" width="32" height="32" alt="Atenna" style="border-radius:50%;"/>`;
+    logoDiv.innerHTML = `<img src="${logoUrl}" width="96" height="96" alt="Atenna" style="border-radius:50%;margin-bottom:16px;"/>`;
     wrap.appendChild(logoDiv);
   }
 
@@ -1585,7 +1585,7 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
   if (logoUrl && document.getElementById('atenna-popup')) {
     const logoDiv = document.createElement('div');
     logoDiv.style.cssText = 'width:100%;display:flex;justify-content:center;margin-bottom:8px;';
-    logoDiv.innerHTML = `<img src="${logoUrl}" width="32" height="32" alt="Atenna" style="border-radius:50%;"/>`;
+    logoDiv.innerHTML = `<img src="${logoUrl}" width="96" height="96" alt="Atenna" style="border-radius:50%;margin-bottom:16px;"/>`;
     wrap.appendChild(logoDiv);
   }
 
@@ -1759,7 +1759,7 @@ function renderResetView(container: HTMLElement, switchView: (view: string) => v
   if (logoUrl && document.getElementById('atenna-popup')) {
     const logoDiv = document.createElement('div');
     logoDiv.style.cssText = 'width:100%;display:flex;justify-content:center;margin-bottom:8px;';
-    logoDiv.innerHTML = `<img src="${logoUrl}" width="32" height="32" alt="Atenna" style="border-radius:50%;"/>`;
+    logoDiv.innerHTML = `<img src="${logoUrl}" width="96" height="96" alt="Atenna" style="border-radius:50%;margin-bottom:16px;"/>`;
     wrap.appendChild(logoDiv);
   }
 
