@@ -740,7 +740,14 @@ async function openModal(): Promise<void> {
   modal.setAttribute('aria-label', 'Atenna');
 
   overlay.appendChild(modal);
-  document.body.appendChild(overlay);
+
+  // Mount to #atenna-popup (popup context) if it exists, otherwise to body (content script)
+  const popupContainer = document.getElementById('atenna-popup');
+  if (popupContainer) {
+    popupContainer.appendChild(overlay);
+  } else {
+    document.body.appendChild(overlay);
+  }
 
   // ── Close handler ────────────────────────────────────
   const close = () => { clearMsgInterval(); overlay.remove(); };
@@ -1292,8 +1299,20 @@ function renderPreLoginOnboarding(container: HTMLElement, switchView: (view: str
   clearMsgInterval();
   container.innerHTML = '';
 
+  const logoUrl = getLogoUrl();
+  const logoImg = logoUrl ? `<img src="${logoUrl}" width="160" height="160" alt="Atenna" style="display:block;margin:0 auto;"/>` : '<div style="width:160px;height:160px;margin:0 auto;background:#22c55e;border-radius:50%;"></div>';
+
   const wrap = document.createElement('div');
   wrap.className = 'atenna-modal__onboarding';
+
+  // For popup context, add animated logo first
+  const popupContainer = document.getElementById('atenna-popup');
+  if (popupContainer) {
+    const logodiv = document.createElement('div');
+    logodiv.className = 'atenna-modal__onb-logo-anim';
+    logodiv.innerHTML = logoImg;
+    container.appendChild(logodiv);
+  }
 
   wrap.innerHTML = `
     <div class="atenna-modal__onb-hero">
@@ -1346,6 +1365,15 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
 
   const wrap = document.createElement('div');
   wrap.className = 'atenna-modal__login';
+
+  // Add logo in popup context
+  const logoUrl = getLogoUrl();
+  if (logoUrl && document.getElementById('atenna-popup')) {
+    const logoDiv = document.createElement('div');
+    logoDiv.style.cssText = 'width:100%;display:flex;justify-content:center;margin-bottom:8px;';
+    logoDiv.innerHTML = `<img src="${logoUrl}" width="32" height="32" alt="Atenna" style="border-radius:50%;"/>`;
+    wrap.appendChild(logoDiv);
+  }
 
   const title = document.createElement('h2');
   title.className = 'atenna-modal__login-title';
@@ -1492,6 +1520,15 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
 
   const wrap = document.createElement('div');
   wrap.className = 'atenna-modal__login';
+
+  // Add logo in popup context
+  const logoUrl = getLogoUrl();
+  if (logoUrl && document.getElementById('atenna-popup')) {
+    const logoDiv = document.createElement('div');
+    logoDiv.style.cssText = 'width:100%;display:flex;justify-content:center;margin-bottom:8px;';
+    logoDiv.innerHTML = `<img src="${logoUrl}" width="32" height="32" alt="Atenna" style="border-radius:50%;"/>`;
+    wrap.appendChild(logoDiv);
+  }
 
   const backBtn = document.createElement('button');
   backBtn.className = 'atenna-modal__login-back';
@@ -1657,6 +1694,15 @@ function renderResetView(container: HTMLElement, switchView: (view: string) => v
 
   const wrap = document.createElement('div');
   wrap.className = 'atenna-modal__login';
+
+  // Add logo in popup context
+  const logoUrl = getLogoUrl();
+  if (logoUrl && document.getElementById('atenna-popup')) {
+    const logoDiv = document.createElement('div');
+    logoDiv.style.cssText = 'width:100%;display:flex;justify-content:center;margin-bottom:8px;';
+    logoDiv.innerHTML = `<img src="${logoUrl}" width="32" height="32" alt="Atenna" style="border-radius:50%;"/>`;
+    wrap.appendChild(logoDiv);
+  }
 
   const backBtn = document.createElement('button');
   backBtn.className = 'atenna-modal__login-back';
