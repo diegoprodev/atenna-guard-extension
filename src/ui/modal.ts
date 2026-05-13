@@ -595,7 +595,7 @@ function renderSettingsPage(
       }
 
       // ── Seção: Privacidade e Dados (FASE 3.1B) ──────
-      body.appendChild(makeSectionTitle('🔐 Privacidade e Dados'));
+      body.appendChild(makeSectionTitle('Privacidade e Dados'));
       const privacySection = renderPrivacyDataSection(session, pro);
       body.appendChild(privacySection);
 
