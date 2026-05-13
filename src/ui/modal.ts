@@ -1302,60 +1302,119 @@ function renderPreLoginOnboarding(container: HTMLElement, switchView: (view: str
   const logoUrl = getLogoUrl();
   const logoImg = logoUrl ? `<img src="${logoUrl}" width="200" height="200" alt="Atenna" style="display:block;margin:0 auto;width:200px;height:200px !important;"/>` : '<div style="width:200px;height:200px;margin:0 auto;background:#22c55e;border-radius:50%;"></div>';
 
-  const wrap = document.createElement('div');
-  wrap.className = 'atenna-modal__onboarding';
-
-  // For popup context, add animated logo first
+  // Stage 1: Show ONLY the animated logo (in popup context)
   const popupContainer = document.getElementById('atenna-popup');
   if (popupContainer) {
+    const logoOnlyDiv = document.createElement('div');
+    logoOnlyDiv.className = 'atenna-modal__onboarding';
+    logoOnlyDiv.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:300px;';
+
     const logodiv = document.createElement('div');
     logodiv.className = 'atenna-modal__onb-logo-anim';
     logodiv.innerHTML = logoImg;
-    container.appendChild(logodiv);
+    logodiv.style.cssText = 'margin:0;padding:0;';
+
+    logoOnlyDiv.appendChild(logodiv);
+    container.appendChild(logoOnlyDiv);
+
+    // After logo animation (5000ms), replace with content
+    setTimeout(() => {
+      container.innerHTML = '';
+
+      const wrap = document.createElement('div');
+      wrap.className = 'atenna-modal__onboarding';
+
+      wrap.innerHTML = `
+        <div class="atenna-modal__onb-hero">
+          <div class="atenna-modal__onb-wordmark">Atenna</div>
+          <div class="atenna-modal__onb-headline">Clareza antes da inteligência.</div>
+          <p class="atenna-modal__onb-sub">Uma camada entre você e a IA — para que suas intenções cheguem com precisão.</p>
+        </div>
+        <ul class="atenna-modal__onb-features">
+          <li>
+            <span class="atenna-modal__onb-icon">${ONB_ICON_CLARITY}</span>
+            <div><strong>Organiza instruções complexas</strong><span>Estrutura sua intenção em versões claras e objetivas</span></div>
+          </li>
+          <li>
+            <span class="atenna-modal__onb-icon">${ONB_ICON_SHIELD}</span>
+            <div><strong>Detecta dados sensíveis</strong><span>Alerta sobre possíveis informações pessoais antes do envio</span></div>
+          </li>
+          <li>
+            <span class="atenna-modal__onb-icon">${ONB_ICON_FLOW}</span>
+            <div><strong>Melhora a comunicação com IA</strong><span>Solicitações mais claras geram respostas mais precisas</span></div>
+          </li>
+        </ul>
+        <div class="atenna-modal__onb-free-tag">Disponível hoje · 5 utilizações · Sem cartão</div>
+      `;
+
+      const ctaBtn = document.createElement('button');
+      ctaBtn.className = 'atenna-modal__onb-cta';
+      ctaBtn.textContent = 'Começar';
+      ctaBtn.addEventListener('click', () => {
+        void trackEvent('onboarding_cta_clicked');
+        switchView('signup');
+      });
+
+      const loginLink = document.createElement('button');
+      loginLink.className = 'atenna-modal__onb-login';
+      loginLink.textContent = 'Já tenho uma conta';
+      loginLink.addEventListener('click', () => {
+        void trackEvent('onboarding_login_clicked');
+        switchView('login');
+      });
+
+      wrap.appendChild(ctaBtn);
+      wrap.appendChild(loginLink);
+      container.appendChild(wrap);
+    }, 5000);
+  } else {
+    // Fallback for non-popup contexts: render with logo and content together
+    const wrap = document.createElement('div');
+    wrap.className = 'atenna-modal__onboarding';
+
+    wrap.innerHTML = `
+      <div class="atenna-modal__onb-hero">
+        <div class="atenna-modal__onb-wordmark">Atenna</div>
+        <div class="atenna-modal__onb-headline">Clareza antes da inteligência.</div>
+        <p class="atenna-modal__onb-sub">Uma camada entre você e a IA — para que suas intenções cheguem com precisão.</p>
+      </div>
+      <ul class="atenna-modal__onb-features">
+        <li>
+          <span class="atenna-modal__onb-icon">${ONB_ICON_CLARITY}</span>
+          <div><strong>Organiza instruções complexas</strong><span>Estrutura sua intenção em versões claras e objetivas</span></div>
+        </li>
+        <li>
+          <span class="atenna-modal__onb-icon">${ONB_ICON_SHIELD}</span>
+          <div><strong>Detecta dados sensíveis</strong><span>Alerta sobre possíveis informações pessoais antes do envio</span></div>
+        </li>
+        <li>
+          <span class="atenna-modal__onb-icon">${ONB_ICON_FLOW}</span>
+          <div><strong>Melhora a comunicação com IA</strong><span>Solicitações mais claras geram respostas mais precisas</span></div>
+        </li>
+      </ul>
+      <div class="atenna-modal__onb-free-tag">Disponível hoje · 5 utilizações · Sem cartão</div>
+    `;
+
+    const ctaBtn = document.createElement('button');
+    ctaBtn.className = 'atenna-modal__onb-cta';
+    ctaBtn.textContent = 'Começar';
+    ctaBtn.addEventListener('click', () => {
+      void trackEvent('onboarding_cta_clicked');
+      switchView('signup');
+    });
+
+    const loginLink = document.createElement('button');
+    loginLink.className = 'atenna-modal__onb-login';
+    loginLink.textContent = 'Já tenho uma conta';
+    loginLink.addEventListener('click', () => {
+      void trackEvent('onboarding_login_clicked');
+      switchView('login');
+    });
+
+    wrap.appendChild(ctaBtn);
+    wrap.appendChild(loginLink);
+    container.appendChild(wrap);
   }
-
-  wrap.innerHTML = `
-    <div class="atenna-modal__onb-hero">
-      <div class="atenna-modal__onb-wordmark">Atenna</div>
-      <div class="atenna-modal__onb-headline">Clareza antes da inteligência.</div>
-      <p class="atenna-modal__onb-sub">Uma camada entre você e a IA — para que suas intenções cheguem com precisão.</p>
-    </div>
-    <ul class="atenna-modal__onb-features">
-      <li>
-        <span class="atenna-modal__onb-icon">${ONB_ICON_CLARITY}</span>
-        <div><strong>Organiza instruções complexas</strong><span>Estrutura sua intenção em versões claras e objetivas</span></div>
-      </li>
-      <li>
-        <span class="atenna-modal__onb-icon">${ONB_ICON_SHIELD}</span>
-        <div><strong>Detecta dados sensíveis</strong><span>Alerta sobre possíveis informações pessoais antes do envio</span></div>
-      </li>
-      <li>
-        <span class="atenna-modal__onb-icon">${ONB_ICON_FLOW}</span>
-        <div><strong>Melhora a comunicação com IA</strong><span>Solicitações mais claras geram respostas mais precisas</span></div>
-      </li>
-    </ul>
-    <div class="atenna-modal__onb-free-tag">Disponível hoje · 5 utilizações · Sem cartão</div>
-  `;
-
-  const ctaBtn = document.createElement('button');
-  ctaBtn.className = 'atenna-modal__onb-cta';
-  ctaBtn.textContent = 'Começar';
-  ctaBtn.addEventListener('click', () => {
-    void trackEvent('onboarding_cta_clicked');
-    switchView('signup');
-  });
-
-  const loginLink = document.createElement('button');
-  loginLink.className = 'atenna-modal__onb-login';
-  loginLink.textContent = 'Já tenho uma conta';
-  loginLink.addEventListener('click', () => {
-    void trackEvent('onboarding_login_clicked');
-    switchView('login');
-  });
-
-  wrap.appendChild(ctaBtn);
-  wrap.appendChild(loginLink);
-  container.appendChild(wrap);
 }
 
 function renderLoginView(container: HTMLElement, switchView: (view: string) => void): void {

@@ -1845,21 +1845,14 @@
   overflow: visible !important;
 }
 
-#atenna-popup .atenna-modal__onb-hero {
-  animation: atenna-onb-fade-in 500ms ease-out 4.9s both;
-}
-
-#atenna-popup .atenna-modal__onb-features {
-  animation: atenna-onb-fade-in 500ms ease-out 5s both;
-}
-
-#atenna-popup .atenna-modal__onb-cta,
-#atenna-popup .atenna-modal__onb-login {
-  animation: atenna-onb-fade-in 500ms ease-out 5.1s both;
-}
-
-#atenna-popup .atenna-modal__onb-free-tag {
-  animation: atenna-onb-fade-in 500ms ease-out 5.1s both;
+/* Content rendered after logo animation, no delayed fade needed */
+#atenna-popup .atenna-modal__onboarding .atenna-modal__onb-hero,
+#atenna-popup .atenna-modal__onboarding .atenna-modal__onb-features,
+#atenna-popup .atenna-modal__onboarding .atenna-modal__onb-cta,
+#atenna-popup .atenna-modal__onboarding .atenna-modal__onb-login,
+#atenna-popup .atenna-modal__onboarding .atenna-modal__onb-free-tag {
+  animation: none;
+  opacity: 1;
 }
 
 #atenna-popup .atenna-modal__onb-logo-anim {
