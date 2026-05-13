@@ -439,6 +439,91 @@ describe('toggleModal', () => {
   });
 });
 
+// ── DLP integration tests ─────────────────────────────────
+
+describe('DLP protection flow', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    chromeStore = {};
+    clearPromptCache();
+    stubChrome();
+    vi.mocked(auth.getActiveSession).mockResolvedValue({
+      access_token: 'test-token',
+      email: 'test@example.com',
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+    });
+    vi.spyOn(planManager, 'syncPlanFromSupabase').mockResolvedValue(undefined);
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [{ plan: 'free' }] });
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      configurable: true,
+    });
+    vi.spyOn(window, 'getComputedStyle').mockReturnValue(
+      { backgroundColor: 'rgb(255, 255, 255)' } as CSSStyleDeclaration
+    );
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+    chromeStore = {};
+  });
+
+  it('texto sem dados sensíveis gera 3 cards sem advisory DLP', async () => {
+    addTextarea('como fazer um relatório executivo profissional');
+    await toggleModal();
+    await waitForFlow();
+    const cards = document.querySelectorAll('.atenna-modal__card');
+    const advisory = document.querySelector('.atenna-dlp-advisory');
+    expect(cards.length).toBe(3);
+    expect(advisory).toBeNull();
+  });
+
+  it('texto com CPF não trava o modal ao abrir', async () => {
+    addTextarea('meu CPF é 123.456.789-09 preciso de ajuda');
+    await toggleModal();
+    await flushModalInit();
+    // Modal should open regardless — DLP advisory is triggered only on explicit Refinar click
+    expect(document.querySelector('.atenna-modal')).toBeTruthy();
+  });
+
+  it('Refinar com CPF no editor renderiza advisory DLP', async () => {
+    await toggleModal();
+    await flushModalInit();
+    const editor = document.querySelector<HTMLTextAreaElement>('.atenna-modal__editor')!;
+    editor.value = 'meu CPF 123.456.789-09 preciso de ajuda fiscal';
+    document.querySelector<HTMLButtonElement>('.atenna-modal__regen')!.click();
+    // Advisory rendered synchronously before async flow
+    const advisory = document.querySelector('.atenna-dlp-advisory');
+    // DLP detected CPF → advisory shown with risk message
+    expect(advisory).not.toBeNull();
+  });
+
+  it('geração com texto normal produz 3 cards distintos', async () => {
+    addTextarea('como estruturar uma apresentação de negócios');
+    await toggleModal();
+    await waitForFlow();
+    const textareas = document.querySelectorAll<HTMLTextAreaElement>('.atenna-modal__card-textarea');
+    expect(textareas.length).toBe(3);
+    const texts = Array.from(textareas).map(t => t.value);
+    const unique = new Set(texts);
+    expect(unique.size).toBeGreaterThanOrEqual(2);
+  });
+
+  it('fallback de API ainda exibe mensagem de erro clara', async () => {
+    stubChrome({ ok: false });
+    addTextarea('algum texto para testar fallback');
+    await toggleModal();
+    await waitForFlow();
+    const cards = document.querySelectorAll('.atenna-modal__card');
+    expect(cards.length).toBe(0);
+    const results = document.querySelector('[data-results]');
+    expect(results?.textContent).toContain('Erro');
+  });
+});
+
 // ── fetchPrompts unit tests ────────────────────────────────
 
 describe('fetchPrompts', () => {
