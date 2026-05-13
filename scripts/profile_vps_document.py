@@ -50,15 +50,15 @@ def _make_test_pdf_bytes(size_kb: int = 10) -> bytes:
     """PDF mínimo com texto repetido (aproxima tamanho real)."""
     text = "Contrato de prestação de serviços. CPF 529.982.247-25. " * (size_kb * 5)
     return (
-        b"%PDF-1.4\n"
-        b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
-        b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
+        "%PDF-1.4\n"
+        "1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+        "2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
         f"3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R>>endobj\n"
         f"4 0 obj<</Length {len(text)}>>\nstream\n{text}\nendstream\nendobj\n"
-        b"xref\n0 5\n"
-        b"0000000000 65535 f\n0000000009 00000 n\n"
-        b"0000000058 00000 n\n0000000115 00000 n\n0000000200 00000 n\n"
-        b"trailer<</Size 5/Root 1 0 R>>\nstartxref\n300\n%%EOF"
+        "xref\n0 5\n"
+        "0000000000 65535 f\n0000000009 00000 n\n"
+        "0000000058 00000 n\n0000000115 00000 n\n0000000200 00000 n\n"
+        "trailer<</Size 5/Root 1 0 R>>\nstartxref\n300\n%%EOF"
     ).encode(errors="replace")
 
 
@@ -78,10 +78,11 @@ class VpsProfiler:
         self.base_url = base_url.rstrip("/")
         self.headers  = {"Authorization": f"Bearer {token}"}
         self.latencies: list[float] = []
-        self.errors:    list[str]   = []
+        self.errors:    list[str]   = []  # only 5xx / network errors
         self.timeouts:  int = 0
         self.successes: int = 0
         self.rejections: dict[str, int] = {}
+        self.expected_rejections: int = 0  # 4xx = correct behavior
 
     async def _upload(self, client: httpx.AsyncClient, pdf_bytes: bytes, label: str) -> dict[str, Any]:
         t0 = time.perf_counter()
@@ -101,8 +102,13 @@ class VpsProfiler:
             else:
                 body = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
                 code = body.get("detail", {}).get("error", f"http_{resp.status_code}")
-                self.errors.append(f"{label}: {code}")
                 self.rejections[code] = self.rejections.get(code, 0) + 1
+                if resp.status_code >= 500:
+                    # 5xx = real crash/server error
+                    self.errors.append(f"{label}: {code} ({resp.status_code})")
+                else:
+                    # 4xx = controlled rejection (correct behavior)
+                    self.expected_rejections += 1
                 return {"status": "rejected", "code": code, "elapsed_ms": elapsed, "label": label}
 
         except httpx.TimeoutException:
@@ -145,11 +151,12 @@ class VpsProfiler:
         print("FASE 4.2C — VPS PROFILING REPORT")
         print("=" * 60)
 
-        total = self.successes + len(self.errors) + self.timeouts
-        print(f"\nTotal requests : {total}")
-        print(f"Successes      : {self.successes}")
-        print(f"Timeouts       : {self.timeouts}")
-        print(f"Errors         : {len(self.errors)}")
+        total = self.successes + self.expected_rejections + len(self.errors) + self.timeouts
+        print(f"\nTotal requests    : {total}")
+        print(f"Successes         : {self.successes}")
+        print(f"Expected 4xx      : {self.expected_rejections}  (parser guards working correctly)")
+        print(f"Timeouts          : {self.timeouts}")
+        print(f"Server errors 5xx : {len(self.errors)}")
 
         if self.rejections:
             print("\nRejeições por código:")
@@ -199,7 +206,7 @@ class VpsProfiler:
         orphans = srv.get("orphan_buffer_warnings", 0)
         checks.append(("0 orphan buffers",  orphans == 0,     str(orphans)))
         checks.append(("timeout_rate < 5%", timeout_rate < 5, f"{timeout_rate:.1f}%"))
-        checks.append(("0 crashes",         len(self.errors) == 0, str(len(self.errors))))
+        checks.append(("0 server errors 5xx", len(self.errors) == 0, str(len(self.errors))))
 
         all_pass = True
         for name, passed, value in checks:
