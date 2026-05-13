@@ -189,11 +189,10 @@ function applyDefaultPosition(btn: HTMLButtonElement, input: HTMLElement): void 
   rafId = requestAnimationFrame(() => {
     const iRect = input.getBoundingClientRect();
     if (iRect.width === 0 || iRect.height === 0) return;
-    const btnH = btn.getBoundingClientRect().height || 42;
-    // Always ABOVE the input — never overlaps text the user is typing.
-    // Gap of 8px between badge bottom and input top edge.
-    btn.style.top   = `${iRect.top - btnH - 8}px`;
-    btn.style.right = `${window.innerWidth - iRect.right + BADGE_RIGHT_OFFSET}px`;
+    const btnSize = 34;
+    // Position at the top-right corner of the input, half-overlapping the border
+    btn.style.top   = `${iRect.top - btnSize / 2}px`;
+    btn.style.right = `${window.innerWidth - iRect.right - btnSize / 2}px`;
     btn.style.left  = 'auto';
   });
 }
@@ -305,8 +304,8 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
     const img = document.createElement('img');
     img.className = 'atenna-btn__icon';
     img.src    = logoUrl;
-    img.width  = 46;
-    img.height = 46;
+    img.width  = 28;
+    img.height = 28;
     img.alt    = '';
     img.setAttribute('aria-hidden', 'true');
     iconWrap.appendChild(img);
