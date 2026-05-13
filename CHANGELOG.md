@@ -4,6 +4,41 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.28.0] — 2026-05-13 (FASE 4.2B — Document Pipeline: Security-First, Feature Flag OFF)
+
+### FASE 4.2B: Document DLP Pipeline — Implementação com Harness Completo
+
+**PDF/DOCX parsing com todos os guards de segurança. Feature flag OFF — sem deploy até stress harness aprovado.**
+
+**Matriz de Limites (`docs/specs/FASE_4.2B_DOCUMENT_LIMITS_MATRIX.md`):**
+- max_upload: 10MB, max_pages: 50, max_chars: 500K, timeout: 8s
+- max_concurrent: 3 (semáforo), max_chunks: 100 × 5K chars
+- Políticas explícitas para PDF encriptado, PDF scan-only, DOCX com macros, malformed, ZIP bomb, MIME spoof
+
+**Novos módulos backend:**
+- `backend/document/limits.py` — única fonte de verdade para todos os limites e error codes
+- `backend/document/parsers/pdf_parser.py` — extração segura: timeout hard, truncamento por páginas/chars, rejeição de encrypted, captura de MemoryError/RecursionError
+- `backend/document/parsers/docx_parser.py` — extração segura: ZIP bomb detection (ratio 10×), timeout, cleanup explícito
+- `backend/document/sanitizer.py` — validação MIME + magic bytes, chunking, `del` explícito de buffers, `gc.collect()` pós-parse
+- `backend/routes/upload.py` — endpoint `/document/upload` gated por `DOCUMENT_UPLOAD_ENABLED=false`
+
+**Harness de stress/abuse (19/19 GREEN):**
+- MIME spoof (PDF/DOCX), arquivo vazio, arquivo > 10MB, tipo não suportado
+- PDF malformado, PDF encriptado, PDF timeout, truncamento de páginas e chars
+- DOCX ZIP bomb (mock + unit test), DOCX malformado
+- Semáforo de concorrência (MAX_CONCURRENT_PARSES)
+
+**Segurança:**
+- Response nunca contém texto extraído — apenas findings e metadados
+- `del file_bytes` e `del extracted_text` explícitos após uso
+- Stack traces nunca expostos no response
+
+**⚠️ NÃO fazer deploy até:**
+- Stress real na VPS (memory profile, latência p95)
+- Aprovação explícita do harness em produção
+
+---
+
 ## [2.27.0] — 2026-05-13 (FASE 4.2A — DLP Alignment: Atenna Platform Architecture)
 
 ### FASE 4.2A: DLP Enterprise — Backend Realinhamento Arquitetural
