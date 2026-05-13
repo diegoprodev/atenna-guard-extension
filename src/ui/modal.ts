@@ -1300,7 +1300,7 @@ function renderPreLoginOnboarding(container: HTMLElement, switchView: (view: str
   container.innerHTML = '';
 
   const logoUrl = getLogoUrl();
-  const logoImg = logoUrl ? `<img src="${logoUrl}" width="160" height="160" alt="Atenna" style="display:block;margin:0 auto;"/>` : '<div style="width:160px;height:160px;margin:0 auto;background:#22c55e;border-radius:50%;"></div>';
+  const logoImg = logoUrl ? `<img src="${logoUrl}" width="200" height="200" alt="Atenna" style="display:block;margin:0 auto;width:200px;height:200px !important;"/>` : '<div style="width:200px;height:200px;margin:0 auto;background:#22c55e;border-radius:50%;"></div>';
 
   const wrap = document.createElement('div');
   wrap.className = 'atenna-modal__onboarding';
