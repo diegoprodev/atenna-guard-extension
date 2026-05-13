@@ -1322,7 +1322,7 @@ function renderPreLoginOnboarding(container: HTMLElement, switchView: (view: str
       container.innerHTML = '';
 
       const wrap = document.createElement('div');
-      wrap.className = 'atenna-modal__onboarding';
+      wrap.className = 'atenna-modal__onboarding atenna-modal__onboarding--fade-in';
 
       wrap.innerHTML = `
         <div class="atenna-modal__onb-hero">

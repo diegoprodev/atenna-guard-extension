@@ -52,6 +52,11 @@
   to { opacity: 1; }
 }
 
+@keyframes atenna-onb-content-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes atenna-onb-logo-zoom {
   0% {
     transform: scale(0);
@@ -62,6 +67,22 @@
     opacity: 1;
   }
   50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  55% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  65% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+  70% {
     transform: scale(1);
     opacity: 1;
   }
@@ -1836,23 +1857,41 @@
 
 /* In popup context, onboarding adjusts to natural height - NO SCROLL */
 #atenna-popup .atenna-modal__onboarding {
-  min-height: auto;
+  min-height: auto !important;
   max-height: none !important;
   height: auto !important;
   padding: 16px;
   background: #fff;
   gap: 16px;
   overflow: visible !important;
+  overflow-y: visible !important;
+  overflow-x: hidden !important;
 }
 
-/* Content rendered after logo animation, no delayed fade needed */
-#atenna-popup .atenna-modal__onboarding .atenna-modal__onb-hero,
-#atenna-popup .atenna-modal__onboarding .atenna-modal__onb-features,
-#atenna-popup .atenna-modal__onboarding .atenna-modal__onb-cta,
-#atenna-popup .atenna-modal__onboarding .atenna-modal__onb-login,
-#atenna-popup .atenna-modal__onboarding .atenna-modal__onb-free-tag {
-  animation: none;
-  opacity: 1;
+/* Content fades in when rendered after logo */
+#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-hero,
+#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-features,
+#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-cta,
+#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-login,
+#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-free-tag {
+  animation: atenna-onb-content-fade-in 600ms ease-out forwards;
+}
+
+#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-hero {
+  animation-delay: 0ms;
+}
+
+#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-features {
+  animation-delay: 100ms;
+}
+
+#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-free-tag {
+  animation-delay: 200ms;
+}
+
+#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-cta,
+#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-login {
+  animation-delay: 300ms;
 }
 
 #atenna-popup .atenna-modal__onb-logo-anim {
