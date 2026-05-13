@@ -1,4 +1,4 @@
-"""OpenAI Service — GPT-4 Mini (cheap) fallback for Gemini"""
+"""OpenAI Service — gpt-4.1-nano primary (fastest + cheapest)"""
 import os
 import json
 import httpx
@@ -9,10 +9,9 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
-# Use gpt-4o-mini — most cost-effective and fastest modern model
-# gpt-4o-mini: $0.15 per 1M input tokens, $0.60 per 1M output tokens
-# Latest OpenAI model, 10-20x cheaper than full gpt-4, superior quality
-MODEL = "gpt-4o-mini"
+# gpt-4.1-nano: $0.10/1M input, $0.40/1M output, ~640ms TTFT
+# 2x faster than gemini-2.5-flash-lite at the same price
+MODEL = "gpt-4.1-nano"
 
 SYSTEM_PROMPT = """Você é um especialista em engenharia de prompts e estruturação de pensamento.
 Sua missão é melhorar o raciocínio do usuário, estruturar intenção e gerar prompts superiores ao que ele faria sozinho.

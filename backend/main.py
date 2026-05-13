@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import json
 
 from schemas.prompt_schema import PromptRequest, PromptResponse
-from services.gemini_service import generate_prompts
+from services.prompt_service import generate_prompts
 from routes.analytics import router as analytics_router
 from routes.auth import router as auth_router
 from routes.dlp import router as dlp_router
