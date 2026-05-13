@@ -65,7 +65,8 @@
   45% { transform: scale(1); opacity: 1; }
   60% { transform: scale(1.04); opacity: 1; }
   75% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1); opacity: 0; }
+  95% { transform: scale(0.95); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
 }
 
 /* ── Overlay ─────────────────────────────────────────────── */
@@ -1832,7 +1833,7 @@
 /* In popup context, onboarding adjusts to natural height - NO SCROLL */
 #atenna-popup .atenna-modal__onboarding {
   min-height: auto !important;
-  max-height: none !important;
+  max-height: 100% !important;
   height: auto !important;
   padding: 16px;
   background: #fff;
@@ -1840,32 +1841,18 @@
   overflow: hidden !important;
   overflow-y: hidden !important;
   overflow-x: hidden !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-/* Content fades in when rendered after logo */
-#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-hero,
-#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-features,
-#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-cta,
-#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-login,
-#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-free-tag {
-  animation: atenna-onb-content-fade-in 600ms ease-out forwards;
+#atenna-popup .atenna-modal__onboarding * {
+  overflow: hidden !important;
 }
 
-#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-hero {
-  animation-delay: 0ms;
-}
-
-#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-features {
-  animation-delay: 100ms;
-}
-
-#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-free-tag {
-  animation-delay: 200ms;
-}
-
-#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-cta,
-#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in .atenna-modal__onb-login {
-  animation-delay: 300ms;
+/* Entire onboarding page fades in as a single unit */
+#atenna-popup .atenna-modal__onboarding.atenna-modal__onboarding--fade-in {
+  animation: atenna-onb-content-fade-in 500ms ease-out forwards;
 }
 
 #atenna-popup .atenna-modal__onb-logo-anim {
