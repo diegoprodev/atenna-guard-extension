@@ -4,6 +4,27 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.31.0] — 2026-05-14 (Cloudflare AI Gateway)
+
+### Infrastructure — LLM Cost Control & Observability
+
+**Purpose:** Rotear todas as chamadas LLM (OpenAI + Gemini) pelo Cloudflare AI Gateway para controle de custos, cache semântico, logs centralizados e futura integração com admin dashboard.
+
+- CF Gateway configurado: `atenna-safe-plugin` em `gateway.ai.cloudflare.com/v1/e6d552f924497f01ac4a986ef8f8c342`
+- `CF_AIG_TOKEN` adicionado ao `.env` da VPS
+- `services/openai_service.py` — OpenAI agora roteia via `…/openai/chat/completions` com header `cf-aig-authorization`
+- `services/gemini_service.py` — Gemini agora roteia via `…/google-ai-studio/v1beta/…` com header `cf-aig-authorization`
+- Fallback automático para chamada direta se `CF_AIG_TOKEN` não estiver presente (graceful degradation)
+- Logs incluem `via CF Gateway` ou `via direto` para rastreabilidade
+
+**Benefícios imediatos:**
+- Dashboard de custo por modelo no painel CF (OpenAI + Gemini lado a lado)
+- Cache semântico: requisições similares retornam do cache — custo $0
+- Rate limiting configurável no painel CF sem deploys
+- Base para admin dashboard em tempo real via CF Analytics API
+
+---
+
 ## [2.30.0] — 2026-05-14 (FASE Hardening Pré-Rollout)
 
 ### Security Hardening & Compliance
