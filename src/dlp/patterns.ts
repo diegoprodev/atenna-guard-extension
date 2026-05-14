@@ -7,17 +7,18 @@ interface PatternDef {
   validate?:  (raw: string) => boolean;
 }
 
-// ── CPF digit-verifier (frontend) ────────────────────────────
+// ── CPF validator ─────────────────────────────────────────────
+// Brazilian heuristic: 11 digits where digit[2] != '9'
+// (mobile phones: DDD + 9 + 8 digits → digit[2] is always '9')
+// Mathematical verifier is intentionally skipped — it rejects typos and test CPFs,
+// both of which still represent sensitive data that should be protected.
 
 function validateCPF(raw: string): boolean {
   const d = raw.replace(/\D/g, '');
-  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
-  for (let i = 9; i <= 10; i++) {
-    const sum = Array.from({ length: i }, (_, j) => parseInt(d[j]) * (i + 1 - j))
-      .reduce((a, b) => a + b, 0);
-    const expected = (sum * 10 % 11) % 10;
-    if (parseInt(d[i]) !== expected) return false;
-  }
+  if (d.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(d)) return false; // all same digit
+  // If digit[2] === '9' → Brazilian mobile phone format, not a CPF
+  if (d[2] === '9') return false;
   return true;
 }
 
@@ -80,7 +81,14 @@ function validateName(raw: string): boolean {
 // ── Pattern definitions ───────────────────────────────────────
 
 const PATTERNS: PatternDef[] = [
-  // CPF — with digit-verifier
+  // Phone with explicit DDD in parentheses — always a phone, never a CPF
+  // Matches: (83) 99665-0717  (11) 98765-4321  (21) 3456-7890
+  {
+    type: 'PHONE',
+    pattern: /\(\d{2}\)\s?\d{4,5}[-\s]?\d{4}\b/g,
+    confidence: 0.97,
+  },
+  // CPF — 11 digits where digit[2] != '9'
   {
     type: 'CPF',
     pattern: /\b\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2}\b/g,
