@@ -329,15 +329,21 @@ function makeProgressBar(value: number, max: number, color = '#22c55e'): HTMLEle
   const fill = document.createElement('div');
   fill.className = 'atenna-settings__bar-fill';
   const pct = max > 0 ? Math.min(100, Math.round(value / max * 100)) : 0;
-  fill.style.width = `${pct}%`;
+  // Start at 0 so the CSS transition animates from left
+  fill.style.width = '0%';
   fill.style.background = color;
   wrap.appendChild(fill);
+  // Animate after paint so the transition fires
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    fill.style.width = `${pct}%`;
+  }));
   return wrap;
 }
 
-function makeStatRow(label: string, value: string, sub?: string): HTMLElement {
+function makeStatRow(label: string, value: string, sub?: string, tooltip?: string): HTMLElement {
   const row = document.createElement('div');
   row.className = 'atenna-settings__stat-row';
+  if (tooltip) row.title = tooltip;
   const l = document.createElement('span');
   l.className = 'atenna-settings__stat-label';
   l.textContent = label;
@@ -476,15 +482,30 @@ function renderSettingsPage(
       const usageSection = document.createElement('div');
       usageSection.className = 'atenna-settings__section';
 
-      const todayRow = makeStatRow('Hoje', `${usage.count} / ${dailyLimit}`);
+      const todayRow = makeStatRow(
+        'Hoje',
+        `${usage.count} / ${dailyLimit}`,
+        undefined,
+        `Prompts gerados hoje. Limite diário: ${dailyLimit}.`,
+      );
       if (!pro) todayRow.appendChild(makeProgressBar(usage.count, DAILY_LIMIT));
 
-      const monthRow = makeStatRow('Este mês', `${monthly} / ${monthlyLimit}`);
+      const monthRow = makeStatRow(
+        'Este mês',
+        `${monthly} / ${monthlyLimit}`,
+        undefined,
+        `Prompts gerados no mês atual. Limite mensal: ${monthlyLimit}.`,
+      );
       if (!pro) monthRow.appendChild(makeProgressBar(monthly, MONTHLY_LIMIT, '#3b82f6'));
 
       usageSection.appendChild(todayRow);
       usageSection.appendChild(monthRow);
-      usageSection.appendChild(makeStatRow('Total', `${total} refinamentos`));
+      usageSection.appendChild(makeStatRow(
+        'Total acumulado',
+        total > 0 ? `${total} refinamentos` : '— nenhum ainda',
+        undefined,
+        'Total de prompts refinados desde a instalação.',
+      ));
 
       if (!pro) {
         const upgradeBtn = document.createElement('button');
@@ -506,9 +527,24 @@ function renderSettingsPage(
       const dlpSection = document.createElement('div');
       dlpSection.className = 'atenna-settings__section';
 
-      dlpSection.appendChild(makeStatRow('Dados protegidos', String(dlp.protectedCount), 'substituições realizadas'));
-      dlpSection.appendChild(makeStatRow('Scans DLP', String(dlp.scansTotal), 'verificações em tempo real'));
-      dlpSection.appendChild(makeStatRow('Tokens economizados', tokensK, 'estimativa de dados ofuscados'));
+      dlpSection.appendChild(makeStatRow(
+        'Dados protegidos',
+        dlp.protectedCount > 0 ? String(dlp.protectedCount) : '—',
+        dlp.protectedCount > 0 ? 'substituições realizadas' : 'Clique em "Proteger dados" para registrar',
+        'Número de vezes que dados sensíveis foram mascarados antes do envio.',
+      ));
+      dlpSection.appendChild(makeStatRow(
+        'Verificações DLP',
+        dlp.scansTotal > 0 ? String(dlp.scansTotal) : '—',
+        dlp.scansTotal > 0 ? 'scans em tempo real' : 'Aguardando primeira verificação',
+        'Total de análises automáticas realizadas pelo scanner DLP.',
+      ));
+      dlpSection.appendChild(makeStatRow(
+        'Tokens economizados',
+        dlp.tokensEstimated > 0 ? tokensK : '—',
+        dlp.tokensEstimated > 0 ? 'estimativa de dados ofuscados' : 'Será calculado após o primeiro uso',
+        'Estimativa de tokens de dados sensíveis que não foram enviados aos LLMs.',
+      ));
 
       const taxaRow = document.createElement('div');
       taxaRow.className = 'atenna-settings__stat-row atenna-settings__stat-row--bar';
@@ -517,7 +553,7 @@ function renderSettingsPage(
       taxaLabel.textContent = 'Taxa de proteção';
       const taxaVal = document.createElement('span');
       taxaVal.className = 'atenna-settings__stat-value';
-      taxaVal.textContent = `${taxaProtecao}%`;
+      taxaVal.textContent = dlp.scansTotal > 0 ? `${taxaProtecao}%` : '—';
       taxaRow.appendChild(taxaLabel);
       taxaRow.appendChild(taxaVal);
       dlpSection.appendChild(taxaRow);
