@@ -4,6 +4,36 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.30.0] — 2026-05-14 (FASE Hardening Pré-Rollout)
+
+### Security Hardening & Compliance
+
+**Purpose:** Implementar requisitos pré-rollout identificados no audit 8.7/10: security headers, privacy policy, monitoring.
+
+#### HTTP Security Headers ✅
+- Novo middleware `middleware/security_headers.py` no backend FastAPI
+- Headers em todas as respostas: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 1; mode=block`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, `Cache-Control: no-store`
+- Middleware também incrementa contadores de métricas por status code
+
+#### Prometheus Metrics ✅
+- Novo endpoint `/metrics` (formato Prometheus text)
+- Contadores: `atenna_requests_total`, `atenna_errors_5xx_total`, `atenna_errors_4xx_total`, `atenna_auth_failures_total`, `atenna_uptime_seconds`
+- Pronto para integração com Grafana
+
+#### Privacy Policy ✅
+- Página HTML em `https://atennaplugin.maestro-n8n.site/privacy`
+- Cobre LGPD Art. 17-22: acesso, exclusão, portabilidade
+- Link "Política de Privacidade" no rodapé da tela de configurações da extensão
+- Servida via FastAPI StaticFiles + rota `/privacy`
+
+#### Settings Icon Fix ✅
+- Substituído emoji ⚙ (renderizado como ☀ no Windows/Chrome) por SVG inline
+- Engrenagem agora exibida corretamente em todos os sistemas
+
+**VPS:** Container rebuild com `--no-cache`. Container `healthy`. Verificado: headers presentes em `/health`, `/metrics` respondendo, `/privacy` retornando HTML.
+
+---
+
 ## [UNRELEASED] — FASE: Consolidação Operacional Canônica (2026-05-13)
 
 ### Canonical System State Documentation & Infrastructure Fixes
