@@ -16,11 +16,17 @@ CREATE POLICY "user_own" ON public.user_plans
   FOR SELECT USING (auth.uid()::text = user_id);
 
 -- ============================================================
--- 1. Secure view: admin_user_view
---    Lists users without exposing sensitive fields.
---    Accessible only by service role (view over auth schema).
+-- 1. Secure view: admin_user_view (in private schema)
+--    NOT exposed to PostgREST — accessible only via service_role.
+--    Fixes: auth_users_exposed + security_definer_view lints.
 -- ============================================================
-CREATE OR REPLACE VIEW admin_user_view AS
+DROP VIEW IF EXISTS public.admin_user_view;
+CREATE SCHEMA IF NOT EXISTS private;
+REVOKE ALL ON SCHEMA private FROM anon, authenticated, public;
+
+CREATE OR REPLACE VIEW private.admin_user_view
+  WITH (security_invoker = true)
+AS
 SELECT
   u.id,
   u.email,
@@ -32,6 +38,9 @@ SELECT
   p.updated_at AS plan_updated_at
 FROM auth.users u
 LEFT JOIN public.user_plans p ON p.user_id = u.id::text;
+
+GRANT USAGE ON SCHEMA private TO service_role;
+GRANT SELECT ON private.admin_user_view TO service_role;
 
 -- ============================================================
 -- 2. Table: admin_audit_events
