@@ -1951,11 +1951,11 @@ function renderUpgradeTrigger(): HTMLElement {
 
   const msg = document.createElement('p');
   msg.className = 'atenna-modal__upgrade-trigger-msg';
-  msg.textContent = 'Você já criou 3 prompts.';
+  msg.textContent = `Você já criou ${UPGRADE_TRIGGER} prompts.`;
 
   const sub = document.createElement('p');
   sub.className = 'atenna-modal__upgrade-trigger-sub';
-  sub.textContent = 'Usuários Pro refinam sem limite de iterações.';
+  sub.textContent = 'Pro: gerações ilimitadas, proteção DLP avançada e histórico completo.';
 
   const btn = document.createElement('button');
   btn.className = 'atenna-modal__upgrade-trigger-btn';
@@ -1985,9 +1985,9 @@ function renderPrompts(
   container.innerHTML = '';
 
   const entries: Array<{ emoji: string; label: string; speed: string; description: string; text: string; preview?: string; prompt_type: PromptType; variant: 'primary' | 'secondary' | 'tertiary' }> = [
-    { emoji: '●', label: 'Refinado',      speed: 'Rápido',       description: 'Claro e objetivo',      text: data.structured, preview: data.structured_preview, prompt_type: 'structured', variant: 'primary' },
-    { emoji: '●', label: 'Estruturado',   speed: 'Equilibrado',   description: 'Organizado em seções', text: data.direct,     preview: data.direct_preview,     prompt_type: 'direct',     variant: 'secondary' },
-    { emoji: '●', label: 'Estratégico',   speed: 'Profundo',      description: 'Aprofundado e preciso',text: data.technical,  preview: data.technical_preview,  prompt_type: 'technical',  variant: 'tertiary' },
+    { emoji: '●', label: 'Direto',        speed: 'Rápido',        description: 'Claro e objetivo',      text: data.direct,     preview: data.direct_preview,     prompt_type: 'direct',     variant: 'primary' },
+    { emoji: '●', label: 'Estruturado',  speed: 'Equilibrado',   description: 'Organizado em seções',  text: data.structured, preview: data.structured_preview, prompt_type: 'structured', variant: 'secondary' },
+    { emoji: '●', label: 'Estratégico',  speed: 'Profundo',      description: 'Aprofundado e preciso', text: data.technical,  preview: data.technical_preview,  prompt_type: 'technical',  variant: 'tertiary' },
   ];
 
   const cards = document.createElement('div');

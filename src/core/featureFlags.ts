@@ -41,8 +41,11 @@ export async function getFlag(flagName: string): Promise<boolean> {
     // Fallthrough to default
   }
 
-  // Check Chrome storage (for extension persistence)
+  // Check Chrome storage (for extension persistence) — only in top frame
   try {
+    if (typeof window === 'undefined' || window !== window.top) {
+      throw new Error('iframe context');
+    }
     const stored = await new Promise<Record<string, boolean> | undefined>((resolve) => {
       chrome.storage.local.get('atenna_flags', (result) => {
         resolve((result.atenna_flags as Record<string, boolean> | undefined) ?? undefined);

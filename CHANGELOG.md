@@ -4,6 +4,31 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.33.0] — 2026-05-14 (DLP, Qualidade de Prompts e UX)
+
+### Bug Fixes
+
+#### DLP não detectava CPF colado via paste ✅
+- **Causa:** `injectButton.ts` escutava apenas evento `input` — no ChatGPT, `paste` em `contenteditable` nem sempre dispara `input` de forma confiável
+- **Fix:** Adicionado listener `paste` com `setTimeout(onInput, 100)` para aguardar o DOM atualizar antes de scanear
+
+#### `Access to storage is not allowed from this context` persistia ✅
+- **Causa:** `featureFlags.ts` chamava `chrome.storage.local.get` sem verificar contexto de iframe — disparava em todos os subframes do ChatGPT
+- **Fix:** Adicionado guard `window !== window.top` em `featureFlags.ts` além dos guards já existentes em `content.ts` e `injectButton.ts`
+
+#### Labels dos prompts trocados (Refinado exibia `structured`, Estruturado exibia `direct`) ✅
+- **Causa:** Mapeamento `data.structured → label "Refinado"` e `data.direct → label "Estruturado"` estava invertido
+- **Fix:** Corrigido para `direct → "Direto/Rápido"`, `structured → "Estruturado/Seções"`, `technical → "Estratégico/Profundo"`
+
+#### Counter "Você já criou 3 prompts" hardcoded ✅
+- **Causa:** String literal `'Você já criou 3 prompts.'` em vez de usar a constante `UPGRADE_TRIGGER`
+- **Fix:** Usa `UPGRADE_TRIGGER` dinamicamente
+
+### UX
+- Mensagem de upgrade Pro agora menciona DLP: "gerações ilimitadas, proteção DLP avançada e histórico completo"
+
+---
+
 ## [2.32.0] — 2026-05-14 (Correções Críticas de Produção)
 
 ### Bug Fixes

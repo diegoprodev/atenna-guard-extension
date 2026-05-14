@@ -461,6 +461,8 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
     }, 400);
   };
   input.addEventListener('input', onInput);
+  // paste may not fire 'input' reliably on contenteditable in ChatGPT — scan after DOM settles
+  input.addEventListener('paste', () => setTimeout(onInput, 100));
 
   let ro: ResizeObserver | undefined;
   if (typeof ResizeObserver !== 'undefined') {
