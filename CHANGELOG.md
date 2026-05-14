@@ -4,6 +4,35 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.32.0] — 2026-05-14 (Correções Críticas de Produção)
+
+### Bug Fixes
+
+#### `TypeError: Failed to fetch` — backend inacessível desde sempre ✅
+- **Causa:** `manifest.json` nunca tinha `https://atennaplugin.maestro-n8n.site/*` em `host_permissions`
+- Chrome MV3 bloqueia silenciosamente qualquer fetch do service worker para domínios sem permissão explícita
+- **Fix:** Adicionado `"https://atennaplugin.maestro-n8n.site/*"` ao `host_permissions`
+
+#### `500: module 'dlp.telemetry' has no attribute 'server_revalidated'` ✅
+- **Causa:** `main.py` chamava `telemetry.server_revalidated()` mas a função nunca existia no `dlp/telemetry.py` da VPS
+- `docker compose restart` não reembala código — só `docker compose build` + `force-recreate` fazem isso
+- **Fix:** Adicionado `server_revalidated()` e `get_aggregates()` ao `telemetry.py` + rebuild da imagem
+
+#### `Access to storage is not allowed from this context` ✅
+- **Causa:** ChatGPT e outros sites embedam iframes internos onde o content script também executava
+- `chrome.storage` não é acessível de iframes — cada chamada gerava erro no console ao clicar no badge
+- **Fix:** `content.ts` e `injectButton.ts` agora verificam `window === window.top` antes de inicializar e antes de qualquer chamada ao storage
+
+#### Ícone de configurações aparecia como ☀ (sol) em vez de engrenagem ✅
+- **Causa:** Emoji ⚙ renderizado incorretamente por font fallback no Windows/Chrome
+- **Fix:** Substituído por SVG inline — renderiza corretamente em todos os sistemas
+
+#### Limpeza de arquivos órfãos na VPS ✅
+- Removidos da raiz: `gemini_service.py`, `openai_service.py`, `prompt_service.py`, `main_new.py`, `limits.py`, `sanitizer.py`, `observability.py`, `dlp/analytics.py`
+- Todos sem imports ativos — duplicatas de versões antigas nunca removidas
+
+---
+
 ## [2.31.0] — 2026-05-14 (Cloudflare AI Gateway)
 
 ### Infrastructure — LLM Cost Control & Observability
