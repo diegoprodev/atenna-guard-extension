@@ -71,9 +71,9 @@ function validateName(raw: string): boolean {
   if (words.length < 2) return false;
   // At least one word must be >= 4 chars (filters "DA DE DO")
   if (!words.some(w => w.length >= 4)) return false;
-  // More than half the words cannot be stopwords
-  const stopCount = words.filter(w => NAME_STOPWORDS.has(w)).length;
-  if (stopCount > words.length / 2) return false;
+  // Reject if ANY word is a known tech/stopword (uppercase comparison)
+  const hasStopword = words.some(w => NAME_STOPWORDS.has(w.toUpperCase()));
+  if (hasStopword) return false;
   return true;
 }
 
@@ -179,29 +179,47 @@ const PATTERNS: PatternDef[] = [
     pattern: /\b\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}\b/g,
     confidence: 0.97,
   },
-  // Brazilian full name in ALL_CAPS (2-4 words, at least one word >= 4 chars)
-  // Matches "DIEGO RODRIGUES DA SILVA", "MARIA JOSE SANTOS"
-  // Filtered by stopword guard to avoid "CPF CODIGO", "API KEY", etc.
+  // Brazilian full name — Title Case: "Diego Rodrigues da Silva"
+  {
+    type: 'NAME',
+    pattern: /\b(?:[A-ZÁÉÍÓÚÃÕÇÂÊÎÔÛÀÈÙÄËÏÖÜ][a-záéíóúãõçâêîôûàèùäëïöü]{1,}\s+){1,3}[A-ZÁÉÍÓÚÃÕÇÂÊÎÔÛÀÈÙÄËÏÖÜ][a-záéíóúãõçâêîôûàèùäëïöü]{1,}\b/g,
+    confidence: 0.62,
+    validate: validateName,
+  },
+  // Brazilian full name — ALL_CAPS: "DIEGO RODRIGUES DA SILVA"
   {
     type: 'NAME',
     pattern: /\b(?:[A-ZÁÉÍÓÚÃÕÇÂÊÎÔÛÀÈÙÄËÏÖÜ]{2,}\s+){1,3}[A-ZÁÉÍÓÚÃÕÇÂÊÎÔÛÀÈÙÄËÏÖÜ]{2,}\b/g,
     confidence: 0.65,
     validate: validateName,
   },
+  // Brazilian full name — lowercase: "diego rodrigues da silva"
+  {
+    type: 'NAME',
+    pattern: /\b(?:[a-záéíóúãõçâêîôûàèùäëïöü]{2,}\s+){1,3}[a-záéíóúãõçâêîôûàèùäëïöü]{2,}\b/g,
+    confidence: 0.55,
+    validate: validateName,
+  },
 ];
 
 export function scanPatterns(text: string): DetectedEntity[] {
-  const entities: DetectedEntity[] = [];
+  const raw: DetectedEntity[] = [];
 
   for (const def of PATTERNS) {
     const re = new RegExp(def.pattern.source, def.pattern.flags);
     let match: RegExpExecArray | null;
 
     while ((match = re.exec(text)) !== null) {
-      // Apply digit-verifier if present — skip invalid matches
-      if (def.validate && !def.validate(match[0])) continue;
-
-      entities.push({
+      if (def.validate && !def.validate(match[0])) {
+        // For NAME patterns: if match starts with a stopword, retry from next word
+        // so "cpf diego rodrigues" → rejected, then tries "diego rodrigues"
+        if (def.type === 'NAME') {
+          const spaceIdx = match[0].indexOf(' ');
+          if (spaceIdx > 0) re.lastIndex = match.index + spaceIdx + 1;
+        }
+        continue;
+      }
+      raw.push({
         type:       def.type,
         value:      match[0],
         start:      match.index,
@@ -209,6 +227,17 @@ export function scanPatterns(text: string): DetectedEntity[] {
         confidence: def.confidence,
       });
     }
+  }
+
+  // Deduplicate overlapping matches — keep highest-confidence entity per position
+  // This prevents CPF digits from being re-classified as PHONE
+  raw.sort((a, b) => b.confidence - a.confidence);
+  const entities: DetectedEntity[] = [];
+  for (const candidate of raw) {
+    const overlaps = entities.some(
+      e => candidate.start < e.end && candidate.end > e.start
+    );
+    if (!overlaps) entities.push(candidate);
   }
 
   return entities;
