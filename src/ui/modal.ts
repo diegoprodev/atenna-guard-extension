@@ -1106,10 +1106,12 @@ async function runFlow(
     if (!document.getElementById(OVERLAY_ID)) return;
 
     if (!data._fromApi || data._is_fallback) {
-      // API failed or backend returned local fallback — show error, don't decrement usage
-      console.error('[Atenna] API error: returning fallback, not decrementing usage');
+      // API unavailable — render template prompts without decrementing usage
+      console.warn('[Atenna] API unavailable, showing template prompts (usage not deducted)');
       void trackEvent('prompt_generate_api_failed', { origin, input_length: userText.length });
-      container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--at-text);">Erro ao refinar com IA. Tente novamente.<br><button onclick="location.reload()" style="margin-top: 10px; padding: 6px 12px; border: 1px solid var(--at-green); background: none; color: var(--at-green); border-radius: 4px; cursor: pointer;">Tentar novamente</button></div>';
+      await renderSuccess(container);
+      if (!document.getElementById(OVERLAY_ID)) return;
+      renderPrompts(container, data, platformInput, overlay, origin, 0);
       return;
     }
 

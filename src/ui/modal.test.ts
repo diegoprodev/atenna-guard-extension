@@ -512,15 +512,13 @@ describe('DLP protection flow', () => {
     expect(unique.size).toBeGreaterThanOrEqual(2);
   });
 
-  it('fallback de API ainda exibe mensagem de erro clara', async () => {
+  it('fallback de API exibe 3 prompts template sem decrementar uso', async () => {
     stubChrome({ ok: false });
     addTextarea('algum texto para testar fallback');
     await toggleModal();
     await waitForFlow();
     const cards = document.querySelectorAll('.atenna-modal__card');
-    expect(cards.length).toBe(0);
-    const results = document.querySelector('[data-results]');
-    expect(results?.textContent).toContain('Erro');
+    expect(cards.length).toBe(3);
   });
 });
 

@@ -68,7 +68,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       })
         .then(res => {
           if (res.status === 401) { sendResponse({ ok: false, error: 'auth_required', status: 401 }); return; }
-          if (!res.ok)            { sendResponse({ ok: false, status: res.status }); return; }
+          if (!res.ok) {
+            console.warn('[Atenna] backend HTTP error:', res.status, res.statusText);
+            sendResponse({ ok: false, status: res.status });
+            return;
+          }
           return res.json().then(data => sendResponse({ ok: true, data }));
         });
     })
