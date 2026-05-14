@@ -2,8 +2,12 @@ fastapi
 uvicorn
 httpx
 python-dotenv
+python-multipart
 presidio-analyzer
 presidio-anonymizer
-spacy
+spacy>=3.7.0
 supabase
 fpdf2>=2.7.0
+# NLP Models (installed separately)
+# python -m spacy download pt_core_news_sm
+# python -m spacy download en_core_web_sm

@@ -5,6 +5,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Download spaCy NLP models
+RUN python -m spacy download pt_core_news_sm && \
+    python -m spacy download en_core_web_sm
+
 COPY . .
 
 EXPOSE 8000

@@ -68,7 +68,11 @@ async def generate(
 
     user_id = _user.get("sub")
     input_text = request.input
-    dlp_meta = request.dlp or {}
+    # Convert Pydantic DlpMetadataRequest to dict if present
+    if request.dlp:
+        dlp_meta = request.dlp.model_dump(exclude_none=True) if hasattr(request.dlp, 'model_dump') else request.dlp.__dict__
+    else:
+        dlp_meta = {}
 
     # Session ID for telemetry tracking
     session_id = dlp_meta.get("dlp_session_id")
