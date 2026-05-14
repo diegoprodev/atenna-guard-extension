@@ -22,17 +22,21 @@ let savedPos:       { top: number; left: number } | null = null;
 
 let autoBannerEnabled = true;
 
-// Read persisted setting at module load
-try {
-  chrome.storage.local.get('atenna_settings', (result) => {
-    const s = result['atenna_settings'] as { autoBanner?: boolean } | undefined;
-    if (s && typeof s.autoBanner === 'boolean') autoBannerEnabled = s.autoBanner;
-  });
-} catch { /* non-extension env */ }
+// Read persisted setting at module load — only in top frame (iframes block storage access)
+if (window === window.top) {
+  try {
+    chrome.storage.local.get('atenna_settings', (result) => {
+      const s = result['atenna_settings'] as { autoBanner?: boolean } | undefined;
+      if (s && typeof s.autoBanner === 'boolean') autoBannerEnabled = s.autoBanner;
+    });
+  } catch { /* non-extension env */ }
+}
 
 export function setAutoBanner(enabled: boolean): void {
   autoBannerEnabled = enabled;
-  try { chrome.storage.local.set({ atenna_settings: { autoBanner: enabled } }); } catch { /* */ }
+  if (window === window.top) {
+    try { chrome.storage.local.set({ atenna_settings: { autoBanner: enabled } }); } catch { /* */ }
+  }
 }
 
 // ── PT-BR labels for entity types ───────────────────────────

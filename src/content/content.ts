@@ -70,8 +70,12 @@ try {
   });
 } catch { /* non-extension env */ }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => void init());
-} else {
-  void init();
+// Only run in the top-level frame — iframes don't have storage access
+// and don't contain the main chat input
+if (window === window.top) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => void init());
+  } else {
+    void init();
+  }
 }
