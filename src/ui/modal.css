@@ -2533,54 +2533,61 @@
 
 /* Section title */
 .atenna-settings__section-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--at-text);
-  opacity: 0.45;
-  margin: 14px 0 6px;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.07em !important;
+  text-transform: uppercase !important;
+  color: var(--at-text) !important;
+  opacity: 0.45 !important;
+  margin: 14px 0 6px !important;
+  display: block !important;
 }
 
 /* Section card */
 .atenna-settings__section {
-  background: var(--at-card-bg);
-  border: 1px solid var(--at-border);
-  border-radius: 10px;
-  padding: 4px 0;
-  overflow: hidden;
+  background: var(--at-card-bg) !important;
+  border: 1px solid var(--at-border) !important;
+  border-radius: 10px !important;
+  padding: 4px 0 !important;
+  overflow: hidden !important;
+  display: block !important;
+  box-sizing: border-box !important;
 }
 
-/* Stat row */
+/* Stat row — !important guards against ChatGPT/page CSS resets zeroing padding */
 .atenna-settings__stat-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  flex-wrap: wrap;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 14px !important;
+  flex-wrap: wrap !important;
+  min-height: 36px !important;
+  box-sizing: border-box !important;
 }
 
 .atenna-settings__stat-label {
-  flex: 1;
-  font-size: 13px;
-  color: var(--at-text);
-  opacity: 0.75;
+  flex: 1 !important;
+  font-size: 13px !important;
+  color: var(--at-text) !important;
+  opacity: 0.75 !important;
+  line-height: 1.4 !important;
 }
 
 .atenna-settings__stat-value {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--at-text);
-  font-variant-numeric: tabular-nums;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: var(--at-text) !important;
+  font-variant-numeric: tabular-nums !important;
 }
 
 .atenna-settings__stat-sub {
-  width: 100%;
-  font-size: 10px;
-  color: var(--at-text);
-  opacity: 0.35;
-  margin-top: -4px;
-  padding: 0 0 2px;
+  width: 100% !important;
+  font-size: 10px !important;
+  color: var(--at-text) !important;
+  opacity: 0.35 !important;
+  margin-top: -4px !important;
+  padding: 0 0 2px !important;
+  display: block !important;
 }
 
 /* Progress bar */
@@ -2594,10 +2601,11 @@
 }
 
 .atenna-settings__bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  min-width: 3px;
-  transition: width 700ms cubic-bezier(0.34, 1.1, 0.64, 1);
+  height: 100% !important;
+  border-radius: 3px !important;
+  min-width: 3px !important;
+  transition: width 700ms cubic-bezier(0.34, 1.1, 0.64, 1) !important;
+  display: block !important;
 }
 
 /* Upgrade CTA inside settings */
