@@ -27,7 +27,7 @@ SELECT
   u.created_at,
   u.last_sign_in_at,
   u.banned_until,
-  (u.app_metadata->>'role')::text AS role,
+  (u.raw_app_meta_data->>'role')::text AS role,
   p.plan_type,
   p.updated_at AS plan_updated_at
 FROM auth.users u
