@@ -10,7 +10,8 @@
     "https://claude.ai/*",
     "https://gemini.google.com/*",
     "http://localhost/*",
-    "https://*.supabase.co/*"
+    "https://*.supabase.co/*",
+    "https://atennaplugin.maestro-n8n.site/*"
   ],
   "content_scripts": [
     {
