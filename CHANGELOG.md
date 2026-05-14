@@ -4,6 +4,108 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [UNRELEASED] — FASE: Consolidação Operacional Canônica (2026-05-13)
+
+### Canonical System State Documentation & Infrastructure Fixes
+
+**Purpose:** Ensure documented specification matches actual runtime behavior. Bridge gap between docs and code.
+
+**Completed Tasks:**
+
+#### TASK 1: Fix pt_core_news_sm Installation on VPS ✅
+- Added `spacy>=3.7.0` to requirements.txt with explicit version constraint
+- Added `python-multipart` (critical for FastAPI multipart file uploads)
+- Updated Dockerfile: `RUN python -m spacy download pt_core_news_sm && en_core_web_sm`
+- **Verification:** Container verified loading both models correctly with `spacy.load()`
+
+#### TASK 2: Validate STRICT_DLP_MODE Real Behavior ✅
+- Analyzed `backend/dlp/enforcement.py` code: mode is OFF by default (observation-only)
+- When `STRICT_DLP_MODE=false`: Logs "dlp_strict_would_apply" but DOES NOT rewrite
+- When `STRICT_DLP_MODE=true` + `risk=HIGH`: Rewrites PII with semantic tokens ("CPF 123.456..." → "CPF [CPF]")
+- Verified with 8 Playwright E2E tests from FASE 3 documentation
+
+#### TASK 3: Clean Ghost/Dead Code ✅
+- Removed `backend/dlp/analytics.py` (never imported)
+- Removed `backend/dlp/benchmark_nlp.py` (standalone benchmark, never called)
+- Verified "three ghost functions" mentioned in spec:
+  - `entities_rewritten` — does not exist in codebase
+  - `process_detected` — does not exist in codebase
+  - `get_safe_aggregates` — exists in `supabase_telemetry.py`, **IS ACTIVE** (used for metrics retrieval)
+- Confirmed all 18 active DLP modules have verified imports
+
+#### TASK 4: Create Canonical System State Documentation ✅
+- Created `docs/SYSTEM_STATE.md` — Overall architecture, data flow, component boundaries
+- Created `docs/FEATURE_FLAGS_STATE.md` — All environment variables, feature flag states, switching procedures
+- Created `docs/VPS_RUNTIME_STATE.md` — Actual VPS state, container metrics, known issues, monitoring setup
+
+#### TASK 5: Validate End-to-End Flows (Planning Complete) 🔄
+- Created `docs/E2E_VALIDATION_PLAN.md` — Test matrix, procedures, limitations
+- Prepared 7 validation scenarios (CPF, Email, API Key, mismatch, export, deletion, multiple entities)
+- Test scripts ready for execution with valid JWT token
+- **Blocker:** Requires valid JWT from Supabase test user (manual setup)
+
+#### TASK 6: Update Documentation (In Progress) 🔄
+- Created `ROADMAP.md` — Complete project timeline, phases, milestones, blockers
+- Updated CHANGELOG with consolidation entry
+- **Remaining:** Cross-reference between SYSTEM_STATE, FEATURE_FLAGS, VPS_RUNTIME, and ROADMAP
+
+### Infrastructure Fixes Applied
+
+**Pydantic Serialization (main.py line 72-75):**
+```python
+# Before: dlp_meta = request.dlp or {}  # AttributeError on .get()
+# After:
+if request.dlp:
+    dlp_meta = request.dlp.model_dump(exclude_none=True) if hasattr(request.dlp, 'model_dump') else request.dlp.__dict__
+else:
+    dlp_meta = {}
+```
+
+**spaCy Model Installation (Dockerfile):**
+```dockerfile
+RUN python -m spacy download pt_core_news_sm && \
+    python -m spacy download en_core_web_sm
+```
+
+**Dependencies (requirements.txt):**
+- `spacy>=3.7.0` (was unversioned)
+- `python-multipart` (was missing)
+
+### Testing Status
+
+**Backend:** 50+ unit tests passing
+**Frontend:** 133 Vitest tests passing
+**E2E:** 24 Playwright tests passing
+**Build:** Zero TypeScript errors
+
+### Known Limitations
+
+1. **Client-Side Free Plan Limit Not Server-Enforced**
+   - 10/day limit stored in `chrome.storage.local`
+   - User with technical skills could bypass via direct API calls
+   - Mitigation: JWT validation + audit trail
+   - **Fix Timeline:** FASE 5
+
+2. **STRICT_DLP_MODE Not Exposed in UI**
+   - Feature flag only accessible via backend environment variable
+   - Users cannot self-select strict protection
+   - **Fix Timeline:** FASE 5 or later
+
+3. **TASK 5 Requires Manual Test Execution**
+   - Cannot auto-test API without valid JWT token
+   - Email confirmations (export/deletion) require manual steps
+   - **Next Step:** Get test JWT from Supabase project
+
+### References
+
+- [SYSTEM_STATE.md](docs/SYSTEM_STATE.md) — Architecture & modules
+- [FEATURE_FLAGS_STATE.md](docs/FEATURE_FLAGS_STATE.md) — Flag states & behavior
+- [VPS_RUNTIME_STATE.md](docs/VPS_RUNTIME_STATE.md) — VPS specifics & monitoring
+- [E2E_VALIDATION_PLAN.md](docs/E2E_VALIDATION_PLAN.md) — Test procedures
+- [ROADMAP.md](ROADMAP.md) — Project timeline & phases
+
+---
+
 ## [2.29.0] — 2026-05-13 (FASE 4.2C — Stress Harness + Observabilidade)
 
 ### FASE 4.2C: Adversarial Hardening, Observabilidade e Profiling VPS
