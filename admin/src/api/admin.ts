@@ -48,6 +48,18 @@ export const api = {
     post('/admin/users/' + id + '/reset-quota', t, { confirmed: true }),
   updatePlan: (t: string, id: string, plan: string) =>
     put('/admin/users/' + id + '/plan', t, { plan_type: plan, confirmed: true }),
+  createUser: (t: string, payload: { email: string; password?: string; role?: string; plan_type?: string; send_invite?: boolean }) =>
+    post('/admin/users', t, payload),
+  sendLink: (t: string, id: string) =>
+    post('/admin/users/' + id + '/send-link', t, {}),
+  editUser: (t: string, id: string, patch: { email?: string; role?: string; plan_type?: string }) =>
+    put('/admin/users/' + id, t, { ...patch, confirmed: true }),
+  deleteUser: (t: string, id: string) =>
+    fetch(`https://atennaplugin.maestro-n8n.site/admin/users/${id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
+      body: JSON.stringify({ confirmed: true }),
+    }).then(r => r.json()),
   featureFlags: (t: string) => get<FlagsResponse>('/admin/feature-flags', t),
   setFlag: (t: string, name: string, enabled: boolean) =>
     put('/admin/feature-flags/' + name, t, { enabled, confirmed: true }),
@@ -56,6 +68,19 @@ export const api = {
   errors: (t: string, page = 1) => get<ErrorsResponse>(`/admin/errors?page=${page}`, t),
   audit: (t: string, page = 1) => get<AuditResponse>(`/admin/audit?page=${page}`, t),
   costs: (t: string) => get<CostSummary>('/admin/costs', t),
+  usage: (t: string, search = '', sort = 'cost_desc') =>
+    get<UsageResponse>(`/admin/usage?search=${encodeURIComponent(search)}&sort=${sort}`, t),
+  plansConfig: (t: string) => get<PlansConfigResponse>('/admin/plans/config', t),
+  plansUsers: (t: string, plan = '', status = '', search = '') =>
+    get<{ data: PlanUserRow[]; total: number }>(`/admin/plans/users?plan_filter=${plan}&status_filter=${status}&search=${encodeURIComponent(search)}`, t),
+  assignPlan: (t: string, payload: { user_id: string; plan_type: string; billing_period: string; status: string; notes: string }) =>
+    post('/admin/plans/assign', t, { ...payload, confirmed: true }),
+  updatePlanStatus: (t: string, user_id: string, status: string, notes = '') =>
+    fetch(`https://atennaplugin.maestro-n8n.site/admin/plans/${user_id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
+      body: JSON.stringify({ status, notes, confirmed: true }),
+    }).then(r => r.json()),
 };
 
 export interface AdminOverview {
@@ -67,7 +92,58 @@ export interface AdminOverview {
   dlp_protected_total: number;
   errors_5xx_today: number;
   cost_estimate_usd: number;
+  cost_estimate_brl: number;
+  usd_brl_rate: number;
+  cf_requests_today: number;
   status: { backend: string; supabase: string; openai: string; gemini: string };
+}
+
+export interface UsageRow {
+  user_id: string;
+  email: string;
+  plan: string;
+  role: string;
+  last_sign_in: string | null;
+  scans_total: number;
+  protected: number;
+  tokens_dlp: number;
+  tokens_cf: number;
+  cost_usd: number;
+  cost_brl: number;
+}
+
+export interface UsageResponse {
+  data: UsageRow[];
+  total_users: number;
+  total_cost_usd: number;
+  total_cost_brl: number;
+  total_tokens: number;
+  usd_brl_rate: number;
+}
+
+export interface PlanUserRow {
+  user_id: string;
+  email: string;
+  plan_type: string;
+  billing_period: string;
+  status: string;
+  notes: string;
+  updated_at: string | null;
+  price_brl: number;
+  features: string[];
+  quota_daily: number;
+}
+
+export interface PlanConfig {
+  price_brl_monthly: number;
+  price_brl_annual: number;
+  quota_daily: number;
+  features: string[];
+}
+
+export interface PlansConfigResponse {
+  plans: Record<string, PlanConfig>;
+  usd_brl_rate: number;
 }
 
 export interface AdminUser {
@@ -142,8 +218,28 @@ export interface AuditEvent {
 
 export interface AuditResponse { data: AuditEvent[]; total: number; }
 
+export interface CfProviderStats {
+  tokens_in: number;
+  tokens_out: number;
+  cost_usd: number;
+  model: string;
+}
+
+export interface CfMetrics {
+  error?: string;
+  totals?: {
+    requests_cached: number;
+    requests_errored: number;
+    tokens_in: number;
+    tokens_out: number;
+    cost_usd: number;
+  };
+  by_provider?: Record<string, CfProviderStats>;
+}
+
 export interface CostSummary {
   tokens_estimated_total: number;
   cost_breakdown: { gemini_usd: number; openai_usd: number };
+  cloudflare: CfMetrics | null;
   note: string;
 }

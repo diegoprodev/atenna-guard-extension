@@ -1,12 +1,47 @@
 # Atenna Guard Extension — Roadmap 2026
 
-**Current Status:** FASE Consolidação (TASK 1-6 In Progress)  
-**Last Updated:** 2026-05-13  
-**Next Milestone:** v2.24.0 (FASE 5 — Document Upload)
+**Current Status:** v2.35.0 — Super Admin + Upload→Chat Inject deployados  
+**Last Updated:** 2026-05-15  
+**Next Milestone:** v2.36.0 — Document Upload UI (habilitar feature flag) + Checkout Asaas Pro
 
 ---
 
 ## RELEASED VERSIONS
+
+### ✅ v2.35.0 — Upload→Chat Inject + BRL Dinâmico (2026-05-15)
+- Botões "Copiar" e "Aplicar no chat" após DLP scan de documento
+- Taxa USD/BRL ao vivo via frankfurter.app (fallback R$ 5,06)
+- BRL formatado com 2 casas decimais em todo o admin panel
+- **Status:** ✅ DEPLOYED
+
+---
+
+### ✅ v2.34.0 — FASE 5.0: Super Admin Control Plane (2026-05-15)
+- Painel admin completo: Overview (KPIs reais + charts), Usuários (CRUD), DLP, Custos, Sistema, Flags, Erros, Auditoria
+- Páginas novas: Custo por Usuário, Planos Pro (free/pro/enterprise + MRR)
+- Dados reais: auth.users API, CF Gateway logs, user_dlp_stats, dlp_events
+- Política de senha super_admin (12+ chars, maiúscula, especial)
+- **Status:** ✅ DEPLOYED
+
+---
+
+### ✅ v2.33.0 — DLP Qualidade e UX (2026-05-14)
+- Fix paste detection ChatGPT, labels de prompts corrigidos, counter dinâmico
+- **Status:** ✅ DEPLOYED
+
+---
+
+### ✅ v2.32.0 — Correções Críticas de Produção (2026-05-14)
+- host_permissions, telemetry.server_revalidated, iframe guard, ícone engrenagem SVG
+- **Status:** ✅ DEPLOYED
+
+---
+
+### ✅ v2.31.0 — Cloudflare AI Gateway (2026-05-14)
+- OpenAI + Gemini roteados via CF Gateway; custo, cache, logs centralizados
+- **Status:** ✅ DEPLOYED
+
+---
 
 ### ✅ v2.29.0 — FASE 4.2C (Stress Harness + Observabilidade)
 **Released:** 2026-05-13
@@ -140,20 +175,15 @@
 
 ## IN PROGRESS
 
-### 🔄 FASE: Consolidação Operacional Canônica
+### 🔄 v2.36.0 — FASE 5 Document Upload UI + Asaas Checkout
 
-**Objective:** Ensure documented spec matches actual runtime state
+**Milestones:**
+- ⏳ Habilitar `DOCUMENT_UPLOAD_ENABLED=true` no `.env` da VPS
+- ⏳ UI de upload integrada ao fluxo principal (não apenas settings)
+- ⏳ Checkout Asaas para planos Pro (mensal/anual)
+- ⏳ Webhook Asaas → Supabase user_plans (status sync)
 
-**Tasks:**
-- ✅ **TASK 1:** Fix pt_core_news_sm installation on VPS
-- ✅ **TASK 2:** Validate STRICT_DLP_MODE behavior
-- ✅ **TASK 3:** Clean ghost/dead code
-- ✅ **TASK 4:** Create canonical system state docs
-- 🔄 **TASK 5:** Validate end-to-end flows (Planning complete, manual execution pending)
-- 🔄 **TASK 6:** Update documentation to match reality (In progress)
-- ⏳ **TASK 7:** Generate final consolidated audit report (Pending)
-
-**Expected Completion:** 2026-05-15
+**Expected Completion:** 2026-05-25
 
 ---
 

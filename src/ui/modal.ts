@@ -609,15 +609,13 @@ function renderSettingsPage(
             'csv': 5 * 1024 * 1024,
             'json': 1024 * 1024,
           },
-          onReady: (content: string, preview: string, riskLevel: string, rewritten?: string) => {
-            // Document is ready to send to provider
+          onReady: (content: string, _preview: string, riskLevel: string, rewritten?: string) => {
             void trackEvent('document_ready_to_send', {
               content_length: content.length,
               risk_level: riskLevel,
               was_rewritten: !!rewritten,
             });
-            // TODO: Open chat with document context
-            console.log('[FASE 4.1] Document ready:', { preview, riskLevel, contentLength: content.length });
+            renderDocumentActionBar(docSection, content);
           },
           onError: (error: string) => {
             void trackEvent('document_upload_error', { error });
@@ -2234,4 +2232,107 @@ function showToast(message: string): void {
   toast.textContent = message;
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 1900);
+}
+
+function renderDocumentActionBar(container: HTMLElement, content: string): void {
+  // Remove any previous action bar
+  container.querySelector('.atenna-doc-action-bar')?.remove();
+
+  const bar = document.createElement('div');
+  bar.className = 'atenna-doc-action-bar';
+
+  // ── Copiar ────────────────────────────────────────────
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'atenna-doc-action-btn';
+  copyBtn.title = 'Copiar conteúdo sanitizado';
+  copyBtn.innerHTML = `
+    <svg class="atenna-doc-action-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <rect x="9" y="9" width="13" height="13" rx="2"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    </svg>
+    <span>Copiar</span>
+  `;
+  const copyTooltip = document.createElement('span');
+  copyTooltip.className = 'atenna-doc-action-btn__tooltip';
+  copyTooltip.textContent = 'Copiado!';
+  copyBtn.appendChild(copyTooltip);
+
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+    } catch {
+      fallbackCopy(content);
+    }
+    // Switch to checkmark
+    copyBtn.innerHTML = `
+      <svg class="atenna-doc-action-btn__icon atenna-doc-action-btn__icon--success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      <span>Copiar</span>
+    `;
+    copyBtn.appendChild(copyTooltip);
+    copyTooltip.classList.add('atenna-doc-action-btn__tooltip--visible');
+    copyBtn.classList.add('atenna-doc-action-btn--copied');
+    setTimeout(() => {
+      copyTooltip.classList.remove('atenna-doc-action-btn__tooltip--visible');
+      copyBtn.classList.remove('atenna-doc-action-btn--copied');
+      copyBtn.innerHTML = `
+        <svg class="atenna-doc-action-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="9" y="9" width="13" height="13" rx="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        <span>Copiar</span>
+      `;
+      copyBtn.appendChild(copyTooltip);
+    }, 2000);
+    void trackEvent('document_copied_to_clipboard', { char_count: content.length });
+  });
+
+  // ── Aplicar ───────────────────────────────────────────
+  const applyBtn = document.createElement('button');
+  applyBtn.className = 'atenna-doc-action-btn atenna-doc-action-btn--primary';
+  applyBtn.title = 'Inserir no chat ativo (ChatGPT, Claude, Gemini)';
+  applyBtn.innerHTML = `
+    <svg class="atenna-doc-action-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <line x1="22" y1="2" x2="11" y2="13"/>
+      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+    </svg>
+    <span>Aplicar no chat</span>
+  `;
+  applyBtn.addEventListener('click', () => {
+    try {
+      chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+        const tabId = tabs[0]?.id;
+        if (!tabId) { showToast('Nenhuma aba ativa encontrada.'); return; }
+        chrome.tabs.sendMessage(tabId, { type: 'INJECT_CONTENT_TO_CHAT', content }, () => {
+          if (chrome.runtime.lastError) {
+            showToast('Abra o ChatGPT, Claude ou Gemini antes de aplicar.');
+            return;
+          }
+          applyBtn.innerHTML = `
+            <svg class="atenna-doc-action-btn__icon atenna-doc-action-btn__icon--success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Aplicado!</span>
+          `;
+          applyBtn.disabled = true;
+          setTimeout(() => {
+            applyBtn.disabled = false;
+            applyBtn.innerHTML = `
+              <svg class="atenna-doc-action-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              <span>Aplicar no chat</span>
+            `;
+          }, 2500);
+        });
+      });
+    } catch { showToast('Erro ao injetar conteúdo.'); }
+    void trackEvent('document_applied_to_chat', { char_count: content.length });
+  });
+
+  bar.appendChild(copyBtn);
+  bar.appendChild(applyBtn);
+  container.appendChild(bar);
 }

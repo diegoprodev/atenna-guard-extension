@@ -52,14 +52,7 @@ export function Login({ onLogin }: Props) {
     <div className="admin-login">
       <div className="admin-login__card">
         <div className="admin-login__logo">
-          <div style={{
-            width: 32, height: 32, background: '#09090b', borderRadius: 7,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-            </svg>
-          </div>
+          <img src="/nexussafe/logo.png" alt="Atenna" style={{ width: 32, height: 32, borderRadius: 7, objectFit: 'contain' }} />
           <span>Atenna Admin</span>
         </div>
 

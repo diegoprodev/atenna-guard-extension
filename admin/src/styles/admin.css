@@ -202,6 +202,23 @@ button { cursor: pointer; font: inherit; }
   margin-bottom: 28px;
 }
 
+.admin-kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+}
+.admin-kpi-card__label {
+  font-size: 11px; color: var(--text-2); font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;
+}
+.admin-kpi-card__value {
+  font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.admin-kpi-card__sub { font-size: 11px; color: var(--text-3); margin-top: 3px; }
+
 .admin-metric-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -450,6 +467,27 @@ button { cursor: pointer; font: inherit; }
   gap: 10px;
   justify-content: flex-end;
 }
+
+.admin-modal__header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.admin-modal__header h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+.admin-modal__footer {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.admin-modal { max-width: 480px; }
 
 /* ── Status system strip ─────────────────────────────────────── */
 .admin-status-strip {

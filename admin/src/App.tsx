@@ -8,6 +8,8 @@ import { DLP } from './pages/DLP';
 import { Costs } from './pages/Costs';
 import { Errors } from './pages/Errors';
 import { Audit } from './pages/Audit';
+import { UsageCosts } from './pages/UsageCosts';
+import { Plans } from './pages/Plans';
 import { Login } from './pages/Login';
 
 const TOKEN_KEY = 'atenna_admin_token';
@@ -47,6 +49,8 @@ export default function App() {
     flags:    <FeatureFlags token={token} />,
     errors:   <Errors token={token} />,
     audit:    <Audit token={token} />,
+    usage:    <UsageCosts token={token} />,
+    plans:    <Plans token={token} />,
   };
 
   return (

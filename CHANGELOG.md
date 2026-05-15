@@ -4,6 +4,57 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.35.0] — 2026-05-15 (Upload → Chat Inject + BRL Dinâmico)
+
+### Features
+
+#### Upload: botões "Copiar" e "Aplicar no chat" após scan DLP
+- Após DLP scan de documento, dois botões aparecem na action bar:
+  - **Copiar** — ícone clipboard; ao clicar muda para ✓ verde + tooltip "Copiado!" por 2s; usa `navigator.clipboard` com fallback `execCommand`
+  - **Aplicar no chat** — envia o conteúdo sanitizado para o input do chat ativo (ChatGPT, Claude, Gemini) via message passing (`INJECT_CONTENT_TO_CHAT`)
+- Elimina o double-upload: user não precisa fazer upload na Atenna E depois na plataforma de IA
+- `src/content/content.ts` — handler `INJECT_CONTENT_TO_CHAT` com suporte a `#prompt-textarea` (ChatGPT), `div[contenteditable]` (Claude/Gemini)
+- `src/ui/modal.ts` — `renderDocumentActionBar()` com estado visual de confirmação nos dois botões
+
+#### Admin: taxa USD/BRL dinâmica via frankfurter.app
+- Backend busca cotação ao vivo de `api.frankfurter.app/latest?from=USD&to=BRL` a cada request
+- Fallback para R$ 5,06 se API indisponível
+- `utils/fx_rate.py` — utilitário compartilhado, usado em overview, usage e plans
+- BRL formatado com 2 casas decimais (padrão brasileiro); valores < R$ 0,01 exibem `< R$ 0,01`
+
+### Admin Panel (FASE 5.0 continuação)
+
+#### Páginas novas deployadas
+- **Custo por Usuário** (`/usage`) — grid por conta com tokens, custo USD/BRL, barra de distribuição
+- **Planos Pro** (`/plans`) — tier cards (free/pro/enterprise), MRR em BRL+USD, tabela de assinantes com filtros, modal de atribuição
+
+#### Correções Overview
+- `cost_estimate_brl` e `usd_brl_rate` agora retornados pelo backend (não calculados no frontend)
+- Labels de custo com 6 casas decimais em USD (ex: `$0.001095`) e 2 casas em BRL (`R$ 0,01`)
+
+---
+
+## [2.34.0] — 2026-05-15 (FASE 5.0 — Super Admin Control Plane)
+
+### Features
+
+#### Painel Super Admin completo
+- Login dedicado com política de senha (mín. 12 chars, maiúscula, especial, dígito)
+- **Visão Geral** — 8 KPIs reais (usuários, DLP, CF requests, custo BRL/USD), gráfico de atividade e distribuição DLP via Recharts
+- **Usuários** — CRUD completo: criar, enviar link de reset, editar email/plano/role, deletar (com guard anti-self-delete)
+- **DLP / Custos / Sistema / Feature Flags / Erros / Auditoria** — todos com dados reais
+- Logo Atenna no login e sidebar
+- Toggle dark/light mode
+
+#### Backend FASE 5.0
+- `routes/admin/overview.py` — dados reais: auth.users API, user_dlp_stats, dlp_events, CF Gateway logs, admin_error_events
+- `routes/admin/users.py` — POST/PUT/DELETE + send-link + auditoria em `admin_audit_events`
+- `routes/admin/usage.py` — custo por usuário agregando DLP stats + CF logs
+- `routes/admin/plans.py` — CRUD de planos (free/pro/enterprise), billing_period, status, MRR
+- `utils/password_policy.py` — validação de senha com 5 regras
+
+---
+
 ## [2.33.0] — 2026-05-14 (DLP, Qualidade de Prompts e UX)
 
 ### Bug Fixes

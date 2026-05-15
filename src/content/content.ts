@@ -63,12 +63,38 @@ async function init(): Promise<void> {
 
 // Listen for messages from popup
 try {
-  chrome.runtime.onMessage.addListener((msg: { type?: string }) => {
+  chrome.runtime.onMessage.addListener((msg: { type?: string; content?: string }) => {
     if (msg?.type === 'OPEN_SETTINGS') {
       void openSettingsOverlay();
     }
+    if (msg?.type === 'INJECT_CONTENT_TO_CHAT' && msg.content) {
+      injectContentIntoChat(msg.content);
+    }
   });
 } catch { /* non-extension env */ }
+
+function injectContentIntoChat(content: string): void {
+  // ChatGPT: native textarea
+  const chatgptInput = document.querySelector('#prompt-textarea') as HTMLTextAreaElement | null;
+  if (chatgptInput) {
+    const nativeSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+    nativeSetter?.call(chatgptInput, content);
+    chatgptInput.dispatchEvent(new Event('input', { bubbles: true }));
+    chatgptInput.focus();
+    return;
+  }
+  // Claude / Gemini: contenteditable div
+  const ceInput = document.querySelector(
+    'div[contenteditable="true"][data-placeholder], .ql-editor, div[contenteditable="true"]'
+  ) as HTMLElement | null;
+  if (ceInput) {
+    ceInput.focus();
+    // Use execCommand so React/ProseMirror state stays in sync
+    document.execCommand('selectAll', false);
+    document.execCommand('insertText', false, content);
+    ceInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
 
 // Only run in the top-level frame — iframes don't have storage access
 // and don't contain the main chat input

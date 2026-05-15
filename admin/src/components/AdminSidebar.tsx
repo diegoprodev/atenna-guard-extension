@@ -74,11 +74,18 @@ const SECTIONS: Array<{ title: string; items: NavItem[] }> = [
     ],
   },
   {
+    title: 'Financeiro',
+    items: [
+      { id: 'usage',  label: 'Custo por Usuário', icon: <IconDollar /> },
+      { id: 'plans',  label: 'Planos Pro',         icon: <IconFlag /> },
+    ],
+  },
+  {
     title: 'Controle',
     items: [
-      { id: 'flags', label: 'Feature Flags', icon: <IconFlag /> },
-      { id: 'errors', label: 'Erros', icon: <IconAlert /> },
-      { id: 'audit', label: 'Auditoria', icon: <IconLog /> },
+      { id: 'flags',  label: 'Feature Flags', icon: <IconFlag /> },
+      { id: 'errors', label: 'Erros',         icon: <IconAlert /> },
+      { id: 'audit',  label: 'Auditoria',     icon: <IconLog /> },
     ],
   },
 ];
@@ -87,11 +94,7 @@ export function AdminSidebar({ page, onNavigate }: Props) {
   return (
     <nav className="admin-sidebar">
       <div className="admin-sidebar__logo">
-        <div className="admin-sidebar__logo-mark">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-          </svg>
-        </div>
+        <img src="/nexussafe/logo.png" alt="Atenna" className="admin-sidebar__logo-mark" style={{ borderRadius: 6, objectFit: 'contain' }} />
         <div>
           <div className="admin-sidebar__logo-text">Atenna</div>
           <div className="admin-sidebar__logo-sub">Admin</div>
