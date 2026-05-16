@@ -13,6 +13,8 @@ import { getDlpStats, syncDlpStats } from '../core/dlpStats';
 import { renderPrivacyDataSection } from './privacy-data';
 import { UploadWidget } from './upload-widget';
 import { getFlag } from '../core/featureFlags';
+import { getBadgeColor, saveBadgeColor, applyBadgeColorToDom } from '../core/userSettings';
+import type { BadgeColor } from '../core/userSettings';
 
 const OVERLAY_ID  = 'atenna-modal-overlay';
 const SUCCESS_MS  = 500;
@@ -649,17 +651,7 @@ function renderSettingsPage(
         const colorPicker = document.createElement('div');
         colorPicker.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;';
 
-        let getBadgeColor: ((jwt?: string) => Promise<import('../core/userSettings').BadgeColor>) | undefined;
-        let saveBadgeColor: ((color: import('../core/userSettings').BadgeColor, jwt?: string, userId?: string) => Promise<void>) | undefined;
-        let applyBadgeColorToDom: ((color: import('../core/userSettings').BadgeColor) => void) | undefined;
-        try {
-          const mod = await import('../core/userSettings');
-          getBadgeColor = mod.getBadgeColor;
-          saveBadgeColor = mod.saveBadgeColor;
-          applyBadgeColorToDom = mod.applyBadgeColorToDom;
-        } catch { /* module unavailable */ }
-
-        type BC = import('../core/userSettings').BadgeColor;
+        type BC = BadgeColor;
 
         const COLORS: { id: BC; label: string; bg: string }[] = [
           { id: 'transparent', label: 'Transparente', bg: 'linear-gradient(135deg,rgba(255,255,255,.35),rgba(255,255,255,.08))' },
@@ -671,7 +663,7 @@ function renderSettingsPage(
         ];
 
         // Load current color from Supabase (or local fallback)
-        let currentColor: BC = getBadgeColor ? await getBadgeColor(session.access_token) : 'transparent';
+        let currentColor: BC = await getBadgeColor(session.access_token);
 
         // Extract userId for Supabase writes
         let settingsUserId: string | undefined;
@@ -707,8 +699,8 @@ function renderSettingsPage(
             colorPicker.querySelectorAll<HTMLButtonElement>('[data-color]').forEach(s => markInactive(s));
             markActive(sw);
             currentColor = id;
-            if (saveBadgeColor) void saveBadgeColor(id, session.access_token, settingsUserId);
-            if (applyBadgeColorToDom) applyBadgeColorToDom(id);
+            void saveBadgeColor(id, session.access_token, settingsUserId);
+            applyBadgeColorToDom(id);
           });
 
           colorPicker.appendChild(sw);
