@@ -1,5 +1,5 @@
 import { getCurrentInput, getInputText, setInputText } from '../core/inputHandler';
-import { getUsage, incrementUsage, isAtLimit, isAtAnyLimit, DAILY_LIMIT, getTotalCount, incrementTotalCount, getMonthlyUsage, MONTHLY_LIMIT, incrementMonthlyUsage } from '../core/usageCounter';
+import { getUsage, incrementUsage, isAtLimit, isAtAnyLimit, DAILY_LIMIT, getTotalCount, incrementTotalCount, getMonthlyUsage, MONTHLY_LIMIT, incrementMonthlyUsage, syncUsageFromSupabase } from '../core/usageCounter';
 import { isPro, syncPlanFromSupabase } from '../core/planManager';
 import { getActiveSession, signInWithPassword, signUpWithPassword, resetPassword } from '../core/auth';
 import { track, trackEvent } from '../core/analytics';
@@ -448,23 +448,37 @@ function renderSettingsPage(
   // ── Load all data async ──────────────────────────────────
   void (async () => {
     try {
-      const [usage, monthly, total, dlpLocal] = await Promise.all([
+      const [usageLocal, monthlyLocal, totalLocal, dlpLocal] = await Promise.all([
         getUsage(),
         getMonthlyUsage(),
         getTotalCount(),
         getDlpStats(),
       ]);
 
-      // Attempt Supabase sync (non-blocking)
+      // Supabase 2-way sync — usage + DLP
       let dlp = dlpLocal;
+      let usage = usageLocal;
+      let monthly = monthlyLocal;
+      let total = totalLocal;
+
       if (session.access_token) {
         try {
-          // Extract user_id from JWT
           const { decodeJwtPayload } = await import('../core/auth');
           const payload = decodeJwtPayload(session.access_token);
           const userId = payload['sub'] as string | undefined;
-          if (userId) dlp = await syncDlpStats(session.access_token, userId);
-        } catch { /* offline */ }
+
+          const [syncedUsage, syncedDlp] = await Promise.all([
+            syncUsageFromSupabase(session.access_token),
+            userId ? syncDlpStats(session.access_token, userId) : Promise.resolve(dlpLocal),
+          ]);
+
+          if (syncedUsage) {
+            usage   = { ...usage,   count: syncedUsage.todayCount };
+            monthly = syncedUsage.monthlyCount;
+            total   = syncedUsage.totalCount;
+          }
+          dlp = syncedDlp;
+        } catch { /* offline — use local values */ }
       }
 
       const taxaProtecao = dlp.scansTotal > 0
