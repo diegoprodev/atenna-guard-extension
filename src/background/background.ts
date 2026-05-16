@@ -1,5 +1,6 @@
-const BACKEND_URL   = 'https://atennaplugin.maestro-n8n.site/generate-prompts';
-const ANALYTICS_URL = 'https://atennaplugin.maestro-n8n.site/track';
+const BACKEND_URL    = 'https://atennaplugin.maestro-n8n.site/generate-prompts';
+const CHECKOUT_URL   = 'https://atennaplugin.maestro-n8n.site/checkout/create';
+const ANALYTICS_URL  = 'https://atennaplugin.maestro-n8n.site/track';
 const JWT_KEY       = 'atenna_jwt';
 
 function decodeJwtPayload(token: string): Record<string, unknown> {
@@ -94,6 +95,22 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       });
 
     return true; // keep channel open
+  }
+
+  // ── Checkout session creation ─────────────────────────────
+  if (msg.type === 'ATENNA_CHECKOUT') {
+    getStoredJWT().then(jwt => {
+      if (!jwt) { sendResponse({ ok: false, error: 'auth_required' }); return; }
+      return fetch(CHECKOUT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwt}` },
+      })
+        .then(res => {
+          if (!res.ok) { sendResponse({ ok: false, status: res.status }); return; }
+          return res.json().then(data => sendResponse({ ok: true, url: data.url }));
+        });
+    }).catch(err => sendResponse({ ok: false, error: String(err) }));
+    return true;
   }
 
   // ── Analytics (fire-and-forget, no response needed) ──────

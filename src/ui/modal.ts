@@ -299,11 +299,10 @@ function renderUpgradeModal(onClose: () => void): HTMLElement {
 
   const cta = document.createElement('button');
   cta.className = 'atenna-upgrade-modal__cta';
-  cta.textContent = 'Quero o Atenna Pro →';
+  cta.textContent = 'Assinar Atenna Pro — R$197';
+  cta.dataset.label = 'Assinar Atenna Pro — R$197';
   cta.addEventListener('click', () => {
-    void trackEvent('upgrade_interest_registered');
-    showToast('Interesse registrado! Entraremos em contato.');
-    onClose();
+    void openCheckout('upgrade_modal', cta);
   });
 
   const dismiss = document.createElement('button');
@@ -596,11 +595,10 @@ function renderSettingsPage(
         const upgradeBtn = document.createElement('button');
         upgradeBtn.className = 'atenna-settings__upgrade-cta';
         upgradeBtn.style.cssText = 'display:block;width:calc(100% - 28px);margin:4px 14px 10px;padding:9px 14px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;text-align:center;';
-        upgradeBtn.textContent = '★ Upgrade para Pro — acesso ilimitado';
+        upgradeBtn.textContent = 'Assinar Atenna Pro — R$197';
+        upgradeBtn.dataset.label = 'Assinar Atenna Pro — R$197';
         upgradeBtn.addEventListener('click', () => {
-          void trackEvent('upgrade_modal_shown');
-          const up = renderUpgradeModal(() => up.remove());
-          document.body.appendChild(up);
+          void openCheckout('settings_panel', upgradeBtn);
         });
         usageSection.appendChild(upgradeBtn);
       }
@@ -1544,10 +1542,10 @@ function renderLimitReached(container: HTMLElement): void {
 
   const btn = document.createElement('button');
   btn.className = 'atenna-modal__limit-btn';
-  btn.textContent = 'Conhecer Pro';
+  btn.textContent = 'Assinar Pro — R$197';
+  btn.dataset.label = 'Assinar Pro — R$197';
   btn.addEventListener('click', () => {
-    void trackEvent('upgrade_from_limit');
-    showToast('Em breve! 🚀');
+    void openCheckout('limit_screen', btn);
   });
 
   wrap.appendChild(msg);
@@ -2172,10 +2170,10 @@ function renderUpgradeTrigger(): HTMLElement {
 
   const btn = document.createElement('button');
   btn.className = 'atenna-modal__upgrade-trigger-btn';
-  btn.textContent = 'Ver Pro';
+  btn.textContent = 'Assinar Pro — R$197';
+  btn.dataset.label = 'Assinar Pro — R$197';
   btn.addEventListener('click', () => {
-    void trackEvent('upgrade_from_trigger');
-    showToast('Em breve! 🚀');
+    void openCheckout('usage_trigger', btn);
   });
 
   card.appendChild(msg);
@@ -2418,6 +2416,31 @@ function fallbackCopy(text: string): void {
   ta.select();
   document.execCommand('copy');
   ta.remove();
+}
+
+async function openCheckout(source: string, btn?: HTMLButtonElement): Promise<void> {
+  if (btn) { btn.disabled = true; btn.textContent = 'Abrindo...'; }
+  void trackEvent('checkout_started', { source } as Parameters<typeof trackEvent>[1]);
+  try {
+    const url = await new Promise<string | null>((resolve) => {
+      try {
+        chrome.runtime.sendMessage({ type: 'ATENNA_CHECKOUT' }, (res: { ok: boolean; url?: string } | null) => {
+          if (chrome.runtime.lastError || !res?.ok) { resolve(null); return; }
+          resolve(res.url ?? null);
+        });
+      } catch { resolve(null); }
+    });
+    if (url) {
+      window.open(url, '_blank', 'noopener');
+      void trackEvent('checkout_url_opened', { source } as Parameters<typeof trackEvent>[1]);
+    } else {
+      showToast('Erro ao abrir checkout. Tente novamente.');
+    }
+  } catch {
+    showToast('Erro inesperado. Tente novamente.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label ?? 'Assinar Pro'; }
+  }
 }
 
 function showToast(message: string): void {
