@@ -580,17 +580,26 @@ function renderSettingsPage(
       // ── Badge color picker ────────────────────────────
       {
         const colorRow = document.createElement('div');
-        colorRow.className = 'atenna-settings__color-row';
+        colorRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 14px;gap:12px;box-sizing:border-box;';
 
         const colorLabel = document.createElement('span');
-        colorLabel.className = 'atenna-settings__color-label';
+        colorLabel.style.cssText = 'font-size:13px;color:var(--at-text,#e8e8e8);font-weight:500;white-space:nowrap;opacity:0.85;font-family:inherit;';
         colorLabel.textContent = 'Cor do badge';
         colorRow.appendChild(colorLabel);
 
         const colorPicker = document.createElement('div');
-        colorPicker.className = 'atenna-settings__color-picker';
+        colorPicker.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;';
 
-        const { getBadgeColor, saveBadgeColor, applyBadgeColorToDom } = await import('../core/userSettings');
+        let getBadgeColor: ((jwt?: string) => Promise<import('../core/userSettings').BadgeColor>) | undefined;
+        let saveBadgeColor: ((color: import('../core/userSettings').BadgeColor, jwt?: string, userId?: string) => Promise<void>) | undefined;
+        let applyBadgeColorToDom: ((color: import('../core/userSettings').BadgeColor) => void) | undefined;
+        try {
+          const mod = await import('../core/userSettings');
+          getBadgeColor = mod.getBadgeColor;
+          saveBadgeColor = mod.saveBadgeColor;
+          applyBadgeColorToDom = mod.applyBadgeColorToDom;
+        } catch { /* module unavailable */ }
+
         type BC = import('../core/userSettings').BadgeColor;
 
         const COLORS: { id: BC; label: string; bg: string }[] = [
@@ -603,7 +612,7 @@ function renderSettingsPage(
         ];
 
         // Load current color from Supabase (or local fallback)
-        let currentColor: BC = await getBadgeColor(session.access_token);
+        let currentColor: BC = getBadgeColor ? await getBadgeColor(session.access_token) : 'transparent';
 
         // Extract userId for Supabase writes
         let settingsUserId: string | undefined;
@@ -639,8 +648,8 @@ function renderSettingsPage(
             colorPicker.querySelectorAll<HTMLButtonElement>('[data-color]').forEach(s => markInactive(s));
             markActive(sw);
             currentColor = id;
-            void saveBadgeColor(id, session.access_token, settingsUserId);
-            applyBadgeColorToDom(id);
+            if (saveBadgeColor) void saveBadgeColor(id, session.access_token, settingsUserId);
+            if (applyBadgeColorToDom) applyBadgeColorToDom(id);
           });
 
           colorPicker.appendChild(sw);

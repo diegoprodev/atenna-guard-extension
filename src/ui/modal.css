@@ -2525,11 +2525,14 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128,128,128,0.45) transparent;
 }
 
-.atenna-settings__body::-webkit-scrollbar { width: 4px; }
-.atenna-settings__body::-webkit-scrollbar-track { background: transparent; }
-.atenna-settings__body::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.2); border-radius: 2px; }
+.atenna-settings__body::-webkit-scrollbar { width: 6px; }
+.atenna-settings__body::-webkit-scrollbar-track { background: rgba(128,128,128,0.06); border-radius: 3px; }
+.atenna-settings__body::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.45); border-radius: 3px; }
+.atenna-settings__body::-webkit-scrollbar-thumb:hover { background: rgba(128,128,128,0.65); }
 
 /* Section title */
 .atenna-settings__section-title {

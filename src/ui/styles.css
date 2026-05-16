@@ -157,8 +157,8 @@
     opacity   350ms ease;
 }
 
-/* Pulse ring — adapts to color token */
-.atenna-btn__icon-wrap::before {
+/* Pulse ring — centered on btn, not icon-wrap, to avoid offset with borders */
+.atenna-btn::before {
   content: '';
   position: absolute;
   inset: -3px;
@@ -169,7 +169,7 @@
   transition: opacity 300ms ease;
 }
 
-.atenna-btn:hover .atenna-btn__icon-wrap::before {
+.atenna-btn:hover::before {
   opacity: 0;
   animation: none;
 }
