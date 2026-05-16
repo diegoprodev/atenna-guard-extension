@@ -161,17 +161,17 @@ export async function syncUsageFromSupabase(jwt: string): Promise<UsageSyncResul
 
     // Fetch all prompt_generate_success events for this user
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/analytics_events?event_name=eq.prompt_generate_success&select=timestamp`,
+      `${SUPABASE_URL}/rest/v1/analytics_events?event_name=eq.prompt_generate_success&select=created_at`,
       { headers },
     );
     if (!res.ok) return null;
 
-    const rows = await res.json() as Array<{ timestamp: number }>;
+    const rows = await res.json() as Array<{ created_at: string }>;
     if (!Array.isArray(rows)) return null;
 
     const totalCount   = rows.length;
-    const monthlyCount = rows.filter(r => r.timestamp >= monthMs).length;
-    const todayCount   = rows.filter(r => r.timestamp >= todayMs).length;
+    const monthlyCount = rows.filter(r => new Date(r.created_at).getTime() >= monthMs).length;
+    const todayCount   = rows.filter(r => new Date(r.created_at).getTime() >= todayMs).length;
 
     // Merge with local (take higher value — offline-first, no data loss)
     const [localUsage, localMonthly, localTotal] = await Promise.all([

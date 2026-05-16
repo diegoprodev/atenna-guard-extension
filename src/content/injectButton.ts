@@ -396,7 +396,10 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
     }
   });
 
-  // Load persisted badge color: Supabase (with JWT) → local → default transparent
+  // Set default immediately to avoid green→transparent flash
+  btn.setAttribute('data-badge-color', 'transparent');
+
+  // Then load persisted color from Supabase/local and update
   void (async () => {
     try {
       const { getActiveSession } = await import('../core/auth');

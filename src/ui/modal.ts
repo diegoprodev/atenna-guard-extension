@@ -323,15 +323,18 @@ function renderUpgradeModal(onClose: () => void): HTMLElement {
 
 // ─── Settings Dashboard Page ──────────────────────────────────
 
-const S_ROW  = 'display:flex;align-items:center;gap:8px;padding:9px 14px;flex-wrap:wrap;min-height:38px;box-sizing:border-box;border-bottom:1px solid rgba(128,128,128,0.10);';
-const S_LABEL = 'flex:1;font-size:13px;color:var(--at-text,#e8e8e8);opacity:0.78;line-height:1.4;font-family:inherit;';
-const S_VALUE = 'font-size:13px;font-weight:700;color:var(--at-text,#e8e8e8);font-variant-numeric:tabular-nums;font-family:inherit;';
-const S_SUB   = 'width:100%;font-size:10px;color:var(--at-text,#e8e8e8);opacity:0.40;margin-top:-3px;padding-bottom:2px;display:block;font-family:inherit;';
+const _textColor = isDark() ? '#e8e8e8' : '#1a1a1a';
+const S_ROW   = 'display:flex;align-items:center;gap:8px;padding:9px 14px;flex-wrap:wrap;min-height:38px;box-sizing:border-box;border-bottom:1px solid rgba(128,128,128,0.10);';
+const S_LABEL = `flex:1;font-size:13px;color:${_textColor};opacity:0.78;line-height:1.4;font-family:inherit;`;
+const S_VALUE = `font-size:13px;font-weight:700;color:${_textColor};font-variant-numeric:tabular-nums;font-family:inherit;`;
+const S_SUB   = `width:100%;font-size:10px;color:${_textColor};opacity:0.40;margin-top:-3px;padding-bottom:2px;display:block;font-family:inherit;`;
 
 function makeProgressBar(value: number, max: number, color = '#22c55e'): HTMLElement {
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'height:5px;background:rgba(128,128,128,0.15);border-radius:3px;overflow:hidden;margin:0 14px 10px;';
+  wrap.className = 'atenna-stat-bar-wrap';
+  wrap.style.cssText = 'height:5px;background:rgba(128,128,128,0.15);border-radius:3px;overflow:hidden;margin:0 14px 10px;display:block;';
   const fill = document.createElement('div');
+  fill.className = 'atenna-stat-bar-fill';
   fill.style.cssText = `height:100%;border-radius:3px;min-width:0;background:${color};width:0%;transition:width 700ms cubic-bezier(0.34,1.1,0.64,1);display:block;`;
   const pct = max > 0 ? Math.min(100, Math.round(value / max * 100)) : 0;
   wrap.appendChild(fill);
@@ -343,18 +346,22 @@ function makeProgressBar(value: number, max: number, color = '#22c55e'): HTMLEle
 
 function makeStatRow(label: string, value: string, sub?: string, tooltip?: string): HTMLElement {
   const row = document.createElement('div');
+  row.className = 'atenna-stat-row';
   row.style.cssText = S_ROW;
   if (tooltip) row.title = tooltip;
   const l = document.createElement('span');
+  l.className = 'atenna-stat-label';
   l.style.cssText = S_LABEL;
   l.textContent = label;
   const v = document.createElement('span');
+  v.className = 'atenna-stat-value';
   v.style.cssText = S_VALUE;
   v.textContent = value;
   row.appendChild(l);
   row.appendChild(v);
   if (sub) {
     const s = document.createElement('span');
+    s.className = 'atenna-stat-sub';
     s.style.cssText = S_SUB;
     s.textContent = sub;
     row.appendChild(s);
@@ -379,6 +386,44 @@ function renderSettingsPage(
   const overlay = document.createElement('div');
   overlay.id = 'atenna-settings-overlay';
   overlay.className = 'atenna-modal-overlay';
+
+  // Force layout on stat rows — host page !important rules (ChatGPT/Claude/Gemini)
+  // can override inline styles. A <style> tag injected after page styles wins.
+  const _tc = isDark() ? '#e8e8e8' : '#1a1a1a';
+  const forceStyle = document.createElement('style');
+  forceStyle.textContent = `
+    #atenna-settings-overlay .atenna-stat-row {
+      display: flex !important; align-items: center !important; gap: 8px !important;
+      padding: 9px 14px !important; flex-wrap: wrap !important;
+      min-height: 38px !important; box-sizing: border-box !important;
+      border-bottom: 1px solid rgba(128,128,128,0.10) !important;
+      width: 100% !important; visibility: visible !important; opacity: 1 !important;
+    }
+    #atenna-settings-overlay .atenna-stat-label {
+      flex: 1 !important; font-size: 13px !important; line-height: 1.4 !important;
+      font-family: inherit !important; visibility: visible !important;
+      display: inline !important; color: ${_tc} !important; opacity: 0.78 !important;
+    }
+    #atenna-settings-overlay .atenna-stat-value {
+      font-size: 13px !important; font-weight: 700 !important;
+      font-variant-numeric: tabular-nums !important; font-family: inherit !important;
+      visibility: visible !important; display: inline !important; color: ${_tc} !important;
+    }
+    #atenna-settings-overlay .atenna-stat-sub {
+      width: 100% !important; font-size: 10px !important; display: block !important;
+      margin-top: -3px !important; padding-bottom: 2px !important;
+      visibility: visible !important; color: ${_tc} !important; opacity: 0.40 !important;
+    }
+    #atenna-settings-overlay .atenna-stat-bar-wrap {
+      height: 5px !important; border-radius: 3px !important; overflow: hidden !important;
+      margin: 0 14px 10px !important; display: block !important; width: auto !important;
+    }
+    #atenna-settings-overlay .atenna-stat-bar-fill {
+      height: 100% !important; border-radius: 3px !important; display: block !important;
+      min-width: 0 !important;
+    }
+  `;
+  overlay.appendChild(forceStyle);
 
   const box = document.createElement('div');
   box.className = dark ? 'atenna-modal atenna-modal--dark atenna-settings' : 'atenna-modal atenna-settings';
@@ -495,7 +540,7 @@ function renderSettingsPage(
       // ── Seção: Uso de Prompts ──────────────────────────
       body.appendChild(makeSectionTitle('📊 Uso de Prompts'));
 
-      const S_SECTION = 'background:var(--at-card-bg,#232323);border:1px solid rgba(255,255,255,0.09);border-radius:10px;overflow:hidden;display:block;box-sizing:border-box;';
+      const S_SECTION = `background:${dark ? '#2a2a2a' : '#f0f0f0'};border:1px solid rgba(128,128,128,0.15);border-radius:10px;overflow:hidden;display:block;box-sizing:border-box;`;
       const usageSection = document.createElement('div');
       usageSection.className = 'atenna-settings__section';
       usageSection.style.cssText = S_SECTION;
