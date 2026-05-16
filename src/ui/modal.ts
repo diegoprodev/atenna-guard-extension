@@ -567,6 +567,62 @@ function renderSettingsPage(
       const personalSection = document.createElement('div');
       personalSection.className = 'atenna-settings__section';
 
+      // ── Badge color picker ────────────────────────────
+      {
+        const colorRow = document.createElement('div');
+        colorRow.className = 'atenna-settings__color-row';
+
+        const colorLabel = document.createElement('span');
+        colorLabel.className = 'atenna-settings__color-label';
+        colorLabel.textContent = 'Cor do badge';
+        colorRow.appendChild(colorLabel);
+
+        const colorPicker = document.createElement('div');
+        colorPicker.className = 'atenna-settings__color-picker';
+
+        const COLORS: { id: import('../content/injectButton').BadgeColor; label: string; swatch: string }[] = [
+          { id: 'green',       label: 'Verde',        swatch: '#22c55e' },
+          { id: 'blue',        label: 'Azul',         swatch: '#3b82f6' },
+          { id: 'yellow',      label: 'Amarelo',      swatch: '#eab308' },
+          { id: 'red',         label: 'Vermelho',     swatch: '#ef4444' },
+          { id: 'white',       label: 'Branco',       swatch: '#ffffff' },
+          { id: 'transparent', label: 'Transparente', swatch: 'linear-gradient(135deg,rgba(255,255,255,.35) 0%,rgba(255,255,255,.08) 100%)' },
+        ];
+
+        let currentColor: import('../content/injectButton').BadgeColor = 'green';
+        const { loadBadgeColor, saveBadgeColor, applyBadgeColor } = await import('../content/injectButton');
+        await new Promise<void>(res => loadBadgeColor(c => { currentColor = c; res(); }));
+
+        COLORS.forEach(({ id, label, swatch }) => {
+          const swatch_el = document.createElement('button');
+          swatch_el.className = 'atenna-settings__color-swatch';
+          swatch_el.setAttribute('aria-label', label);
+          swatch_el.setAttribute('title', label);
+          swatch_el.setAttribute('data-color', id);
+          swatch_el.style.background = swatch;
+          if (id === 'transparent') {
+            swatch_el.style.border = '1.5px solid rgba(255,255,255,0.4)';
+            swatch_el.style.backdropFilter = 'blur(8px)';
+          }
+          if (id === currentColor) swatch_el.classList.add('active');
+
+          swatch_el.addEventListener('click', () => {
+            colorPicker.querySelectorAll('.atenna-settings__color-swatch').forEach(s => s.classList.remove('active'));
+            swatch_el.classList.add('active');
+            currentColor = id;
+            saveBadgeColor(id);
+            // Apply immediately to existing badge on the page behind settings
+            const badge = document.getElementById('atenna-guard-btn') as HTMLButtonElement | null;
+            if (badge) applyBadgeColor(badge, id);
+          });
+
+          colorPicker.appendChild(swatch_el);
+        });
+
+        colorRow.appendChild(colorPicker);
+        personalSection.appendChild(colorRow);
+      }
+
       const toggleRow = document.createElement('label');
       toggleRow.className = 'atenna-modal__account-toggle-row';
       toggleRow.style.padding = '8px 0';

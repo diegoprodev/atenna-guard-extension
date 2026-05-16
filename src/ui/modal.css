@@ -2936,3 +2936,71 @@
 .atenna-doc-action-btn__tooltip--visible {
   opacity: 1;
 }
+
+/* ── Badge Color Picker ─────────────────────────────────── */
+.atenna-settings__color-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 12px 14px !important;
+  gap: 12px !important;
+}
+
+.atenna-settings__color-label {
+  font-size: 13px !important;
+  color: var(--at-text) !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  opacity: 0.85 !important;
+}
+
+.atenna-settings__color-picker {
+  display: flex !important;
+  gap: 8px !important;
+  align-items: center !important;
+}
+
+/* Fitts's Law: swatches 28px — easy click target */
+.atenna-settings__color-swatch {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  border: 2px solid transparent !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  transition:
+    transform 150ms cubic-bezier(0.34,1.4,0.64,1),
+    box-shadow 150ms ease,
+    border-color 150ms ease !important;
+  position: relative !important;
+  outline: none !important;
+  flex-shrink: 0 !important;
+}
+
+/* Hick's Law: hover ring focuses attention without adding noise */
+.atenna-settings__color-swatch:hover {
+  transform: scale(1.18) !important;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.2) !important;
+}
+
+/* Active = selected: outer ring + scale */
+.atenna-settings__color-swatch.active {
+  transform: scale(1.10) !important;
+  box-shadow:
+    0 0 0 2px var(--at-card-bg),
+    0 0 0 4px var(--at-text) !important;
+}
+
+/* Transparent swatch visual */
+.atenna-settings__color-swatch[data-color="transparent"] {
+  background: linear-gradient(135deg, rgba(255,255,255,.35), rgba(255,255,255,.08)) !important;
+  border: 1.5px solid rgba(255,255,255,0.4) !important;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+/* White swatch needs border to be visible on light background */
+.atenna-settings__color-swatch[data-color="white"] {
+  border: 1.5px solid rgba(0,0,0,0.12) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12) !important;
+}

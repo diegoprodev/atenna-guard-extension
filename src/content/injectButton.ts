@@ -13,6 +13,26 @@ const INJECTED_ATTR      = 'data-atenna-injected';
 const BTN_ID             = 'atenna-guard-btn';
 const BTN_CLASS          = 'atenna-btn';
 const BADGE_RIGHT_OFFSET = 90;
+const BADGE_GAP          = 10; // px gap between badge bottom and input top
+
+export type BadgeColor = 'green' | 'blue' | 'yellow' | 'white' | 'red' | 'transparent';
+const BADGE_COLOR_KEY = 'atenna_badge_color';
+
+export function loadBadgeColor(cb: (color: BadgeColor) => void): void {
+  try {
+    chrome.storage.local.get(BADGE_COLOR_KEY, (res) => {
+      cb((res[BADGE_COLOR_KEY] as BadgeColor | undefined) ?? 'green');
+    });
+  } catch { cb('green'); }
+}
+
+export function saveBadgeColor(color: BadgeColor): void {
+  try { chrome.storage.local.set({ [BADGE_COLOR_KEY]: color }); } catch { /* */ }
+}
+
+export function applyBadgeColor(btn: HTMLButtonElement, color: BadgeColor): void {
+  btn.setAttribute('data-badge-color', color);
+}
 
 let currentCleanup: (() => void) | undefined;
 let rafId:          number | undefined;
@@ -194,10 +214,10 @@ function applyDefaultPosition(btn: HTMLButtonElement, input: HTMLElement): void 
   rafId = requestAnimationFrame(() => {
     const iRect = input.getBoundingClientRect();
     if (iRect.width === 0 || iRect.height === 0) return;
-    const btnSize = 34;
-    // Position at the top-right corner of the input, half-overlapping the border
-    btn.style.top   = `${iRect.top - btnSize / 2}px`;
-    btn.style.right = `${window.innerWidth - iRect.right - btnSize / 2}px`;
+    const btnH = btn.offsetHeight || 34;
+    // Position badge fully above the input with a gap — never overlapping the input
+    btn.style.top   = `${iRect.top - btnH - BADGE_GAP}px`;
+    btn.style.right = `${window.innerWidth - iRect.right}px`;
     btn.style.left  = 'auto';
   });
 }
@@ -392,6 +412,9 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
       uploadBtn.style.display = '';
     }
   });
+
+  // Load persisted badge color
+  loadBadgeColor((color) => applyBadgeColor(btn, color));
 
   addDragBehavior(btn, onToggle);
 

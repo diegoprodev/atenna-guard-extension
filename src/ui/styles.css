@@ -43,21 +43,51 @@
 
 /* ── Button badge — Retractable pill ─────────────────── */
 
+/* ═══════════════════════════════════════════════════════════
+   BADGE COLOR TOKENS  (data-badge-color attribute)
+   ─────────────────────────────────────────────────────────── */
+
+.atenna-btn                               { --_bg: #22c55e; --_bg-h: #16a34a; --_ring: rgba(34,197,94,.55); --_shadow: rgba(34,197,94,.45); --_icon-filter: brightness(0) invert(1); --_actions-color: #fff; }
+.atenna-btn[data-badge-color="green"]     { --_bg: #22c55e; --_bg-h: #16a34a; --_ring: rgba(34,197,94,.55); --_shadow: rgba(34,197,94,.45); --_icon-filter: brightness(0) invert(1); --_actions-color: #fff; }
+.atenna-btn[data-badge-color="blue"]      { --_bg: #3b82f6; --_bg-h: #2563eb; --_ring: rgba(59,130,246,.55); --_shadow: rgba(59,130,246,.45); --_icon-filter: brightness(0) invert(1); --_actions-color: #fff; }
+.atenna-btn[data-badge-color="yellow"]    { --_bg: #eab308; --_bg-h: #ca8a04; --_ring: rgba(234,179,8,.55); --_shadow: rgba(234,179,8,.45); --_icon-filter: brightness(0); --_actions-color: #1a1a1a; }
+.atenna-btn[data-badge-color="white"]     { --_bg: #ffffff; --_bg-h: #f0f0f0; --_ring: rgba(255,255,255,.6); --_shadow: rgba(0,0,0,.18); --_icon-filter: none; --_actions-color: #1a1a1a; }
+.atenna-btn[data-badge-color="red"]       { --_bg: #ef4444; --_bg-h: #dc2626; --_ring: rgba(239,68,68,.55); --_shadow: rgba(239,68,68,.45); --_icon-filter: brightness(0) invert(1); --_actions-color: #fff; }
+.atenna-btn[data-badge-color="transparent"] {
+  --_bg: rgba(255,255,255,0.10);
+  --_bg-h: rgba(255,255,255,0.18);
+  --_ring: rgba(255,255,255,0.25);
+  --_shadow: rgba(0,0,0,.12);
+  --_icon-filter: brightness(0) invert(1);
+  --_actions-color: #fff;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.22) !important;
+}
+/* transparent hover — slightly more opaque glass */
+.atenna-btn[data-badge-color="transparent"]:hover {
+  border: 1px solid rgba(255,255,255,0.35) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BADGE BASE
+   ─────────────────────────────────────────────────────────── */
+
 .atenna-btn {
   position: fixed;
-  /* top + right set dynamically by injectButton.ts */
+  /* top + right set dynamically by injectButton.ts — always ABOVE the input */
   border: none;
   cursor: pointer;
   z-index: 999999;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
-  width: 34px;
-  height: 34px;
-  border-radius: 17px;
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
   padding: 0;
-  background: #22c55e;
-  box-shadow: 0 2px 10px rgba(34, 197, 94, 0.45);
-  overflow: visible; /* dot and tooltip must protrude outside the circle */
+  background: var(--_bg, #22c55e);
+  box-shadow: 0 2px 10px var(--_shadow, rgba(34,197,94,.45));
+  overflow: visible;
 
   transition:
     width        500ms cubic-bezier(0.4, 0, 0.2, 1),
@@ -69,17 +99,17 @@
 }
 
 .atenna-btn:hover {
-  width: 134px;
+  width: 136px;
   border-radius: 14px;
-  background: #16a34a;
+  background: var(--_bg-h, #16a34a);
   box-shadow:
-    0 8px 28px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.15),
-    0 0 20px rgba(34, 197, 94, 0.35);
+    0 8px 28px rgba(0, 0, 0, 0.22),
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 0 20px var(--_shadow, rgba(34,197,94,.35));
 }
 
 .atenna-btn:focus-visible {
-  outline: 2px solid #22c55e;
+  outline: 2px solid var(--_bg, #22c55e);
   outline-offset: 2px;
 }
 
@@ -93,8 +123,8 @@
   position: absolute;
   right: 0;
   top: 0;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -102,16 +132,16 @@
   z-index: 1;
 }
 
-/* Coruja: zoom-out lento ao expandir, zoom-in spring ao recolher */
+/* Logo: zoom-out ao expandir, zoom-in spring ao recolher */
 .atenna-btn__icon {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   object-fit: contain;
   display: block;
   flex-shrink: 0;
   transform: scale(1);
   opacity: 1;
-  filter: brightness(0) invert(1); /* logo branca para contraste sobre fundo verde */
+  filter: var(--_icon-filter, brightness(0) invert(1));
   animation: atenna-icon-shine 3.5s ease-in-out infinite;
   transition:
     transform 550ms cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -122,19 +152,18 @@
   transform: scale(0);
   opacity: 0;
   animation: none;
-  /* zoom-out mais lento para dar pra ver */
   transition:
     transform 450ms cubic-bezier(0.4, 0, 1, 1),
     opacity   350ms ease;
 }
 
-/* Pulse ring — só no estado colapsado */
+/* Pulse ring — adapts to color token */
 .atenna-btn__icon-wrap::before {
   content: '';
   position: absolute;
   inset: -3px;
   border-radius: 50%;
-  border: 2px solid rgba(34, 197, 94, 0.55);
+  border: 2px solid var(--_ring, rgba(34,197,94,.55));
   animation: atenna-ring-pulse 2.8s ease-in-out infinite;
   pointer-events: none;
   transition: opacity 300ms ease;
@@ -258,7 +287,7 @@
     transform 240ms cubic-bezier(0.34, 1.2, 0.64, 1) 240ms;
 }
 
-/* Botão de ação individual */
+/* Botão de ação individual — cor herdada do token do badge */
 .atenna-btn__action {
   position: relative;
   width: 28px;
@@ -267,20 +296,21 @@
   align-items: center;
   justify-content: center;
   border: none;
-  background: rgba(255, 255, 255, 0.0);
+  background: transparent;
   border-radius: 7px;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--_actions-color, #fff);
+  opacity: 0.80;
   padding: 0;
   transition:
     background 130ms ease,
-    color      130ms ease,
+    opacity    130ms ease,
     transform  130ms ease;
 }
 
 .atenna-btn__action:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.18);
+  opacity: 1;
   transform: scale(1.1);
 }
 
