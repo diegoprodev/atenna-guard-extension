@@ -15,24 +15,7 @@ const BTN_CLASS          = 'atenna-btn';
 const BADGE_RIGHT_OFFSET = 90;
 const BADGE_GAP          = 10; // px gap between badge bottom and input top
 
-export type BadgeColor = 'green' | 'blue' | 'yellow' | 'white' | 'red' | 'transparent';
-const BADGE_COLOR_KEY = 'atenna_badge_color';
-
-export function loadBadgeColor(cb: (color: BadgeColor) => void): void {
-  try {
-    chrome.storage.local.get(BADGE_COLOR_KEY, (res) => {
-      cb((res[BADGE_COLOR_KEY] as BadgeColor | undefined) ?? 'green');
-    });
-  } catch { cb('green'); }
-}
-
-export function saveBadgeColor(color: BadgeColor): void {
-  try { chrome.storage.local.set({ [BADGE_COLOR_KEY]: color }); } catch { /* */ }
-}
-
-export function applyBadgeColor(btn: HTMLButtonElement, color: BadgeColor): void {
-  btn.setAttribute('data-badge-color', color);
-}
+import { getBadgeColor } from '../core/userSettings';
 
 let currentCleanup: (() => void) | undefined;
 let rafId:          number | undefined;
@@ -413,8 +396,18 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
     }
   });
 
-  // Load persisted badge color
-  loadBadgeColor((color) => applyBadgeColor(btn, color));
+  // Load persisted badge color: Supabase (with JWT) → local → default transparent
+  void (async () => {
+    try {
+      const { getActiveSession } = await import('../core/auth');
+      const session = await getActiveSession();
+      const color = await getBadgeColor(session?.access_token);
+      btn.setAttribute('data-badge-color', color);
+    } catch {
+      const color = await getBadgeColor();
+      btn.setAttribute('data-badge-color', color);
+    }
+  })();
 
   addDragBehavior(btn, onToggle);
 

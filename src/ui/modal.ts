@@ -323,17 +323,18 @@ function renderUpgradeModal(onClose: () => void): HTMLElement {
 
 // ─── Settings Dashboard Page ──────────────────────────────────
 
+const S_ROW  = 'display:flex;align-items:center;gap:8px;padding:9px 14px;flex-wrap:wrap;min-height:38px;box-sizing:border-box;border-bottom:1px solid rgba(128,128,128,0.10);';
+const S_LABEL = 'flex:1;font-size:13px;color:var(--at-text,#e8e8e8);opacity:0.78;line-height:1.4;font-family:inherit;';
+const S_VALUE = 'font-size:13px;font-weight:700;color:var(--at-text,#e8e8e8);font-variant-numeric:tabular-nums;font-family:inherit;';
+const S_SUB   = 'width:100%;font-size:10px;color:var(--at-text,#e8e8e8);opacity:0.40;margin-top:-3px;padding-bottom:2px;display:block;font-family:inherit;';
+
 function makeProgressBar(value: number, max: number, color = '#22c55e'): HTMLElement {
   const wrap = document.createElement('div');
-  wrap.className = 'atenna-settings__bar-wrap';
+  wrap.style.cssText = 'height:5px;background:rgba(128,128,128,0.15);border-radius:3px;overflow:hidden;margin:0 14px 10px;';
   const fill = document.createElement('div');
-  fill.className = 'atenna-settings__bar-fill';
+  fill.style.cssText = `height:100%;border-radius:3px;min-width:0;background:${color};width:0%;transition:width 700ms cubic-bezier(0.34,1.1,0.64,1);display:block;`;
   const pct = max > 0 ? Math.min(100, Math.round(value / max * 100)) : 0;
-  // Start at 0 so the CSS transition animates from left
-  fill.style.width = '0%';
-  fill.style.background = color;
   wrap.appendChild(fill);
-  // Animate after paint so the transition fires
   requestAnimationFrame(() => requestAnimationFrame(() => {
     fill.style.width = `${pct}%`;
   }));
@@ -342,19 +343,19 @@ function makeProgressBar(value: number, max: number, color = '#22c55e'): HTMLEle
 
 function makeStatRow(label: string, value: string, sub?: string, tooltip?: string): HTMLElement {
   const row = document.createElement('div');
-  row.className = 'atenna-settings__stat-row';
+  row.style.cssText = S_ROW;
   if (tooltip) row.title = tooltip;
   const l = document.createElement('span');
-  l.className = 'atenna-settings__stat-label';
+  l.style.cssText = S_LABEL;
   l.textContent = label;
   const v = document.createElement('span');
-  v.className = 'atenna-settings__stat-value';
+  v.style.cssText = S_VALUE;
   v.textContent = value;
   row.appendChild(l);
   row.appendChild(v);
   if (sub) {
     const s = document.createElement('span');
-    s.className = 'atenna-settings__stat-sub';
+    s.style.cssText = S_SUB;
     s.textContent = sub;
     row.appendChild(s);
   }
@@ -364,6 +365,7 @@ function makeStatRow(label: string, value: string, sub?: string, tooltip?: strin
 function makeSectionTitle(text: string): HTMLElement {
   const h = document.createElement('div');
   h.className = 'atenna-settings__section-title';
+  h.style.cssText = 'font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--at-text,#e8e8e8);opacity:0.45;padding:18px 4px 6px;font-family:inherit;';
   h.textContent = text;
   return h;
 }
@@ -479,8 +481,11 @@ function renderSettingsPage(
       // ── Seção: Uso de Prompts ──────────────────────────
       body.appendChild(makeSectionTitle('📊 Uso de Prompts'));
 
+      const S_SECTION = 'background:var(--at-card-bg,#232323);border:1px solid rgba(255,255,255,0.09);border-radius:10px;overflow:hidden;display:block;box-sizing:border-box;';
       const usageSection = document.createElement('div');
       usageSection.className = 'atenna-settings__section';
+      usageSection.style.cssText = S_SECTION;
+
 
       const todayRow = makeStatRow(
         'Hoje',
@@ -510,6 +515,7 @@ function renderSettingsPage(
       if (!pro) {
         const upgradeBtn = document.createElement('button');
         upgradeBtn.className = 'atenna-settings__upgrade-cta';
+        upgradeBtn.style.cssText = 'display:block;width:calc(100% - 28px);margin:4px 14px 10px;padding:9px 14px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;text-align:center;';
         upgradeBtn.textContent = '★ Upgrade para Pro — acesso ilimitado';
         upgradeBtn.addEventListener('click', () => {
           void trackEvent('upgrade_modal_shown');
@@ -526,6 +532,8 @@ function renderSettingsPage(
 
       const dlpSection = document.createElement('div');
       dlpSection.className = 'atenna-settings__section';
+      dlpSection.style.cssText = S_SECTION;
+
 
       dlpSection.appendChild(makeStatRow(
         'Dados protegidos',
@@ -547,12 +555,12 @@ function renderSettingsPage(
       ));
 
       const taxaRow = document.createElement('div');
-      taxaRow.className = 'atenna-settings__stat-row atenna-settings__stat-row--bar';
+      taxaRow.style.cssText = S_ROW;
       const taxaLabel = document.createElement('span');
-      taxaLabel.className = 'atenna-settings__stat-label';
+      taxaLabel.style.cssText = S_LABEL;
       taxaLabel.textContent = 'Taxa de proteção';
       const taxaVal = document.createElement('span');
-      taxaVal.className = 'atenna-settings__stat-value';
+      taxaVal.style.cssText = S_VALUE;
       taxaVal.textContent = dlp.scansTotal > 0 ? `${taxaProtecao}%` : '—';
       taxaRow.appendChild(taxaLabel);
       taxaRow.appendChild(taxaVal);
@@ -566,6 +574,8 @@ function renderSettingsPage(
 
       const personalSection = document.createElement('div');
       personalSection.className = 'atenna-settings__section';
+      personalSection.style.cssText = S_SECTION;
+
 
       // ── Badge color picker ────────────────────────────
       {
@@ -580,43 +590,60 @@ function renderSettingsPage(
         const colorPicker = document.createElement('div');
         colorPicker.className = 'atenna-settings__color-picker';
 
-        const COLORS: { id: import('../content/injectButton').BadgeColor; label: string; swatch: string }[] = [
-          { id: 'green',       label: 'Verde',        swatch: '#22c55e' },
-          { id: 'blue',        label: 'Azul',         swatch: '#3b82f6' },
-          { id: 'yellow',      label: 'Amarelo',      swatch: '#eab308' },
-          { id: 'red',         label: 'Vermelho',     swatch: '#ef4444' },
-          { id: 'white',       label: 'Branco',       swatch: '#ffffff' },
-          { id: 'transparent', label: 'Transparente', swatch: 'linear-gradient(135deg,rgba(255,255,255,.35) 0%,rgba(255,255,255,.08) 100%)' },
+        const { getBadgeColor, saveBadgeColor, applyBadgeColorToDom } = await import('../core/userSettings');
+        type BC = import('../core/userSettings').BadgeColor;
+
+        const COLORS: { id: BC; label: string; bg: string }[] = [
+          { id: 'transparent', label: 'Transparente', bg: 'linear-gradient(135deg,rgba(255,255,255,.35),rgba(255,255,255,.08))' },
+          { id: 'green',       label: 'Verde',        bg: '#22c55e' },
+          { id: 'blue',        label: 'Azul',         bg: '#3b82f6' },
+          { id: 'yellow',      label: 'Amarelo',      bg: '#eab308' },
+          { id: 'red',         label: 'Vermelho',     bg: '#ef4444' },
+          { id: 'white',       label: 'Branco',       bg: '#ffffff' },
         ];
 
-        let currentColor: import('../content/injectButton').BadgeColor = 'green';
-        const { loadBadgeColor, saveBadgeColor, applyBadgeColor } = await import('../content/injectButton');
-        await new Promise<void>(res => loadBadgeColor(c => { currentColor = c; res(); }));
+        // Load current color from Supabase (or local fallback)
+        let currentColor: BC = await getBadgeColor(session.access_token);
 
-        COLORS.forEach(({ id, label, swatch }) => {
-          const swatch_el = document.createElement('button');
-          swatch_el.className = 'atenna-settings__color-swatch';
-          swatch_el.setAttribute('aria-label', label);
-          swatch_el.setAttribute('title', label);
-          swatch_el.setAttribute('data-color', id);
-          swatch_el.style.background = swatch;
-          if (id === 'transparent') {
-            swatch_el.style.border = '1.5px solid rgba(255,255,255,0.4)';
-            swatch_el.style.backdropFilter = 'blur(8px)';
-          }
-          if (id === currentColor) swatch_el.classList.add('active');
+        // Extract userId for Supabase writes
+        let settingsUserId: string | undefined;
+        try {
+          const { decodeJwtPayload } = await import('../core/auth');
+          settingsUserId = (decodeJwtPayload(session.access_token)['sub'] as string) ?? undefined;
+        } catch { /* offline */ }
 
-          swatch_el.addEventListener('click', () => {
-            colorPicker.querySelectorAll('.atenna-settings__color-swatch').forEach(s => s.classList.remove('active'));
-            swatch_el.classList.add('active');
+        COLORS.forEach(({ id, label, bg }) => {
+          const sw = document.createElement('button');
+          sw.style.cssText = `width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;background:${bg};transition:transform 150ms cubic-bezier(0.34,1.4,0.64,1),box-shadow 150ms ease;flex-shrink:0;outline:none;`;
+          if (id === 'transparent') sw.style.border = '1.5px solid rgba(255,255,255,0.4)';
+          if (id === 'white') sw.style.border = '1.5px solid rgba(0,0,0,0.15)';
+          sw.setAttribute('aria-label', label);
+          sw.setAttribute('title', label);
+          sw.setAttribute('data-color', id);
+
+          const markActive = (el: HTMLButtonElement) => {
+            el.style.transform = 'scale(1.15)';
+            el.style.boxShadow = '0 0 0 2px var(--at-card-bg,#2a2a2a), 0 0 0 4px var(--at-text,#e8e8e8)';
+          };
+          const markInactive = (el: HTMLButtonElement) => {
+            el.style.transform = 'scale(1)';
+            el.style.boxShadow = 'none';
+          };
+
+          if (id === currentColor) markActive(sw);
+
+          sw.addEventListener('mouseenter', () => { if (id !== currentColor) sw.style.transform = 'scale(1.12)'; });
+          sw.addEventListener('mouseleave', () => { if (id !== currentColor) markInactive(sw); });
+
+          sw.addEventListener('click', () => {
+            colorPicker.querySelectorAll<HTMLButtonElement>('[data-color]').forEach(s => markInactive(s));
+            markActive(sw);
             currentColor = id;
-            saveBadgeColor(id);
-            // Apply immediately to existing badge on the page behind settings
-            const badge = document.getElementById('atenna-guard-btn') as HTMLButtonElement | null;
-            if (badge) applyBadgeColor(badge, id);
+            void saveBadgeColor(id, session.access_token, settingsUserId);
+            applyBadgeColorToDom(id);
           });
 
-          colorPicker.appendChild(swatch_el);
+          colorPicker.appendChild(sw);
         });
 
         colorRow.appendChild(colorPicker);
@@ -655,6 +682,8 @@ function renderSettingsPage(
 
         const docSection = document.createElement('div');
         docSection.className = 'atenna-settings__section';
+      // inline fallback for host CSS isolation
+      
         docSection.id = 'upload-widget-container';
 
         const uploadWidget = new UploadWidget({
