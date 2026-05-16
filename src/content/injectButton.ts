@@ -390,7 +390,6 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
       void trackEvent('upload_entry_clicked');
     },
   );
-  uploadBtn.style.display = 'none'; // oculto até flag ser verificada
 
   // Ação 4: Configurações (engrenagem real, não sol)
   const settingsBtn = makeAction(
@@ -414,13 +413,6 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   btn.appendChild(iconWrap);
   btn.appendChild(dot);
 
-  // Gate upload action por feature flag
-  Promise.resolve().then(async () => {
-    const multimodalEnabled = await getFlag('MULTIMODAL_ENABLED');
-    if (multimodalEnabled) {
-      uploadBtn.style.display = '';
-    }
-  });
 
   // Set default immediately to avoid green→transparent flash
   btn.setAttribute('data-badge-color', 'transparent');

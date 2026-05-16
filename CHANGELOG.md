@@ -4,6 +4,69 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.37.0] — 2026-05-16 (UI — Narrativa, Badge Hover, Shimmer, Planos Modal)
+
+### Features
+
+#### Onboarding Minimal — narrativa Atenna completa
+- Subtítulo: "Proteja seus dados e comunique com mais precisão à IA."
+- Descrição: "Seus dados trafegam por dezenas de sistemas antes de chegar à IA. O Atenna protege o que é sensível e estrutura o que você quer dizer — para que nada vaze e tudo chegue certo."
+- CTA verde com shimmer sutil esquerda→direita: `atenna-modal__onb-cta-green`
+- Botão Refinar menor e centralizado (`atenna-modal__regen--compact`)
+- Logo no navbar aumentada de 22px → 28px
+
+#### Builder Inteligente — shimmer durante loading
+- Classe `atenna-modal__builder-toggle--loading` aplicada no `renderLoading()` e removida em `renderSuccess()` / `renderLimitReached()`
+- Gradiente animado roxo sutil (`rgba(99,102,241,0.25)`) sinalizando processamento em andamento
+
+#### Badge de campo — "Analisar arquivo" sempre visível
+- Botão upload removido do gate `MULTIMODAL_ENABLED`; aparece sempre no hover do badge
+- Badge hover expandido de 136px → 172px para acomodar os 4 botões sem cortar texto
+
+#### Modal de Planos (Guardião)
+- Tela vazia exibe CTA "Quero prompts ilimitados e proteger meus dados 100% conforme LGPD"
+- Modal side-by-side com dois cards: Mensal (R$29,90/mês) e Anual (R$16,41/mês equivalente)
+- Cálculo de economia: R$358,80 vs R$197 = R$161,80 (45%)
+- Nome do plano: "Atenna Guardião"
+- Copywriting de identidade e perda (neuromarketing), sem linguagem de venda explícita
+
+#### Pro badge no navbar
+- Pill roxo pequeno ao lado de "Atenna" quando usuário é Pro
+
+### Pending — FASE 4.2C (próxima sprint)
+- Excel (XLSX) parser — spec + harness pendentes
+- Limite de upload 10MB → 50MB (requer worker assíncrono + CF R2 para storage temporário)
+- `DOCUMENT_UPLOAD_ENABLED=true` no container VPS
+- Wiring do click handler do botão "Analisar arquivo" → abre upload widget
+- Harness de 15 cenários de stress antes de habilitar em produção
+
+---
+
+## [2.36.0] — 2026-05-16 (Checkout — Planos Mensal/Anual + Cards de Conversão)
+
+### Features
+
+#### Asaas Checkout — dois planos
+- **Anual** R$197 — `chargeTypes: ["DETACHED"]`, PIX + cartão, pagamento único, válido 12 meses
+- **Mensal** R$29,90 — `chargeTypes: ["RECURRENT"]`, cartão apenas, `nextDueDate` dinâmico (+1 dia)
+- `customerData` removido inteiramente (Asaas coleta dados no próprio checkout)
+- Parâmetro `plan` passado por toda a cadeia: extension → background → backend → Asaas
+
+#### N8n workflow — recuperação de abandono e boas-vindas
+- `docs/n8n-checkout-recovery-flow.json` — fluxo completo com IF nodes (compatível com versões sem Switch `operation:in`)
+- Recuperação 2h + desconto 22h para abandonos; boas-vindas + onboarding D+3 para pagos
+
+#### Cards de conversão na extensão
+- `renderPricingCards()` com dois cards lado a lado, substituindo CTAs únicos
+- `renderPlansModal()` com overlay full-screen, cálculo de economia, badges de destaque
+
+### Pending configuração manual (Asaas)
+- Cupons `ATENNA10` e `ATENNA5` — criar no painel Asaas (sem endpoint de API)
+- Taxa de parcelamento — configurar em Configurações › Financeiro no painel Asaas
+- Webhook "atenna safe plugin" — verificar status ativo e eventos selecionados
+
+---
+
 ## [2.35.0] — 2026-05-15 (Upload → Chat Inject + BRL Dinâmico)
 
 ### Features
