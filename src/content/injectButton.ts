@@ -7,7 +7,7 @@ import type { DetectedEntity, DlpMetadata } from '../dlp/types';
 import { getDotTooltip, getDotClass, shouldShowBanner, getBannerBackgroundColor } from '../dlp/advisory';
 import { getFlag } from '../core/featureFlags';
 import { trackEvent } from '../core/analytics';
-import { openSettingsOverlay, generateFromBadge } from '../ui/modal';
+import { openSettingsOverlay, generateFromBadge, openUploadFromBadge } from '../ui/modal';
 
 const INJECTED_ATTR      = 'data-atenna-injected';
 const BTN_ID             = 'atenna-guard-btn';
@@ -388,6 +388,7 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
     </svg>`,
     () => {
       void trackEvent('upload_entry_clicked');
+      void openUploadFromBadge();
     },
   );
 

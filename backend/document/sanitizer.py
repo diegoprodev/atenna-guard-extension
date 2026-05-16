@@ -67,8 +67,9 @@ def validate_upload(filename: str, file_bytes: bytes) -> ValidationResult:
         )
 
     # Guard: magic bytes (detecção de MIME spoof)
+    # CSV é texto puro — sem magic bytes confiáveis, extensão é fonte de verdade
     is_pdf  = file_bytes[:4] == PDF_MAGIC
-    is_docx = file_bytes[:4] == DOCX_MAGIC
+    is_zip  = file_bytes[:4] == DOCX_MAGIC   # DOCX e XLSX são ambos ZIP
 
     if ext == ".pdf" and not is_pdf:
         return ValidationResult(
@@ -77,14 +78,22 @@ def validate_upload(filename: str, file_bytes: bytes) -> ValidationResult:
             error_message="File extension does not match file content",
         )
 
-    if ext == ".docx" and not is_docx:
+    if ext in (".docx", ".xlsx") and not is_zip:
         return ValidationResult(
             valid=False, filetype=None,
             error_code=DocumentErrorCode.MIME_MISMATCH,
             error_message="File extension does not match file content",
         )
 
-    filetype = "pdf" if is_pdf else "docx"
+    if ext == ".pdf":
+        filetype = "pdf"
+    elif ext == ".docx":
+        filetype = "docx"
+    elif ext == ".xlsx":
+        filetype = "xlsx"
+    else:
+        filetype = "csv"
+
     return ValidationResult(valid=True, filetype=filetype, error_code=None, error_message=None)
 
 

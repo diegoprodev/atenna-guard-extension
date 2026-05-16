@@ -1075,6 +1075,28 @@ export function generateFromBadge(): Promise<void> | void {
   return openModal(true);
 }
 
+export async function openUploadFromBadge(): Promise<void> {
+  // Open settings overlay and scroll to upload widget
+  const existing = document.getElementById('atenna-settings-overlay');
+  if (existing) {
+    const widget = existing.querySelector<HTMLElement>('#upload-widget-container');
+    widget?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  const session = await getActiveSession();
+  if (!session) return;
+  const pro = await isPro();
+  const settingsPage = renderSettingsPage(
+    session, pro,
+    () => document.getElementById('atenna-settings-overlay')?.remove(),
+  );
+  document.body.appendChild(settingsPage);
+  requestAnimationFrame(() => {
+    const widget = settingsPage.querySelector<HTMLElement>('#upload-widget-container');
+    widget?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
 export async function openSettingsOverlay(): Promise<void> {
   const existing = document.getElementById('atenna-settings-overlay');
   if (existing) { existing.remove(); return; }

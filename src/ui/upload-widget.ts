@@ -15,6 +15,34 @@
 
 import { trackEvent } from '../core/analytics';
 import { rewritePII } from '../dlp/rewriter';
+import { isPro } from '../core/planManager';
+
+const UPLOAD_LIMIT_FREE = 5;
+const UPLOAD_COUNT_KEY  = 'atenna_upload_count';
+
+async function getUploadUsage(): Promise<number> {
+  return new Promise(resolve => {
+    try {
+      chrome.storage.local.get(UPLOAD_COUNT_KEY, r => {
+        const data = r[UPLOAD_COUNT_KEY] as { count: number; date: string } | undefined;
+        const today = new Date().toISOString().slice(0, 10);
+        if (!data || data.date !== today) { resolve(0); return; }
+        resolve(data.count);
+      });
+    } catch { resolve(0); }
+  });
+}
+
+async function incrementUploadUsage(): Promise<number> {
+  const current = await getUploadUsage();
+  const next = current + 1;
+  const today = new Date().toISOString().slice(0, 10);
+  return new Promise(resolve => {
+    try {
+      chrome.storage.local.set({ [UPLOAD_COUNT_KEY]: { count: next, date: today } }, () => resolve(next));
+    } catch { resolve(next); }
+  });
+}
 
 export interface DetectedEntity {
   type: string;
@@ -56,19 +84,21 @@ export interface UploadState {
   extractedContent?: string;
 }
 
-const SUPPORTED_TYPES: Record<string, string> = {
-  'text/plain': 'txt',
-  'text/markdown': 'md',
-  'text/csv': 'csv',
-  'application/json': 'json',
+const FILE_EXTENSIONS: Record<string, string> = {
+  txt:  'text/plain',
+  md:   'text/markdown',
+  csv:  'text/csv',
+  json: 'application/json',
+  pdf:  'application/pdf',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  doc:  'application/msword',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  xls:  'application/vnd.ms-excel',
 };
 
-const FILE_EXTENSIONS: Record<string, string> = {
-  txt: 'text/plain',
-  md: 'text/markdown',
-  csv: 'text/csv',
-  json: 'application/json',
-};
+// Files requiring server-side extraction (not readable as plain text)
+// All types routed through the backend DLP endpoint
+const BINARY_TYPES = new Set(['pdf', 'docx', 'doc', 'xlsx', 'xls', 'csv']);
 
 const MAGIC_BYTES: Record<string, Uint8Array> = {
   // Text files don't really have magic bytes, so we'll rely on extension + content
@@ -94,7 +124,7 @@ export class UploadWidget {
     const input = document.createElement('input');
     input.type = 'file';
     input.className = 'atenna-upload-widget__input';
-    input.accept = '.txt,.md,.csv,.json,text/plain,text/markdown,text/csv,application/json';
+    input.accept = '.txt,.md,.csv,.json,.pdf,.docx,.doc,.xlsx,.xls';
     input.addEventListener('change', (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) this.handleFileSelect(file);
@@ -109,11 +139,11 @@ export class UploadWidget {
 
     const text = document.createElement('div');
     text.className = 'atenna-upload-widget__text';
-    text.textContent = 'Compartilhe documentos com IA';
+    text.textContent = 'Proteja dados sensíveis em documentos';
 
     const hint = document.createElement('div');
     hint.className = 'atenna-upload-widget__hint';
-    hint.textContent = 'TXT · MD · CSV · JSON · Máx 1 MB';
+    hint.textContent = 'PDF · DOCX · XLSX · CSV · TXT · Máx 10 MB';
 
     const button = document.createElement('button');
     button.className = 'atenna-upload-widget__button';
@@ -160,29 +190,35 @@ export class UploadWidget {
     }
 
     this.state.file = file;
-    this.uploadFile(file).catch((err) => {
+    this.checkLimitThenUpload(file).catch((err) => {
       this.setState({ phase: 'error', error: err instanceof Error ? err.message : String(err) });
       this.renderErrorState();
     });
   }
 
+  private async checkLimitThenUpload(file: File): Promise<void> {
+    const pro = await isPro();
+    if (!pro) {
+      const used = await getUploadUsage();
+      if (used >= UPLOAD_LIMIT_FREE) {
+        this.setState({ phase: 'error', error: `Limite de ${UPLOAD_LIMIT_FREE} análises de arquivos por dia atingido. Continue sem restrições com o plano Pro.` });
+        this.renderErrorState();
+        return;
+      }
+    }
+    await incrementUploadUsage();
+    return this.uploadFile(file);
+  }
+
   validateFile(file: File): { valid: boolean; error?: string } {
     const ext = file.name.split('.').pop()?.toLowerCase();
     if (!ext || !FILE_EXTENSIONS[ext]) {
-      return { valid: false, error: `Tipo de arquivo não suportado. Suportamos: TXT, MD, CSV, JSON` };
+      return { valid: false, error: `Tipo não suportado. Suportamos: PDF, DOCX, Excel, TXT, CSV, JSON` };
     }
-
-    const expectedMime = FILE_EXTENSIONS[ext];
-    const maxSize = this.config.maxSize[ext];
-    if (!maxSize) {
-      return { valid: false, error: `Tipo de arquivo não suportado: ${ext}` };
+    const maxBytes = BINARY_TYPES.has(ext) ? 10 * 1024 * 1024 : 2 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      return { valid: false, error: `Arquivo grande demais. Máximo: ${maxBytes / (1024 * 1024)} MB` };
     }
-
-    if (file.size > maxSize) {
-      const maxMb = maxSize / (1024 * 1024);
-      return { valid: false, error: `Arquivo muito grande. Máximo: ${maxMb} MB, Seu arquivo: ${(file.size / (1024 * 1024)).toFixed(1)} MB` };
-    }
-
     return { valid: true };
   }
 
@@ -190,31 +226,58 @@ export class UploadWidget {
     this.setState({ phase: 'uploading', progress: 0 });
     this.renderUploadingState();
 
-    try {
-      // Read file content
-      const content = await this.readFile(file);
-      this.setState({ progress: 30 });
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'txt';
 
-      // Validate encoding
-      if (!this.isValidUtf8(content)) {
-        throw new Error('Arquivo corrompido ou encoding não suportado. Suportamos UTF-8, ASCII, Latin-1');
+    try {
+      let extracted: string;
+
+      if (BINARY_TYPES.has(ext)) {
+        // Binary files: send to backend (PDF, DOCX, XLSX, CSV)
+        // Backend does extraction + DLP in one call and returns findings only
+        this.setState({ progress: 20 });
+        extracted = await this.extractViaBackend(file);
+        this.setState({ progress: 90 });
+      } else {
+        // Text files: read locally then scan
+        const content = await this.readFile(file);
+        this.setState({ progress: 30 });
+        if (!this.isValidUtf8(content)) {
+          throw new Error('Arquivo corrompido ou encoding não suportado.');
+        }
+        extracted = await this.extractContent(content, ext);
+        this.setState({ progress: 60, extractedContent: extracted });
       }
 
-      // Extract content (for text files, it's the whole content)
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'txt';
-      const extracted = await this.extractContent(content, ext);
-      this.setState({ progress: 60, extractedContent: extracted });
+      // If backend already ran DLP (binary files), use its result directly
+      if (extracted.startsWith('__BACKEND_DLP__')) {
+        const payload = JSON.parse(extracted.slice('__BACKEND_DLP__'.length)) as {
+          risk_level: string; masked_summary: string; blocked: boolean;
+          findings: Array<{ entity_type: string; count: number }>;
+        };
+        const riskLevel = (payload.risk_level as 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH') || 'NONE';
+        this.setState({
+          phase: 'ready',
+          dlpRisk: riskLevel,
+          entities: [],
+          contentPreview: payload.masked_summary,
+          contentHash: '',
+          charCount: 0,
+          progress: 100,
+        });
+        this.renderReadyState();
+        void trackEvent('document_upload_success', { file_type: ext, dlp_risk: riskLevel });
+        return;
+      }
 
-      // Validate size after extraction
-      const MAX_CHARS = 100_000;
+      const MAX_CHARS = 200_000;
       if (extracted.length > MAX_CHARS) {
-        throw new Error(`Arquivo muito grande (${extracted.length} chars > ${MAX_CHARS})`);
+        throw new Error(`Documento muito extenso (${extracted.length} caracteres). Máximo: ${MAX_CHARS}.`);
       }
 
       this.setState({ phase: 'scanning', charCount: extracted.length });
       this.renderScanningState();
 
-      // DLP scan via backend
+      // DLP scan via backend (text files only — binaries already scanned above)
       const scanResult = await this.scanWithDlp(extracted, file.name);
 
       if (!scanResult.success) {
@@ -224,7 +287,7 @@ export class UploadWidget {
       this.setState({
         phase: 'ready',
         dlpRisk: scanResult.dlpRiskLevel,
-        entities: [], // Not exposed to user for security
+        entities: [],
         contentPreview: scanResult.contentPreview,
         contentHash: scanResult.contentHash,
         charCount: scanResult.charCount,
@@ -295,6 +358,38 @@ export class UploadWidget {
     }
 
     return content;
+  }
+
+  private async extractViaBackend(file: File): Promise<string> {
+    const token = await this.getAuthToken();
+    if (!token) throw new Error('Não autenticado. Por favor, faça login.');
+
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+
+    // Route to the unified document DLP endpoint (PDF, DOCX, XLSX, CSV)
+    const resp = await fetch(`${this.getBackendUrl()}/document/upload`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData,
+    });
+
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => '');
+      throw new Error(`Falha ao processar arquivo (${resp.status}). ${body.slice(0, 120)}`);
+    }
+
+    // Backend returns findings + masked_summary, never raw text.
+    // Use masked_summary as the "extracted content" for the DLP flow downstream.
+    const data = await resp.json() as {
+      masked_summary: string;
+      risk_level: string;
+      findings: Array<{ entity_type: string; count: number }>;
+      blocked: boolean;
+    };
+
+    // Surface risk level through a special prefix the scanWithDlp caller can detect
+    return `__BACKEND_DLP__${JSON.stringify(data)}`;
   }
 
   private async scanWithDlp(content: string, fileName: string): Promise<UploadResult> {

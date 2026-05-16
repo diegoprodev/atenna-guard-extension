@@ -1,5 +1,5 @@
 """
-FASE 4.2B — Document Pipeline Limits Matrix
+FASE 4.2C — Document Pipeline Limits Matrix (PDF + DOCX + XLSX + CSV)
 Fonte de verdade para todos os limites de segurança do pipeline de documentos.
 Qualquer mudança aqui requer aprovação explícita (ver FASE_4.2B_DOCUMENT_LIMITS_MATRIX.md).
 """
@@ -24,13 +24,17 @@ MAX_CONCURRENT_PARSES: int = 3
 
 # ── Magic bytes para detecção de MIME ────────────────────────────────────────
 PDF_MAGIC:  bytes = b"%PDF"
-DOCX_MAGIC: bytes = b"PK\x03\x04"               # DOCX = ZIP
+DOCX_MAGIC: bytes = b"PK\x03\x04"               # DOCX/XLSX = ZIP (mesmo magic)
 
 # ── Tipos aceitos ─────────────────────────────────────────────────────────────
-ALLOWED_EXTENSIONS: frozenset[str] = frozenset({".pdf", ".docx"})
+ALLOWED_EXTENSIONS: frozenset[str] = frozenset({".pdf", ".docx", ".xlsx", ".csv"})
 ALLOWED_CONTENT_TYPES: frozenset[str] = frozenset({
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/csv",
+    "text/plain",
+    "application/octet-stream",  # fallback — extensão é a fonte de verdade
 })
 
 # ── Códigos de erro semânticos (nunca expor detalhes internos) ────────────────

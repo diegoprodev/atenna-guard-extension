@@ -1,6 +1,6 @@
 """
-FASE 4.2B — Upload Document Endpoint
-Gated por feature flag DOCUMENT_UPLOAD_ENABLED (default: false).
+FASE 4.2C — Upload Document Endpoint (PDF + DOCX + XLSX + CSV)
+Gated por feature flag DOCUMENT_UPLOAD_ENABLED.
 
 IMPORTANTE: NÃO ativar em produção antes do stress harness passar 100%.
 Ver: docs/specs/FASE_4.2B_DOCUMENT_LIMITS_MATRIX.md
@@ -23,6 +23,8 @@ from document.limits import (
 from document.sanitizer import validate_upload, chunk_text, cleanup_buffers, build_safe_summary
 from document.parsers.pdf_parser import parse_pdf
 from document.parsers.docx_parser import parse_docx
+from document.parsers.xlsx_parser import parse_xlsx
+from document.parsers.csv_parser import parse_csv
 from dlp.policy import evaluate
 import document.observability as obs
 
@@ -131,17 +133,31 @@ async def upload_document(
         with obs.parse_context(filetype):
             if filetype == "pdf":
                 parse_result: Any = await parse_pdf(file_bytes)
-                pages_parsed  = parse_result.pages_parsed
-                total_pages   = parse_result.total_pages
-                truncated     = parse_result.truncated
-                scan_only     = parse_result.scan_only
+                pages_parsed   = parse_result.pages_parsed
+                total_pages    = parse_result.total_pages
+                truncated      = parse_result.truncated
+                scan_only      = parse_result.scan_only
                 extracted_text = parse_result.text
-            else:
-                parse_result = await parse_docx(file_bytes)
-                pages_parsed  = 1
-                total_pages   = 1
-                truncated     = parse_result.truncated
-                scan_only     = False
+            elif filetype == "docx":
+                parse_result   = await parse_docx(file_bytes)
+                pages_parsed   = 1
+                total_pages    = 1
+                truncated      = parse_result.truncated
+                scan_only      = False
+                extracted_text = parse_result.text
+            elif filetype == "xlsx":
+                parse_result   = await parse_xlsx(file_bytes)
+                pages_parsed   = parse_result.sheets
+                total_pages    = parse_result.sheets
+                truncated      = parse_result.truncated
+                scan_only      = False
+                extracted_text = parse_result.text
+            else:  # csv
+                parse_result   = await parse_csv(file_bytes)
+                pages_parsed   = 1
+                total_pages    = 1
+                truncated      = parse_result.truncated
+                scan_only      = False
                 extracted_text = parse_result.text
 
     # ── Liberar buffer original imediatamente ─────────────────────────────────
