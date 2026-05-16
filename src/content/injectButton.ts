@@ -7,7 +7,7 @@ import type { DetectedEntity, DlpMetadata } from '../dlp/types';
 import { getDotTooltip, getDotClass, shouldShowBanner, getBannerBackgroundColor } from '../dlp/advisory';
 import { getFlag } from '../core/featureFlags';
 import { trackEvent } from '../core/analytics';
-import { openSettingsOverlay } from '../ui/modal';
+import { openSettingsOverlay, generateFromBadge } from '../ui/modal';
 
 const INJECTED_ATTR      = 'data-atenna-injected';
 const BTN_ID             = 'atenna-guard-btn';
@@ -342,7 +342,7 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
     return b;
   }
 
-  // Ação 1: Abrir prompt (modal principal)
+  // Ação 1: Abrir modal (aba edição — sem geração automática)
   const promptBtn = makeAction(
     'Abrir Atenna',
     `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -354,7 +354,32 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
     },
   );
 
-  // Ação 2: Analisar arquivo — gated por feature flag
+  // Ação 2: Varinha mágica — gera prompt diretamente se input tiver conteúdo mínimo
+  const wandBtn = makeAction(
+    'Gerar prompt',
+    `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3.5" y1="12.5" x2="10" y2="6"/>
+      <path d="M10 2l.8 1.7 1.7.8-1.7.8L10 7l-.8-1.7L7.5 4.5l1.7-.8L10 2z"/>
+      <line x1="2" y1="6" x2="2.8" y2="6"/><line x1="6" y1="2" x2="6" y2="2.8"/>
+      <line x1="4.2" y1="4.2" x2="4.8" y2="4.8"/>
+    </svg>`,
+    () => {
+      const currentInput = document.querySelector(config.inputSelector) as HTMLElement | null;
+      const text = currentInput ? getInputText(currentInput).trim() : '';
+      if (text.length < 10) {
+        // Visual feedback: shake the wand button
+        wandBtn.style.animation = 'none';
+        wandBtn.offsetHeight; // reflow
+        wandBtn.setAttribute('title', 'Digite algo no campo de texto primeiro');
+        setTimeout(() => wandBtn.setAttribute('title', 'Gerar prompt'), 1500);
+        return;
+      }
+      void trackEvent('badge_action_wand');
+      void generateFromBadge();
+    },
+  );
+
+  // Ação 3: Analisar arquivo — gated por feature flag
   const uploadBtn = makeAction(
     'Analisar arquivo',
     `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
@@ -367,12 +392,12 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   );
   uploadBtn.style.display = 'none'; // oculto até flag ser verificada
 
-  // Ação 3: Configurações
+  // Ação 4: Configurações (engrenagem real, não sol)
   const settingsBtn = makeAction(
     'Configurações',
     `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="8" cy="8" r="2.2"/>
-      <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.2 3.2l1.4 1.4M11.4 11.4l1.4 1.4M3.2 12.8l1.4-1.4M11.4 4.6l1.4-1.4"/>
+      <path d="M6.5 1.5h3l.4 1.4a4.5 4.5 0 0 1 1.1.65l1.4-.45 1.5 2.6-1 1a4.5 4.5 0 0 1 0 1.3l1 1-1.5 2.6-1.4-.45a4.5 4.5 0 0 1-1.1.65l-.4 1.4h-3l-.4-1.4a4.5 4.5 0 0 1-1.1-.65l-1.4.45L2.1 9.95l1-1a4.5 4.5 0 0 1 0-1.3l-1-1 1.5-2.6 1.4.45A4.5 4.5 0 0 1 6.1 2.9L6.5 1.5z"/>
+      <circle cx="8" cy="8" r="1.8"/>
     </svg>`,
     () => {
       void trackEvent('badge_action_settings');
@@ -381,6 +406,7 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   );
 
   actionsBar.appendChild(promptBtn);
+  actionsBar.appendChild(wandBtn);
   actionsBar.appendChild(uploadBtn);
   actionsBar.appendChild(settingsBtn);
 

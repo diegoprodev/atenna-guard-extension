@@ -937,6 +937,14 @@ export function toggleModal(): Promise<void> | void {
   return openModal();
 }
 
+// Called by the magic wand badge action — opens modal and auto-generates.
+// Only called when the platform input already has content (checked by injectButton).
+export function generateFromBadge(): Promise<void> | void {
+  const existing = document.getElementById(OVERLAY_ID);
+  if (existing) { clearMsgInterval(); existing.remove(); return; }
+  return openModal(true);
+}
+
 export async function openSettingsOverlay(): Promise<void> {
   const existing = document.getElementById('atenna-settings-overlay');
   if (existing) { existing.remove(); return; }
@@ -955,7 +963,7 @@ export async function openSettingsOverlay(): Promise<void> {
 
 // ─── Build modal skeleton ──────────────────────────────────
 
-async function openModal(): Promise<void> {
+async function openModal(autoGenerate = false): Promise<void> {
   void trackEvent('modal_opened');
 
   // Create and mount overlay synchronously — tests and UX see it immediately.
@@ -1056,17 +1064,15 @@ async function openModal(): Promise<void> {
 
   const platformInput = getCurrentInput();
   const userText      = platformInput ? getInputText(platformInput).trim() : '';
-  const cacheHit      = promptCache !== null && promptCache.forText === userText && userText !== '';
-  const defaultTab    = (userText !== '' || cacheHit) ? 'prompts' : 'edit';
 
   const logoUrl = getLogoUrl();
   const logoImg = logoUrl
     ? `<img src="${logoUrl}" width="22" height="22" alt="" aria-hidden="true"/>`
     : '';
 
-  const editActive    = defaultTab === 'edit'    ? ' atenna-modal__tab--active' : '';
-  const promptsActive = defaultTab === 'prompts' ? ' atenna-modal__tab--active' : '';
-  const editSelected    = String(defaultTab === 'edit');
+  const editActive    = ' atenna-modal__tab--active';
+  const promptsActive = '';
+  const editSelected    = 'true';
   const promptsSelected = String(defaultTab === 'prompts');
 
   const builderLogoImg = logoUrl ? `<img src="${logoUrl}" width="14" height="14" alt="" aria-hidden="true" style="border-radius:50%;vertical-align:middle;filter:none;opacity:0.9;"/>` : '✦';
@@ -1260,9 +1266,9 @@ async function openModal(): Promise<void> {
     });
   }
 
-  if (cacheHit) {
-    renderPrompts(resultsView, promptCache!.data, platformInput, overlay, 'manual');
-  } else if (userText !== '') {
+  if (autoGenerate && userText !== '') {
+    // Magic wand path: go straight to prompts tab and run generation
+    switchTab('prompts');
     renderLoading(resultsView);
     const shouldShowSuggestion = pro && (isVagueInput(userText) || shouldSuggestBuilder(userText));
     if (shouldShowSuggestion) {
@@ -1275,14 +1281,15 @@ async function openModal(): Promise<void> {
           builderEl.classList.add('atenna-modal__builder--open');
           builderToggleEl.classList.add('atenna-modal__builder-toggle--open');
         },
-        () => runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'auto', pro),
+        () => runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro),
       );
     } else {
-      void runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'auto', pro);
+      void runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro);
     }
   } else {
-    // Always show onboarding when no text — guides first-timers and returning users
+    // Normal badge click: always open in edit tab
     switchTab('edit');
+    if (userText !== '') editorEl.value = userText;
     renderOnboarding(resultsView, (example: string) => {
       editorEl.value = example;
       editorEl.focus();
