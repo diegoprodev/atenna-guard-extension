@@ -4,7 +4,7 @@ const MONTHLY_KEY  = 'atenna_monthly_usage';
 const SUPABASE_URL = 'https://kezbssjmgwtrunqeoyir.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlemJzc2ptZ3d0cnVucWVveWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MzY0NzcsImV4cCI6MjA5MzUxMjQ3N30.c2YNPrG7WcbwtFij8UJlS7BNxY_XeaKoeqPlrKHloKs';
 
-export const DAILY_LIMIT = 10;   // must match backend DAILY_LIMIT_FREE in rate_limit.py
+export const DAILY_LIMIT = 5;    // must match backend DAILY_LIMIT_FREE in rate_limit.py
 export const MONTHLY_LIMIT = 25;
 
 export interface UsageData {

@@ -1540,7 +1540,7 @@ function renderLimitReached(container: HTMLElement): void {
 
   const sub = document.createElement('p');
   sub.className = 'atenna-modal__limit-sub';
-  sub.textContent = 'Você utilizou as 10 gerações gratuitas de hoje. O limite reinicia à meia-noite ou faça upgrade para Pro.';
+  sub.textContent = 'Você utilizou as 5 gerações gratuitas de hoje. O limite reinicia à meia-noite ou faça upgrade para Pro.';
 
   const btn = document.createElement('button');
   btn.className = 'atenna-modal__limit-btn';
