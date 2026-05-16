@@ -389,10 +389,16 @@ function renderSettingsPage(
   overlay.id = 'atenna-settings-overlay';
   overlay.className = 'atenna-modal-overlay';
 
-  // Force layout on stat rows — host page !important rules (ChatGPT/Claude/Gemini)
-  // can override inline styles. A <style> tag injected after page styles wins.
+  // Inject into document.head so it wins over host page !important rules.
+  // A <style> inside a <div> is not guaranteed to be processed after host styles in all browsers.
   const _tc = isDark() ? '#e8e8e8' : '#1a1a1a';
-  const forceStyle = document.createElement('style');
+  const FORCE_STYLE_ID = 'atenna-force-settings-style';
+  let forceStyle = document.getElementById(FORCE_STYLE_ID) as HTMLStyleElement | null;
+  if (!forceStyle) {
+    forceStyle = document.createElement('style');
+    forceStyle.id = FORCE_STYLE_ID;
+    document.head.appendChild(forceStyle);
+  }
   forceStyle.textContent = `
     #atenna-settings-overlay .atenna-stat-row {
       display: flex !important; align-items: center !important; gap: 8px !important;
@@ -424,8 +430,21 @@ function renderSettingsPage(
       height: 100% !important; border-radius: 3px !important; display: block !important;
       min-width: 0 !important;
     }
+    #atenna-settings-overlay .atenna-color-row {
+      display: flex !important; align-items: center !important;
+      justify-content: space-between !important; padding: 12px 14px !important;
+      gap: 12px !important; box-sizing: border-box !important;
+      visibility: visible !important; opacity: 1 !important;
+    }
+    #atenna-settings-overlay .atenna-color-swatches {
+      display: flex !important; gap: 8px !important; align-items: center !important;
+      flex-wrap: wrap !important; visibility: visible !important;
+    }
+    #atenna-settings-overlay .atenna-settings__section {
+      display: block !important; visibility: visible !important; opacity: 1 !important;
+      overflow: visible !important;
+    }
   `;
-  overlay.appendChild(forceStyle);
 
   const box = document.createElement('div');
   box.className = dark ? 'atenna-modal atenna-modal--dark atenna-settings' : 'atenna-modal atenna-settings';
@@ -641,14 +660,16 @@ function renderSettingsPage(
       // ── Badge color picker ────────────────────────────
       {
         const colorRow = document.createElement('div');
+        colorRow.className = 'atenna-color-row';
         colorRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 14px;gap:12px;box-sizing:border-box;';
 
         const colorLabel = document.createElement('span');
-        colorLabel.style.cssText = 'font-size:13px;color:var(--at-text,#e8e8e8);font-weight:500;white-space:nowrap;opacity:0.85;font-family:inherit;';
+        colorLabel.style.cssText = `font-size:13px;color:${_tc};font-weight:500;white-space:nowrap;opacity:0.85;font-family:inherit;`;
         colorLabel.textContent = 'Cor do badge';
         colorRow.appendChild(colorLabel);
 
         const colorPicker = document.createElement('div');
+        colorPicker.className = 'atenna-color-swatches';
         colorPicker.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;';
 
         type BC = BadgeColor;
