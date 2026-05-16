@@ -1142,17 +1142,27 @@ export async function openUploadFromBadge(): Promise<void> {
     onReady: (content: string, _preview: string, riskLevel: string, rewritten?: string) => {
       void trackEvent('document_ready_to_send', { risk_level: riskLevel, was_rewritten: !!rewritten });
       const text = rewritten ?? content;
-      overlay.remove();
-      // Insert into the textarea that was active before overlay opened
-      const target = activeTarget as HTMLTextAreaElement | null;
-      if (target && target.tagName === 'TEXTAREA') {
-        const start = target.selectionStart ?? target.value.length;
-        target.value = target.value.slice(0, start) + text + target.value.slice(start);
-        target.dispatchEvent(new Event('input', { bubbles: true }));
-        target.focus();
-      } else if (activeTarget && (activeTarget as HTMLElement).isContentEditable) {
-        (activeTarget as HTMLElement).focus();
-        document.execCommand('insertText', false, text);
+      // Show action bar (Copiar + Aplicar) inside the overlay panel
+      // Override Aplicar to also close overlay and insert into original target
+      const barContainer = document.createElement('div');
+      panel.appendChild(barContainer);
+      renderDocumentActionBar(barContainer, text);
+      // Wrap the Aplicar button to also close overlay + insert
+      const applyBtn = barContainer.querySelector<HTMLButtonElement>('.atenna-doc-action-btn--primary');
+      if (applyBtn) {
+        applyBtn.addEventListener('click', () => {
+          overlay.remove();
+          const target = activeTarget as HTMLTextAreaElement | null;
+          if (target && target.tagName === 'TEXTAREA') {
+            const start = target.selectionStart ?? target.value.length;
+            target.value = target.value.slice(0, start) + text + target.value.slice(start);
+            target.dispatchEvent(new Event('input', { bubbles: true }));
+            target.focus();
+          } else if (activeTarget && (activeTarget as HTMLElement).isContentEditable) {
+            (activeTarget as HTMLElement).focus();
+            document.execCommand('insertText', false, text);
+          }
+        });
       }
     },
     onError: (error: string) => {
