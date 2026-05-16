@@ -68,6 +68,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       })
         .then(res => {
           if (res.status === 401) { sendResponse({ ok: false, error: 'auth_required', status: 401 }); return; }
+          if (res.status === 429) {
+            return res.json().then(body => {
+              sendResponse({
+                ok: false,
+                error: 'daily_limit_reached',
+                status: 429,
+                limit: body?.detail?.limit ?? 10,
+                count: body?.detail?.count ?? 10,
+                reset_at: body?.detail?.reset_at ?? null,
+              });
+            }).catch(() => sendResponse({ ok: false, error: 'daily_limit_reached', status: 429 }));
+          }
           if (!res.ok) {
             console.warn('[Atenna] backend HTTP error:', res.status, res.statusText);
             sendResponse({ ok: false, status: res.status });

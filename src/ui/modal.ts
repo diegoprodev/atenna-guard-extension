@@ -1363,6 +1363,12 @@ async function runFlow(
 
     renderPrompts(container, data, platformInput, overlay, origin, newTotalCount);
   } catch (error) {
+    if (error instanceof QuotaExceededError) {
+      // Server-side quota exceeded — user bypassed client-side limit
+      void trackEvent('quota_limit_reached_server', { origin, count: error.count, limit: error.limit });
+      renderLimitReached(container);
+      return;
+    }
     void trackEvent('prompt_generate_error', { origin, error: String(error) });
     if (document.getElementById(OVERLAY_ID)) {
       container.innerHTML = '<div style="padding: 20px; text-align: center;">Erro ao gerar prompts. Tente novamente.</div>';
@@ -1530,11 +1536,11 @@ function renderLimitReached(container: HTMLElement): void {
 
   const msg = document.createElement('p');
   msg.className = 'atenna-modal__limit-msg';
-  msg.textContent = 'Você já refinou 5 solicitações hoje.';
+  msg.textContent = 'Limite diário atingido.';
 
   const sub = document.createElement('p');
   sub.className = 'atenna-modal__limit-sub';
-  sub.textContent = 'Volte amanhã para novas gerações ou continue refinando sem limites.';
+  sub.textContent = 'Você utilizou as 10 gerações gratuitas de hoje. O limite reinicia à meia-noite ou faça upgrade para Pro.';
 
   const btn = document.createElement('button');
   btn.className = 'atenna-modal__limit-btn';
@@ -2345,6 +2351,17 @@ export interface PromptResponse extends PromptData {
   _is_fallback?: boolean;
 }
 
+export class QuotaExceededError extends Error {
+  constructor(
+    public readonly count: number,
+    public readonly limit: number,
+    public readonly resetAt: string | null,
+  ) {
+    super('daily_limit_reached');
+    this.name = 'QuotaExceededError';
+  }
+}
+
 export async function fetchPrompts(inputText: string): Promise<PromptResponse> {
   const fallback: PromptResponse = {
     direct:      `Explique de forma clara e objetiva:\n\n${inputText}`,
@@ -2354,6 +2371,10 @@ export async function fetchPrompts(inputText: string): Promise<PromptResponse> {
   };
   try {
     const response = await sendToBackground(inputText);
+    if (response && (response as { error?: string }).error === 'daily_limit_reached') {
+      const r = response as { limit?: number; count?: number; reset_at?: string | null };
+      throw new QuotaExceededError(r.count ?? 10, r.limit ?? 10, r.reset_at ?? null);
+    }
     if (!response || !response.ok) {
       console.warn('[Atenna] backend response not ok:', response);
       throw new Error('backend error');
@@ -2362,6 +2383,7 @@ export async function fetchPrompts(inputText: string): Promise<PromptResponse> {
     data._fromApi = true;
     return data;
   } catch (err) {
+    if (err instanceof QuotaExceededError) throw err;
     console.warn('[Atenna] erro backend:', err);
     return fallback;
   }
