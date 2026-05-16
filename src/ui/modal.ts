@@ -1076,24 +1076,91 @@ export function generateFromBadge(): Promise<void> | void {
 }
 
 export async function openUploadFromBadge(): Promise<void> {
-  // Open settings overlay and scroll to upload widget
-  const existing = document.getElementById('atenna-settings-overlay');
-  if (existing) {
-    const widget = existing.querySelector<HTMLElement>('#upload-widget-container');
-    widget?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    return;
-  }
+  // If an upload overlay is already open, close it
+  const existing = document.getElementById('atenna-upload-overlay');
+  if (existing) { existing.remove(); return; }
+
   const session = await getActiveSession();
   if (!session) return;
+
   const pro = await isPro();
-  const settingsPage = renderSettingsPage(
-    session, pro,
-    () => document.getElementById('atenna-settings-overlay')?.remove(),
-  );
-  document.body.appendChild(settingsPage);
-  requestAnimationFrame(() => {
-    const widget = settingsPage.querySelector<HTMLElement>('#upload-widget-container');
-    widget?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Lightweight overlay — just the upload widget, no full settings page
+  const overlay = document.createElement('div');
+  overlay.id = 'atenna-upload-overlay';
+  overlay.style.cssText = [
+    'position:fixed', 'inset:0', 'z-index:2147483646',
+    'display:flex', 'align-items:center', 'justify-content:center',
+    'background:rgba(0,0,0,0.45)', 'backdrop-filter:blur(2px)',
+  ].join(';');
+
+  const panel = document.createElement('div');
+  panel.style.cssText = [
+    'background:var(--at-card-bg,#1a1a2e)', 'border-radius:12px',
+    'padding:20px', 'width:340px', 'max-width:90vw',
+    'box-shadow:0 8px 32px rgba(0,0,0,0.5)',
+    'border:1px solid var(--at-border,rgba(255,255,255,0.08))',
+    'position:relative',
+  ].join(';');
+
+  const close = document.createElement('button');
+  close.textContent = '×';
+  close.style.cssText = 'position:absolute;top:10px;right:12px;background:none;border:none;color:var(--at-text-muted,#888);font-size:18px;cursor:pointer;line-height:1;';
+  close.addEventListener('click', () => overlay.remove());
+
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:13px;font-weight:600;color:var(--at-text,#e2e8f0);margin-bottom:14px;';
+  title.textContent = 'Analisar documento';
+
+  const widgetContainer = document.createElement('div');
+  widgetContainer.id = 'upload-widget-container';
+
+  panel.appendChild(close);
+  panel.appendChild(title);
+  panel.appendChild(widgetContainer);
+  overlay.appendChild(panel);
+
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+  document.body.appendChild(overlay);
+
+  // Capture active element before overlay opens (overlay steals focus)
+  const activeTarget = document.activeElement as HTMLTextAreaElement | HTMLElement | null;
+
+  const { UploadWidget } = await import('./upload-widget');
+  new UploadWidget({
+    targetElement: widgetContainer,
+    maxSize: {
+      txt: 1024 * 1024,
+      md: 1024 * 1024,
+      csv: 5 * 1024 * 1024,
+      json: 1024 * 1024,
+      pdf: 10 * 1024 * 1024,
+      docx: 10 * 1024 * 1024,
+      xlsx: 10 * 1024 * 1024,
+    },
+    onReady: (content: string, _preview: string, riskLevel: string, rewritten?: string) => {
+      void trackEvent('document_ready_to_send', { risk_level: riskLevel, was_rewritten: !!rewritten });
+      const text = rewritten ?? content;
+      overlay.remove();
+      // Insert into the textarea that was active before overlay opened
+      const target = activeTarget as HTMLTextAreaElement | null;
+      if (target && target.tagName === 'TEXTAREA') {
+        const start = target.selectionStart ?? target.value.length;
+        target.value = target.value.slice(0, start) + text + target.value.slice(start);
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+        target.focus();
+      } else if (activeTarget && (activeTarget as HTMLElement).isContentEditable) {
+        (activeTarget as HTMLElement).focus();
+        document.execCommand('insertText', false, text);
+      }
+    },
+    onError: (error: string) => {
+      void trackEvent('document_upload_error', { error });
+    },
+    onCancel: () => {
+      overlay.remove();
+    },
   });
 }
 

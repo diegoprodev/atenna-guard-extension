@@ -61,7 +61,7 @@ def generate_upload_url(user_id: str, filename: str, content_type: str) -> dict[
         },
         ExpiresIn=_PRESIGN_TTL_SECONDS,
     )
-    return {"url": url, "key": key, "expires_in": _PRESIGN_TTL_SECONDS}
+    return {"upload_url": url, "key": key, "expires_in": _PRESIGN_TTL_SECONDS}
 
 
 def download_for_parse(key: str) -> bytes:

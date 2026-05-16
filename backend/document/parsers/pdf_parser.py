@@ -56,7 +56,8 @@ def _extract_sync(file_bytes: bytes) -> PdfParseResult:
 
         with pdfplumber.open(pdf_io) as pdf:
             # ── Guard: PDF encriptado ──────────────────────────────────────
-            if pdf.doc.is_encrypted:  # type: ignore[attr-defined]
+            _is_encrypted = getattr(pdf.doc, "is_encrypted", None) or getattr(pdf.doc, "_encryption", None)
+            if _is_encrypted:
                 return PdfParseResult(
                     text="", pages_parsed=0, total_pages=0,
                     truncated=False, scan_only=False,
