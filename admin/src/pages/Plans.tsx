@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { api, PlanUserRow, PlanConfig } from '../api/admin';
 
 const PLAN_COLORS: Record<string, string> = {
@@ -28,7 +28,10 @@ export function Plans({ token }: { token: string }) {
 
   // Assign modal
   const [assignModal, setAssignModal] = useState(false);
-  const [aUserId, setAUserId]   = useState('');
+  const [aUserId, setAUserId]     = useState('');
+  const [aSearch, setASearch]     = useState('');
+  const [aResults, setAResults]   = useState<Array<{ id: string; email: string; display_name: string | null; plan: string }>>([]);
+  const [aSearching, setASearching] = useState(false);
   const [aPlan, setAPlan]       = useState('pro');
   const [aBilling, setABilling] = useState('monthly');
   const [aStatus, setAStatus]   = useState('active');
@@ -54,6 +57,29 @@ export function Plans({ token }: { token: string }) {
   function setFb(msg: string, ok: boolean) {
     setFeedback({ msg, ok });
     setTimeout(() => setFeedback(null), 4000);
+  }
+
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleLookupInput(val: string) {
+    setASearch(val);
+    setAUserId('');
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (val.length < 3) { setAResults([]); return; }
+    searchTimer.current = setTimeout(async () => {
+      setASearching(true);
+      try {
+        const r = await api.lookupUsers(token, val);
+        setAResults(r.data);
+      } catch { setAResults([]); }
+      finally { setASearching(false); }
+    }, 350);
+  }
+
+  function selectLookupUser(u: { id: string; email: string; display_name: string | null; plan: string }) {
+    setAUserId(u.id);
+    setASearch(u.display_name ? `${u.display_name} (${u.email})` : u.email);
+    setAResults([]);
   }
 
   async function handleAssign() {
@@ -170,7 +196,7 @@ export function Plans({ token }: { token: string }) {
               <option value="">Todos os status</option>
               {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
-            <button className="btn btn-primary btn-sm" onClick={() => setAssignModal(true)}>+ Atribuir plano</button>
+            <button className="btn btn-primary btn-sm" onClick={() => { setAUserId(''); setASearch(''); setAResults([]); setAssignModal(true); }}>+ Atribuir plano</button>
           </div>
         </div>
 
@@ -231,8 +257,33 @@ export function Plans({ token }: { token: string }) {
           <div className="admin-modal" onClick={e => e.stopPropagation()}>
             <div className="admin-modal__header"><h2>Atribuir plano</h2></div>
             <div className="admin-modal__body">
-              <div style={{ marginBottom: 12 }}><label style={{ fontSize: 12, color: 'var(--text-2)', display: 'block', marginBottom: 4 }}>User ID *</label>
-                <input style={inp} value={aUserId} onChange={e => setAUserId(e.target.value)} placeholder="UUID do usuário" /></div>
+              <div style={{ marginBottom: 12, position: 'relative' }}>
+                <label style={{ fontSize: 12, color: 'var(--text-2)', display: 'block', marginBottom: 4 }}>Buscar usuário *</label>
+                <input style={inp} value={aSearch} onChange={e => handleLookupInput(e.target.value)}
+                  placeholder="Email ou nome do usuário..." autoComplete="off" />
+                {aSearching && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Buscando...</div>}
+                {aResults.length > 0 && (
+                  <div style={{ position: 'absolute', zIndex: 100, left: 0, right: 0, background: 'var(--surface-2, var(--surface))',
+                    border: '1px solid var(--border)', borderRadius: 6, marginTop: 2, maxHeight: 160, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,.2)' }}>
+                    {aResults.map(u => (
+                      <div key={u.id} onClick={() => selectLookupUser(u)}
+                        style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: 12 }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover, rgba(255,255,255,.05))')}
+                        onMouseLeave={e => (e.currentTarget.style.background = '')}>
+                        <span style={{ fontWeight: 500 }}>{u.display_name ?? u.email}</span>
+                        {u.display_name && <span style={{ color: 'var(--text-3)', marginLeft: 6 }}>{u.email}</span>}
+                        <span style={{ float: 'right', fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase' }}>{u.plan}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {aUserId && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: 'var(--green)', display: 'flex', gap: 6 }}>
+                    <span>✓ Selecionado:</span>
+                    <span style={{ fontFamily: 'monospace' }}>{aUserId.slice(0, 8)}…</span>
+                  </div>
+                )}
+              </div>
               <div style={{ marginBottom: 12 }}><label style={{ fontSize: 12, color: 'var(--text-2)', display: 'block', marginBottom: 4 }}>Plano</label>
                 <select style={inp} value={aPlan} onChange={e => setAPlan(e.target.value)}>
                   {Object.keys(config).map(p => <option key={p} value={p}>{p}</option>)}

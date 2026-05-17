@@ -16,7 +16,7 @@ interface State {
   target: AdminUser | null;
 }
 
-const PLANS = ['free', 'pro', 'enterprise'];
+const PLANS = ['free', 'pro'];
 const ROLES = ['', 'super_admin'];
 
 export function Users({ token }: { token: string }) {
@@ -145,7 +145,7 @@ export function Users({ token }: { token: string }) {
           <span className="admin-card__title">{resp ? `${resp.total} usuários` : 'Usuários'}</span>
           <div style={{ display: 'flex', gap: 8 }}>
             <form onSubmit={e => { e.preventDefault(); setPage(1); load(1, search); }} style={{ display: 'flex', gap: 8 }}>
-              <input className="admin-search" placeholder="Buscar por email..." value={search} onChange={e => setSearch(e.target.value)} />
+              <input className="admin-search" placeholder="Buscar por email ou nome..." value={search} onChange={e => setSearch(e.target.value)} />
               <button type="submit" className="btn btn-secondary btn-sm">Buscar</button>
             </form>
             <button className="btn btn-primary btn-sm" onClick={openCreate}>+ Criar usuário</button>
@@ -165,17 +165,19 @@ export function Users({ token }: { token: string }) {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Email</th><th>Plano</th><th>Cadastro</th><th>Último acesso</th><th>Status</th><th>Ações</th>
+                    <th>Usuário</th><th>Plano</th><th>Vencimento</th><th>Cadastro</th><th>Último acesso</th><th>Status</th><th>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {resp.data.map(u => (
                     <tr key={u.id}>
                       <td>
-                        <span style={{ fontWeight: 500 }}>{u.email}</span>
+                        <span style={{ fontWeight: 500 }}>{u.display_name ?? u.email}</span>
+                        <div className="text-xs text-muted">{u.display_name ? u.email : null}</div>
                         <div className="text-xs text-muted mono">{u.id.slice(0, 8)}…</div>
                       </td>
                       <td><StatusBadge status={u.plan_type ?? 'free'} /></td>
+                      <td className="text-muted" style={{ fontSize: 12 }}>{fmtDate(u.plan_expires_at ?? null)}</td>
                       <td className="text-muted">{fmtDate(u.created_at)}</td>
                       <td className="text-muted">{fmtDate(u.last_sign_in_at)}</td>
                       <td>

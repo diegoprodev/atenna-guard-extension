@@ -70,6 +70,8 @@ export const api = {
   costs: (t: string) => get<CostSummary>('/admin/costs', t),
   usage: (t: string, search = '', sort = 'cost_desc') =>
     get<UsageResponse>(`/admin/usage?search=${encodeURIComponent(search)}&sort=${sort}`, t),
+  lookupUsers: (t: string, email: string) =>
+    get<{ data: Array<{ id: string; email: string; display_name: string | null; plan: string }> }>(`/admin/users/lookup?email=${encodeURIComponent(email)}`, t),
   plansConfig: (t: string) => get<PlansConfigResponse>('/admin/plans/config', t),
   plansUsers: (t: string, plan = '', status = '', search = '') =>
     get<{ data: PlanUserRow[]; total: number }>(`/admin/plans/users?plan_filter=${plan}&status_filter=${status}&search=${encodeURIComponent(search)}`, t),
@@ -149,11 +151,13 @@ export interface PlansConfigResponse {
 export interface AdminUser {
   id: string;
   email: string;
+  display_name: string | null;
   created_at: string;
   last_sign_in_at: string | null;
   banned_until: string | null;
   role: string | null;
   plan_type: string | null;
+  plan_expires_at: string | null;
 }
 
 export interface UsersResponse {
