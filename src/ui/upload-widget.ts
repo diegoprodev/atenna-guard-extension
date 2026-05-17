@@ -1,24 +1,17 @@
-/**
- * FASE 4.1: Upload Widget — Documento Upload + DLP Scan + Rewrite
- *
- * Flow:
- * 1. File selection (input or drag-drop)
- * 2. Client-side validation (type, size, magic bytes, encoding)
- * 3. Upload to backend
- * 4. DLP scan (same engine as text)
- * 5. Show result:
- *    - NONE/LOW: ready to send
- *    - HIGH: show protection banner
- * 6. User choice: [Proteger dados] or [Enviar original]
- * 7. Cleanup: delete from memory after use
- */
-
 import { trackEvent } from '../core/analytics';
-import { rewritePII } from '../dlp/rewriter';
 import { isPro } from '../core/planManager';
 
 const UPLOAD_LIMIT_FREE = 5;
 const UPLOAD_COUNT_KEY  = 'atenna_upload_count';
+
+const LOADING_PHRASES = [
+  'Lendo documento…',
+  'Verificando dados sensíveis…',
+  'Analisando conteúdo…',
+  'Identificando entidades…',
+  'Um momento…',
+  'Quase pronto…',
+];
 
 async function getUploadUsage(): Promise<number> {
   return new Promise(resolve => {
@@ -44,44 +37,31 @@ async function incrementUploadUsage(): Promise<number> {
   });
 }
 
-export interface DetectedEntity {
-  type: string;
-  value?: string;
-  start: number;
-  end: number;
-  confidence: number;
-}
-
-export interface UploadResult {
-  success: boolean;
-  dlpRiskLevel?: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH';
-  entityCount?: number;
-  entityTypes?: string[];
-  contentPreview?: string;
-  contentHash?: string;
-  charCount?: number;
-  error?: string;
-}
-
 export interface UploadWidgetConfig {
   targetElement: HTMLElement;
   maxSize: Record<string, number>;
   onReady: (content: string, preview: string, riskLevel: string, rewritten?: string) => void;
   onError: (error: string) => void;
   onCancel: () => void;
+  onUpgrade?: (plan: 'yearly' | 'monthly') => void;
 }
 
-export interface UploadState {
-  phase: 'idle' | 'uploading' | 'validating' | 'scanning' | 'ready' | 'error' | 'rewriting';
-  progress: number; // 0-100
+interface BackendDlpPayload {
+  masked_summary: string;
+  risk_level: string;
+  findings: Array<{ entity_type: string; count: number; risk_level?: string }>;
+  blocked: boolean;
+}
+
+interface UploadState {
+  phase: 'loading' | 'ready' | 'error' | 'quota';
   file?: File;
   dlpRisk?: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH';
-  entities?: DetectedEntity[];
-  contentPreview?: string;
-  contentHash?: string;
-  charCount?: number;
-  error?: string;
+  findings?: Array<{ entity_type: string; count: number }>;
   extractedContent?: string;
+  originalContent?: string;
+  isBinary?: boolean;
+  error?: string;
 }
 
 const FILE_EXTENSIONS: Record<string, string> = {
@@ -96,104 +76,53 @@ const FILE_EXTENSIONS: Record<string, string> = {
   xls:  'application/vnd.ms-excel',
 };
 
-// Files requiring server-side extraction (not readable as plain text)
-// All types routed through the backend DLP endpoint
 const BINARY_TYPES = new Set(['pdf', 'docx', 'doc', 'xlsx', 'xls', 'csv']);
 
-const MAGIC_BYTES: Record<string, Uint8Array> = {
-  // Text files don't really have magic bytes, so we'll rely on extension + content
+const ENTITY_LABELS: Record<string, string> = {
+  CPF: 'CPF', CNPJ: 'CNPJ', RG: 'RG', EMAIL: 'E-mail',
+  PHONE: 'Telefone', CREDIT_CARD: 'Cartão de crédito',
+  API_KEY: 'Chave de API', JWT: 'Token JWT', SECRET: 'Segredo',
+  TOKEN: 'Token', BANK_ACCOUNT: 'Conta bancária', PIX: 'Chave Pix',
+  NAME: 'Nome', ADDRESS: 'Endereço', MEDICAL_DATA: 'Dado de saúde',
+  PASSPORT: 'Passaporte', PIS_PASEP: 'PIS/PASEP', TITULO_ELEITOR: 'Título de eleitor',
 };
 
 export class UploadWidget {
-  config: UploadWidgetConfig;
-  state: UploadState = { phase: 'idle', progress: 0 };
+  private config: UploadWidgetConfig;
+  private state: UploadState = { phase: 'loading' };
   private container: HTMLElement;
-  private fileInput: HTMLInputElement | undefined;
-  private dragOverlay: HTMLElement | undefined;
+  private phraseInterval?: ReturnType<typeof setInterval>;
 
   constructor(config: UploadWidgetConfig) {
     this.config = config;
     this.container = config.targetElement;
-    this.render();
-  }
-
-  render(): void {
-    this.container.innerHTML = '';
-    this.container.className = 'atenna-upload-widget';
-
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.className = 'atenna-upload-widget__input';
-    input.accept = '.txt,.md,.csv,.json,.pdf,.docx,.doc,.xlsx,.xls';
-    input.addEventListener('change', (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) this.handleFileSelect(file);
-    });
-    this.fileInput = input;
-    this.container.appendChild(input);
-
-    // Main UI
-    const icon = document.createElement('div');
-    icon.className = 'atenna-upload-widget__icon';
-    icon.innerHTML = '📎';
-
-    const text = document.createElement('div');
-    text.className = 'atenna-upload-widget__text';
-    text.textContent = 'Proteja dados sensíveis em documentos';
-
-    const hint = document.createElement('div');
-    hint.className = 'atenna-upload-widget__hint';
-    hint.textContent = 'PDF · DOCX · XLSX · CSV · TXT · Máx 10 MB';
-
-    const button = document.createElement('button');
-    button.className = 'atenna-upload-widget__button';
-    button.textContent = 'Selecionar arquivo';
-    button.addEventListener('click', () => this.fileInput?.click());
-
-    this.container.appendChild(icon);
-    this.container.appendChild(text);
-    this.container.appendChild(hint);
-    this.container.appendChild(button);
-
-    // Drag-drop area
-    this.setupDragDrop();
-  }
-
-  private setupDragDrop(): void {
-    this.container.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.container.classList.add('drag-active');
-    });
-
-    this.container.addEventListener('dragleave', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.container.classList.remove('drag-active');
-    });
-
-    this.container.addEventListener('drop', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.container.classList.remove('drag-active');
-      const file = e.dataTransfer?.files?.[0];
-      if (file) this.handleFileSelect(file);
-    });
   }
 
   handleFileSelect(file: File): void {
     const validation = this.validateFile(file);
     if (!validation.valid) {
-      this.setState({ phase: 'error', error: validation.error });
-      this.renderErrorState();
+      this.state = { phase: 'error', error: validation.error };
+      this.render();
       return;
     }
-
-    this.state.file = file;
-    this.checkLimitThenUpload(file).catch((err) => {
-      this.setState({ phase: 'error', error: err instanceof Error ? err.message : String(err) });
-      this.renderErrorState();
+    this.state = { phase: 'loading', file };
+    this.render();
+    this.checkLimitThenUpload(file).catch(err => {
+      this.state = { phase: 'error', file, error: err instanceof Error ? err.message : String(err) };
+      this.render();
     });
+  }
+
+  private validateFile(file: File): { valid: boolean; error?: string } {
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (!ext || !FILE_EXTENSIONS[ext]) {
+      return { valid: false, error: 'Tipo não suportado. Formatos aceitos: PDF, DOCX, Excel, CSV, TXT, JSON' };
+    }
+    const maxBytes = BINARY_TYPES.has(ext) ? 10 * 1024 * 1024 : 2 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      return { valid: false, error: `Arquivo muito grande. Máximo: ${maxBytes / (1024 * 1024)} MB` };
+    }
+    return { valid: true };
   }
 
   private async checkLimitThenUpload(file: File): Promise<void> {
@@ -201,8 +130,8 @@ export class UploadWidget {
     if (!pro) {
       const used = await getUploadUsage();
       if (used >= UPLOAD_LIMIT_FREE) {
-        this.setState({ phase: 'error', error: `Limite de ${UPLOAD_LIMIT_FREE} análises de arquivos por dia atingido. Continue sem restrições com o plano Pro.` });
-        this.renderErrorState();
+        this.state = { phase: 'quota', file };
+        this.render();
         return;
       }
     }
@@ -210,111 +139,84 @@ export class UploadWidget {
     return this.uploadFile(file);
   }
 
-  validateFile(file: File): { valid: boolean; error?: string } {
-    const ext = file.name.split('.').pop()?.toLowerCase();
-    if (!ext || !FILE_EXTENSIONS[ext]) {
-      return { valid: false, error: `Tipo não suportado. Suportamos: PDF, DOCX, Excel, TXT, CSV, JSON` };
+  private async uploadFile(file: File): Promise<void> {
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'txt';
+    try {
+      if (BINARY_TYPES.has(ext)) {
+        const payload = await this.extractViaBackend(file);
+        const risk = (payload.risk_level as 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH') || 'NONE';
+        this.state = {
+          phase: 'ready',
+          file,
+          dlpRisk: risk,
+          findings: payload.findings,
+          extractedContent: payload.masked_summary,
+          isBinary: true,
+        };
+        this.render();
+        void trackEvent('document_upload_success', { file_type: ext, dlp_risk: risk });
+      } else {
+        const raw = await this.readFile(file);
+        if (!this.isValidUtf8(raw)) throw new Error('Arquivo corrompido ou encoding não suportado.');
+        const content = this.normalizeText(raw, ext);
+        if (content.length > 200_000) throw new Error(`Documento muito extenso (${content.length} chars). Máximo: 200.000.`);
+
+        // Text files: scan via backend
+        const token = await this.getAuthToken();
+        if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
+        const blob = new Blob([content], { type: 'text/plain' });
+        const formData = new FormData();
+        formData.append('file', new File([blob], file.name, { type: 'text/plain' }));
+        const resp = await fetch(`${this.backendUrl}/document/upload`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData,
+        });
+        if (!resp.ok) throw new Error(`Erro ao analisar arquivo (${resp.status})`);
+        const data = await resp.json() as BackendDlpPayload;
+        const risk = (data.risk_level as 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH') || 'NONE';
+        this.state = {
+          phase: 'ready',
+          file,
+          dlpRisk: risk,
+          findings: data.findings,
+          extractedContent: data.masked_summary,
+          originalContent: content,
+          isBinary: false,
+        };
+        this.render();
+        void trackEvent('document_upload_success', { file_type: ext, dlp_risk: risk });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.state = { phase: 'error', file, error: msg };
+      this.render();
+      void trackEvent('document_upload_error', { error: msg });
     }
-    const maxBytes = BINARY_TYPES.has(ext) ? 10 * 1024 * 1024 : 2 * 1024 * 1024;
-    if (file.size > maxBytes) {
-      return { valid: false, error: `Arquivo grande demais. Máximo: ${maxBytes / (1024 * 1024)} MB` };
-    }
-    return { valid: true };
   }
 
-  async uploadFile(file: File): Promise<void> {
-    this.setState({ phase: 'uploading', progress: 0 });
-    this.renderUploadingState();
-
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'txt';
-
-    try {
-      let extracted: string;
-
-      if (BINARY_TYPES.has(ext)) {
-        // Binary files: send to backend (PDF, DOCX, XLSX, CSV)
-        // Backend does extraction + DLP in one call and returns findings only
-        this.setState({ progress: 20 });
-        extracted = await this.extractViaBackend(file);
-        this.setState({ progress: 90 });
-      } else {
-        // Text files: read locally then scan
-        const content = await this.readFile(file);
-        this.setState({ progress: 30 });
-        if (!this.isValidUtf8(content)) {
-          throw new Error('Arquivo corrompido ou encoding não suportado.');
-        }
-        extracted = await this.extractContent(content, ext);
-        this.setState({ progress: 60, extractedContent: extracted });
-      }
-
-      // If backend already ran DLP (binary files), use its result directly
-      if (extracted.startsWith('__BACKEND_DLP__')) {
-        const payload = JSON.parse(extracted.slice('__BACKEND_DLP__'.length)) as {
-          risk_level: string; masked_summary: string; blocked: boolean;
-          findings: Array<{ entity_type: string; count: number }>;
-        };
-        const riskLevel = (payload.risk_level as 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH') || 'NONE';
-        this.setState({
-          phase: 'ready',
-          dlpRisk: riskLevel,
-          entities: [],
-          contentPreview: payload.masked_summary,
-          contentHash: '',
-          charCount: 0,
-          progress: 100,
-        });
-        this.renderReadyState();
-        void trackEvent('document_upload_success', { file_type: ext, dlp_risk: riskLevel });
-        return;
-      }
-
-      const MAX_CHARS = 200_000;
-      if (extracted.length > MAX_CHARS) {
-        throw new Error(`Documento muito extenso (${extracted.length} caracteres). Máximo: ${MAX_CHARS}.`);
-      }
-
-      this.setState({ phase: 'scanning', charCount: extracted.length });
-      this.renderScanningState();
-
-      // DLP scan via backend (text files only — binaries already scanned above)
-      const scanResult = await this.scanWithDlp(extracted, file.name);
-
-      if (!scanResult.success) {
-        throw new Error(scanResult.error || 'Análise falhou');
-      }
-
-      this.setState({
-        phase: 'ready',
-        dlpRisk: scanResult.dlpRiskLevel,
-        entities: [],
-        contentPreview: scanResult.contentPreview,
-        contentHash: scanResult.contentHash,
-        charCount: scanResult.charCount,
-        progress: 100,
-      });
-
-      this.renderReadyState();
-      void trackEvent('document_upload_success', { file_type: ext, dlp_risk: scanResult.dlpRiskLevel });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.setState({ phase: 'error', error: message });
-      this.renderErrorState();
-      void trackEvent('document_upload_error', { error: message });
+  private async extractViaBackend(file: File): Promise<BackendDlpPayload> {
+    const token = await this.getAuthToken();
+    if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    const resp = await fetch(`${this.backendUrl}/document/upload`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData,
+    });
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => '');
+      throw new Error(`Falha ao processar arquivo (${resp.status}). ${body.slice(0, 120)}`);
     }
+    return resp.json() as Promise<BackendDlpPayload>;
   }
 
   private async readFile(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const content = reader.result as string;
-          resolve(content);
-        } catch (e) {
-          reject(new Error('Falha ao ler arquivo'));
-        }
-      };
+      reader.onload = () => resolve(reader.result as string);
       reader.onerror = () => reject(new Error('Falha ao ler arquivo'));
       reader.readAsText(file, 'utf-8');
     });
@@ -322,282 +224,345 @@ export class UploadWidget {
 
   private isValidUtf8(str: string): boolean {
     try {
-      // If we can encode and decode without error, it's valid UTF-8
-      const encoded = new TextEncoder().encode(str);
-      new TextDecoder('utf-8', { fatal: true }).decode(encoded);
+      new TextDecoder('utf-8', { fatal: true }).decode(new TextEncoder().encode(str));
       return true;
-    } catch {
-      return false;
-    }
+    } catch { return false; }
   }
 
-  private async extractContent(raw: string, fileType: string): Promise<string> {
-    // For text files, just normalize whitespace and remove control characters
-    let content = raw
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ') // Remove control chars
-      .trim();
-
-    // Remove BOM if present
-    if (content.charCodeAt(0) === 0xFEFF) {
-      content = content.slice(1);
-    }
-
-    // For CSV/JSON, normalize structure
-    if (fileType === 'csv') {
-      // Keep as-is (no JSON parsing)
-    } else if (fileType === 'json') {
-      try {
-        const parsed = JSON.parse(content);
-        content = JSON.stringify(parsed, null, 2);
-      } catch {
-        // If invalid JSON, keep as-is
-      }
-    } else if (fileType === 'md') {
-      // Basic markdown cleanup (remove extra whitespace)
-      content = content.replace(/\n\n\n+/g, '\n\n');
-    }
-
-    return content;
+  private normalizeText(raw: string, ext: string): string {
+    let c = raw.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ').trim();
+    if (c.charCodeAt(0) === 0xFEFF) c = c.slice(1);
+    if (ext === 'json') { try { c = JSON.stringify(JSON.parse(c), null, 2); } catch { /* keep as-is */ } }
+    if (ext === 'md') c = c.replace(/\n\n\n+/g, '\n\n');
+    return c;
   }
 
-  private async extractViaBackend(file: File): Promise<string> {
-    const token = await this.getAuthToken();
-    if (!token) throw new Error('Não autenticado. Por favor, faça login.');
-
-    const formData = new FormData();
-    formData.append('file', file, file.name);
-
-    // Route to the unified document DLP endpoint (PDF, DOCX, XLSX, CSV)
-    const resp = await fetch(`${this.getBackendUrl()}/document/upload`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: formData,
-    });
-
-    if (!resp.ok) {
-      const body = await resp.text().catch(() => '');
-      throw new Error(`Falha ao processar arquivo (${resp.status}). ${body.slice(0, 120)}`);
-    }
-
-    // Backend returns findings + masked_summary, never raw text.
-    // Use masked_summary as the "extracted content" for the DLP flow downstream.
-    const data = await resp.json() as {
-      masked_summary: string;
-      risk_level: string;
-      findings: Array<{ entity_type: string; count: number }>;
-      blocked: boolean;
-    };
-
-    // Surface risk level through a special prefix the scanWithDlp caller can detect
-    return `__BACKEND_DLP__${JSON.stringify(data)}`;
-  }
-
-  private async scanWithDlp(content: string, fileName: string): Promise<UploadResult> {
-    const token = await this.getAuthToken();
-    if (!token) {
-      throw new Error('Não autenticado. Por favor, faça login');
-    }
-
-    const backend = this.getBackendUrl();
-    const formData = new FormData();
-
-    // Create a blob from the content
-    const blob = new Blob([content], { type: 'text/plain' });
-    const file = new File([blob], fileName, { type: 'text/plain' });
-
-    formData.append('file', file);
-
-    try {
-      const response = await fetch(`${backend}/user/upload-document`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-Session-ID': this.getSessionId(),
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || `Server error: ${response.status}`);
-      }
-
-      const result = (await response.json()) as UploadResult;
-      return result;
-    } catch (e) {
-      throw new Error(`DLP scan failed: ${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      // Clear extracted content from memory
-      this.state.extractedContent = undefined;
-    }
-  }
-
-  private getBackendUrl(): string {
-    return 'https://atennaplugin.maestro-n8n.site';
-  }
-
-  private getSessionId(): string {
-    try {
-      const stored = localStorage.getItem('atenna_session_id');
-      return stored || 'unknown';
-    } catch {
-      return 'unknown';
-    }
-  }
+  private get backendUrl(): string { return 'https://atennaplugin.maestro-n8n.site'; }
 
   private async getAuthToken(): Promise<string | null> {
-    try {
-      const stored = localStorage.getItem('atenna_jwt');
-      return stored || null;
-    } catch {
-      return null;
+    return new Promise(resolve => {
+      try {
+        chrome.storage.local.get('atenna_jwt', r => {
+          const session = r['atenna_jwt'] as { access_token?: string } | undefined;
+          resolve(session?.access_token ?? null);
+        });
+      } catch { resolve(null); }
+    });
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  render(): void {
+    if (this.phraseInterval) { clearInterval(this.phraseInterval); this.phraseInterval = undefined; }
+    this.container.innerHTML = '';
+    this.container.className = 'atenna-upw';
+
+    if (this.state.phase === 'loading') this.renderLoading();
+    else if (this.state.phase === 'quota') this.renderQuota();
+    else if (this.state.phase === 'error') this.renderError();
+    else this.renderReady();
+  }
+
+  private renderLoading(): void {
+    const wrap = document.createElement('div');
+    wrap.className = 'atenna-upw__loading';
+
+    if (this.state.file) {
+      const fname = document.createElement('div');
+      fname.className = 'atenna-upw__fname';
+      fname.textContent = this.state.file.name;
+      wrap.appendChild(fname);
     }
+
+    // Spinner com logo no centro
+    const spinWrap = document.createElement('div');
+    spinWrap.className = 'atenna-upw__spin-wrap';
+
+    const ring = document.createElement('div');
+    ring.className = 'atenna-upw__ring';
+
+    const logoImg = document.createElement('img');
+    try { logoImg.src = chrome.runtime.getURL('icons/icon32.png'); } catch { logoImg.src = ''; }
+    logoImg.className = 'atenna-upw__spin-logo';
+    logoImg.alt = '';
+
+    spinWrap.appendChild(ring);
+    spinWrap.appendChild(logoImg);
+
+    const phrase = document.createElement('div');
+    phrase.className = 'atenna-upw__phrase';
+    phrase.textContent = LOADING_PHRASES[0];
+
+    let i = 0;
+    this.phraseInterval = setInterval(() => {
+      i = (i + 1) % LOADING_PHRASES.length;
+      phrase.style.opacity = '0';
+      setTimeout(() => {
+        phrase.textContent = LOADING_PHRASES[i];
+        phrase.style.opacity = '1';
+      }, 180);
+    }, 1800);
+
+    wrap.appendChild(spinWrap);
+    wrap.appendChild(phrase);
+    this.container.appendChild(wrap);
   }
 
-  private setState(partial: Partial<UploadState>): void {
-    this.state = { ...this.state, ...partial };
-  }
+  private renderReady(): void {
+    const { file, dlpRisk, findings = [], isBinary, extractedContent } = this.state;
+    const hasRisk = dlpRisk === 'MEDIUM' || dlpRisk === 'HIGH';
 
-  private renderUploadingState(): void {
-    const progress = this.state.progress || 0;
-    const fileName = this.state.file?.name || 'arquivo';
+    // Miller: cap at 5 findings displayed; collapse the rest
+    const filtered = findings.filter(f => f.count > 0);
+    const MAX_VISIBLE = 5;
+    const visible = filtered.slice(0, MAX_VISIBLE);
+    const hidden  = filtered.slice(MAX_VISIBLE);
 
-    this.container.innerHTML = `
-      <div class="atenna-upload-progress">Enviando ${fileName}...</div>
-      <div class="atenna-upload-progress-bar">
-        <div class="atenna-upload-progress-bar__fill" style="width: ${progress}%"></div>
-      </div>
-    `;
-  }
+    // Header row: filename + risk badge
+    const head = document.createElement('div');
+    head.className = 'atenna-upw__head';
 
-  private renderScanningState(): void {
-    this.container.innerHTML = `
-      <div class="atenna-upload-progress">Analisando dados...</div>
-      <div class="atenna-upload-progress">Verificando conteúdo sensível</div>
-    `;
-  }
+    const fname = document.createElement('div');
+    fname.className = 'atenna-upw__fname';
+    fname.textContent = file?.name ?? 'Documento';
+    fname.title = file?.name ?? '';
 
-  private renderReadyState(): void {
-    const { file, dlpRisk, contentPreview, charCount } = this.state;
-    if (!file) return;
+    const badge = document.createElement('span');
+    badge.className = `atenna-upw__badge atenna-upw__badge--${hasRisk ? 'warn' : 'ok'}`;
+    badge.textContent = hasRisk ? 'Dados sensíveis' : 'Limpo';
 
-    this.container.innerHTML = `
-      <div class="atenna-upload-result success">
-        <div style="margin-bottom: 12px;">✓ Pronto para enviar</div>
-        <div style="font-size: 12px; opacity: 0.7;">
-          ${file.name} (${(file.size / 1024).toFixed(1)} KB)<br>
-          ${charCount} caracteres
-        </div>
-        <div style="margin-top: 8px; font-size: 12px; opacity: 0.7;">
-          ${dlpRisk === 'NONE' || dlpRisk === 'LOW' ? 'Nenhum dado sensível detectado.' : 'Dados sensíveis detectados.'}
-        </div>
-      </div>
-    `;
+    head.appendChild(fname);
+    head.appendChild(badge);
+    this.container.appendChild(head);
 
-    if (dlpRisk === 'HIGH') {
-      this.renderProtectionBanner();
+    // Findings list — Miller: max 5 visible + collapse
+    if (visible.length > 0) {
+      const list = document.createElement('ul');
+      list.className = 'atenna-upw__findings';
+      for (const f of visible) {
+        const li = document.createElement('li');
+        li.className = 'atenna-upw__finding';
+        const label = ENTITY_LABELS[f.entity_type] ?? f.entity_type;
+        li.innerHTML = `<span class="atenna-upw__finding-type">${label}</span><span class="atenna-upw__finding-count">${f.count}×</span>`;
+        list.appendChild(li);
+      }
+      if (hidden.length > 0) {
+        const more = document.createElement('li');
+        more.className = 'atenna-upw__finding atenna-upw__finding--more';
+        more.textContent = `+ ${hidden.length} tipo${hidden.length > 1 ? 's' : ''} adicional`;
+        list.appendChild(more);
+      }
+      this.container.appendChild(list);
+    } else if (!hasRisk) {
+      const ok = document.createElement('div');
+      ok.className = 'atenna-upw__ok-msg';
+      ok.textContent = 'Nenhum dado sensível encontrado.';
+      this.container.appendChild(ok);
+    }
+
+    // Hick: action bar — deliberate hierarchy, ação destrutiva visualmente menor
+    const bar = document.createElement('div');
+    bar.className = 'atenna-upw__bar';
+
+    if (hasRisk) {
+      // Primary: large, green — ação recomendada (Fitts: maior alvo)
+      const LOCK_SVG = `<svg class="atenna-upw__btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+      const protectBtn = this.makeBtn(
+        'Proteger documento',
+        'primary',
+        'Substitui dados sensíveis por marcadores antes de enviar',
+        LOCK_SVG
+      );
+      protectBtn.classList.add('atenna-upw__btn--protect');
+      protectBtn.addEventListener('click', () => {
+        const content = extractedContent ?? '';
+        this.showSuccess(() => this.config.onReady(content, content.slice(0, 300), dlpRisk ?? 'HIGH', content));
+      });
+      bar.appendChild(protectBtn);
+
+      // Secondary: só para arquivos texto onde temos o original — visualmente recessivo
+      if (!isBinary && this.state.originalContent) {
+        const origBtn = this.makeBtn(
+          'Usar sem alteração',
+          'danger',
+          'Envia o documento sem remover os dados sensíveis identificados'
+        );
+        origBtn.addEventListener('click', () => {
+          const orig = this.state.originalContent!;
+          this.showSuccess(() => this.config.onReady(orig, orig.slice(0, 300), dlpRisk ?? 'HIGH'));
+        });
+        bar.appendChild(origBtn);
+      }
     } else {
-      const sendBtn = document.createElement('button');
-      sendBtn.className = 'atenna-upload-widget__button';
-      sendBtn.textContent = 'Enviar para IA';
-      sendBtn.addEventListener('click', () => {
-        if (this.state.extractedContent) {
-          this.config.onReady(
-            this.state.extractedContent,
-            contentPreview || '',
-            dlpRisk || 'NONE'
-          );
-          this.cleanup();
+      // Jakob: label familiar — "Copiar" e "Aplicar" como no resto do app
+      const applyBtn = this.makeBtn('Aplicar no texto', 'primary', 'Insere o conteúdo no campo de texto ativo');
+      applyBtn.addEventListener('click', () => {
+        const content = extractedContent ?? this.state.originalContent ?? '';
+        this.showSuccess(() => this.config.onReady(content, content.slice(0, 300), dlpRisk ?? 'NONE'));
+      });
+      bar.appendChild(applyBtn);
+
+      const copyBtn = this.makeBtn('Copiar', 'secondary', 'Copia o conteúdo para a área de transferência');
+      copyBtn.addEventListener('click', async () => {
+        const content = extractedContent ?? this.state.originalContent ?? '';
+        await navigator.clipboard.writeText(content).catch(() => null);
+        copyBtn.textContent = 'Copiado';
+        setTimeout(() => { copyBtn.textContent = 'Copiar'; }, 1800);
+      });
+      bar.appendChild(copyBtn);
+    }
+
+    this.container.appendChild(bar);
+  }
+
+  // Peak-End: estado de sucesso explícito antes de fechar (o "end" da experiência)
+  private showSuccess(then: () => void): void {
+    if (this.phraseInterval) { clearInterval(this.phraseInterval); this.phraseInterval = undefined; }
+    this.container.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'atenna-upw__success';
+    const icon = document.createElement('div');
+    icon.className = 'atenna-upw__success-icon';
+    icon.textContent = '✓';
+    const msg = document.createElement('div');
+    msg.className = 'atenna-upw__success-msg';
+    msg.textContent = 'Pronto.';
+    wrap.appendChild(icon);
+    wrap.appendChild(msg);
+    this.container.appendChild(wrap);
+    setTimeout(then, 600);
+  }
+
+  private renderQuota(): void {
+    const wrap = document.createElement('div');
+    wrap.className = 'atenna-upw__quota';
+
+    // X vermelho animado
+    const xWrap = document.createElement('div');
+    xWrap.className = 'atenna-upw__quota-x';
+    xWrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+
+    const title = document.createElement('div');
+    title.className = 'atenna-upw__quota-title';
+    title.textContent = 'Cota diária atingida';
+
+    const msg = document.createElement('div');
+    msg.className = 'atenna-upw__quota-msg';
+    msg.textContent = 'Você usou todas as análises gratuitas de hoje. Volte amanhã ou torne-se Atenna Pro para continuar sem restrições.';
+
+    wrap.appendChild(xWrap);
+    wrap.appendChild(title);
+    wrap.appendChild(msg);
+
+    // Cards de plano inline
+    const cardsWrap = document.createElement('div');
+    cardsWrap.className = 'atenna-upw__quota-cards';
+
+    const plans: Array<{ id: 'yearly' | 'monthly'; label: string; price: string; period: string; tag?: string; desc: string; btnLabel: string; primary: boolean }> = [
+      {
+        id: 'yearly', label: 'Pro Anual', price: 'R$197', period: '/ano',
+        tag: 'MELHOR VALOR', desc: '~R$16/mês · 300 prompts · arquivos ilimitados',
+        btnLabel: 'Assinar anual', primary: true,
+      },
+      {
+        id: 'monthly', label: 'Pro Mensal', price: 'R$29,90', period: '/mês',
+        desc: 'Cancele quando quiser · prompts ilimitados',
+        btnLabel: 'Assinar mensal', primary: false,
+      },
+    ];
+
+    for (const p of plans) {
+      const card = document.createElement('div');
+      card.className = `atenna-upw__quota-card${p.primary ? ' atenna-upw__quota-card--featured' : ''}`;
+
+      if (p.tag) {
+        const tag = document.createElement('span');
+        tag.className = 'atenna-upw__quota-tag';
+        tag.textContent = p.tag;
+        card.appendChild(tag);
+      }
+
+      const planName = document.createElement('div');
+      planName.className = 'atenna-upw__quota-plan';
+      planName.textContent = p.label;
+
+      const priceRow = document.createElement('div');
+      priceRow.className = 'atenna-upw__quota-price';
+      priceRow.innerHTML = `<strong>${p.price}</strong><span>${p.period}</span>`;
+
+      const desc = document.createElement('div');
+      desc.className = 'atenna-upw__quota-desc';
+      desc.textContent = p.desc;
+
+      const btn = document.createElement('button');
+      btn.className = `atenna-upw__quota-btn${p.primary ? ' atenna-upw__quota-btn--primary' : ''}`;
+      btn.textContent = p.btnLabel;
+      btn.addEventListener('click', () => {
+        if (this.config.onUpgrade) {
+          this.config.onUpgrade(p.id);
         }
       });
-      this.container.appendChild(sendBtn);
-    }
-  }
 
-  private renderProtectionBanner(): void {
-    const protectBtn = document.createElement('button');
-    protectBtn.className = 'atenna-upload-widget__button atenna-upload-widget__button--primary';
-    protectBtn.textContent = 'Proteger dados';
-    protectBtn.addEventListener('click', () => {
-      this.setState({ phase: 'rewriting' });
-      this.renderRewritingState();
-      this.applyRewrite();
-    });
-
-    const sendBtn = document.createElement('button');
-    sendBtn.className = 'atenna-upload-widget__button';
-    sendBtn.textContent = 'Enviar original';
-    sendBtn.addEventListener('click', () => {
-      if (this.state.extractedContent) {
-        this.config.onReady(
-          this.state.extractedContent,
-          this.state.contentPreview || '',
-          this.state.dlpRisk || 'HIGH'
-        );
-        this.cleanup();
-      }
-    });
-
-    this.container.appendChild(protectBtn);
-    this.container.appendChild(sendBtn);
-  }
-
-  private applyRewrite(): void {
-    // Use local DLP rewriter to protect content
-    // The rewriter masks PII entities with generic placeholders
-    if (!this.state.extractedContent) {
-      this.setState({ phase: 'error', error: 'Conteúdo não disponível' });
-      this.renderErrorState();
-      return;
+      card.appendChild(planName);
+      card.appendChild(priceRow);
+      card.appendChild(desc);
+      card.appendChild(btn);
+      cardsWrap.appendChild(card);
     }
 
-    try {
-      // Call local rewriter (no network call needed)
-      const rewritten = rewritePII(this.state.extractedContent, []);
-      const previewRewritten = rewritten.substring(0, 500);
-
-      this.config.onReady(
-        rewritten,
-        previewRewritten,
-        'PROTECTED',
-        rewritten
-      );
-      void trackEvent('document_rewrite_applied');
-      this.cleanup();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Falha ao proteger';
-      this.setState({ phase: 'error', error: message });
-      this.renderErrorState();
-    }
+    wrap.appendChild(cardsWrap);
+    this.container.appendChild(wrap);
   }
 
-  private renderRewritingState(): void {
-    this.container.innerHTML = `
-      <div class="atenna-upload-progress">Protegendo dados...</div>
-    `;
-  }
+  private renderError(): void {
+    const wrap = document.createElement('div');
+    wrap.className = 'atenna-upw__error';
 
-  private renderErrorState(): void {
-    const error = this.state.error || 'Erro desconhecido';
-    this.container.innerHTML = `
-      <div class="atenna-upload-result error">
-        ❌ ${error}
-      </div>
-    `;
+    const msg = document.createElement('div');
+    msg.className = 'atenna-upw__error-msg';
+    msg.textContent = this.state.error ?? 'Erro desconhecido.';
 
-    const retryBtn = document.createElement('button');
-    retryBtn.className = 'atenna-upload-widget__button';
-    retryBtn.textContent = 'Tentar outro';
-    retryBtn.addEventListener('click', () => {
-      this.render();
+    // Hick: 1 ação clara no estado de erro
+    const retry = this.makeBtn('Escolher outro arquivo', 'secondary', 'Selecionar um arquivo diferente');
+    retry.addEventListener('click', () => {
+      // Reabre o file picker em vez de fechar o overlay
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.txt,.md,.csv,.json,.pdf,.docx,.doc,.xlsx,.xls';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      input.addEventListener('change', () => {
+        const file = input.files?.[0];
+        input.remove();
+        if (file) this.handleFileSelect(file);
+      });
+      input.click();
     });
-    this.container.appendChild(retryBtn);
+
+    wrap.appendChild(msg);
+    wrap.appendChild(retry);
+    this.container.appendChild(wrap);
   }
 
-  cleanup(): void {
-    // Clear sensitive data from memory
-    this.state.extractedContent = undefined;
-    this.state.contentPreview = undefined;
-    this.state.file = undefined;
+  private makeBtn(label: string, variant: 'primary' | 'secondary' | 'danger', tooltip: string, icon?: string): HTMLButtonElement {
+    const btn = document.createElement('button');
+    btn.className = `atenna-doc-action-btn${variant === 'primary' ? ' atenna-doc-action-btn--primary atenna-upw__btn--primary' : ''}${variant === 'danger' ? ' atenna-upw__btn--danger' : ''}`;
+    // sem title — evita tooltip nativo duplicado com o CSS tooltip
+
+    if (icon) {
+      btn.innerHTML = `${icon}<span>${label}</span>`;
+    } else {
+      btn.textContent = label;
+    }
+
+    const tip = document.createElement('span');
+    tip.className = 'atenna-doc-action-btn__tooltip';
+    tip.textContent = tooltip;
+    btn.appendChild(tip);
+
+    btn.addEventListener('mouseenter', () => tip.classList.add('atenna-doc-action-btn__tooltip--visible'));
+    btn.addEventListener('mouseleave', () => tip.classList.remove('atenna-doc-action-btn__tooltip--visible'));
+
+    return btn;
   }
 }

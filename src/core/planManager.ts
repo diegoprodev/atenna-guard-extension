@@ -1,11 +1,13 @@
-const PLAN_KEY = 'atenna_plan';
+const PLAN_KEY         = 'atenna_plan';
+const PRO_WELCOME_KEY  = 'atenna_pro_welcome_pending';
 const SUPABASE_URL      = 'https://kezbssjmgwtrunqeoyir.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlemJzc2ptZ3d0cnVucWVveWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MzY0NzcsImV4cCI6MjA5MzUxMjQ3N30.c2YNPrG7WcbwtFij8UJlS7BNxY_XeaKoeqPlrKHloKs';
 
 export interface Plan {
   type:        'free' | 'pro';
+  planType?:   'free' | 'monthly' | 'yearly';
   email?:      string;
-  validUntil?: number; // ms timestamp; undefined = lifetime
+  validUntil?: number;  // ms timestamp (local cache expiry mirror)
 }
 
 async function storagePlanGet(): Promise<Plan | undefined> {
@@ -29,7 +31,6 @@ export async function setPlan(plan: Plan): Promise<void> {
 export async function getPlan(): Promise<Plan> {
   const plan = await storagePlanGet();
   if (!plan) return { type: 'free' };
-  // If Pro subscription expired, revert to Free
   if (plan.type === 'pro' && plan.validUntil && Date.now() > plan.validUntil) {
     return { type: 'free' };
   }
@@ -41,35 +42,62 @@ export async function isPro(): Promise<boolean> {
   return plan.type === 'pro';
 }
 
-export async function syncPlanFromSupabase(session: { access_token: string; email: string }): Promise<void> {
+/** Returns true if plan just transitioned free → pro (welcome screen trigger) */
+export async function syncPlanFromSupabase(
+  session: { access_token: string; email: string }
+): Promise<{ upgradedToPro: boolean }> {
   try {
-    // Import at call time to avoid circular dependency
     const { decodeJwtPayload } = await import('./auth');
     const payload = decodeJwtPayload(session.access_token);
     const userId = payload.sub as string;
-    if (!userId) return;
+    if (!userId) return { upgradedToPro: false };
 
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=plan`,
+      `${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=plan,plan_type,plan_expires_at`,
       {
-        method: 'GET',
         headers: {
           'apikey':        SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${session.access_token}`,
         },
       }
     );
+    if (!res.ok) return { upgradedToPro: false };
 
-    if (!res.ok) return;
-    const data = await res.json() as Array<{ plan: string }>;
-    const profile = data[0];
+    const data = await res.json() as Array<{ plan: string; plan_type?: string; plan_expires_at?: string }>;
+    const row         = data[0];
+    const remotePlan  = row?.plan;
+    const planType    = (row?.plan_type ?? 'free') as 'free' | 'monthly' | 'yearly';
+    const expiresAt   = row?.plan_expires_at ? new Date(row.plan_expires_at).getTime() : undefined;
 
-    if (profile?.plan === 'pro') {
-      await setPlan({ type: 'pro', email: session.email });
+    const previous = await getPlan();
+    const wasFreeBefore = previous.type === 'free';
+
+    if (remotePlan === 'pro') {
+      await setPlan({ type: 'pro', planType, email: session.email, validUntil: expiresAt });
+      if (wasFreeBefore) {
+        // Mark welcome pending so next modal open shows congrats screen
+        await new Promise<void>(r => {
+          try { chrome.storage.local.set({ [PRO_WELCOME_KEY]: true }, () => r()); }
+          catch { r(); }
+        });
+        return { upgradedToPro: true };
+      }
     } else {
-      await setPlan({ type: 'free', email: session.email });
+      await setPlan({ type: 'free', planType: 'free', email: session.email });
     }
-  } catch {
-    // Silently fail; local plan remains unchanged
-  }
+  } catch { /* silent */ }
+  return { upgradedToPro: false };
+}
+
+/** Check and consume the welcome-pending flag (one-shot). */
+export async function consumeProWelcome(): Promise<boolean> {
+  return new Promise(resolve => {
+    try {
+      chrome.storage.local.get(PRO_WELCOME_KEY, r => {
+        const pending = !!r[PRO_WELCOME_KEY];
+        if (pending) chrome.storage.local.remove(PRO_WELCOME_KEY, () => resolve(true));
+        else resolve(false);
+      });
+    } catch { resolve(false); }
+  });
 }

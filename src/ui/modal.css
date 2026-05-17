@@ -3082,3 +3082,540 @@
   border: 1.5px solid rgba(0,0,0,0.12) !important;
   box-shadow: 0 1px 3px rgba(0,0,0,0.12) !important;
 }
+
+/* ── Pro Welcome Overlay ────────────────────────────────────── */
+.atenna-pro-welcome__panel {
+  background: var(--at-card-bg, #1a1a2e);
+  border: 1px solid var(--at-border, rgba(255,255,255,0.1));
+  border-radius: 16px;
+  padding: 32px 28px 28px;
+  width: 320px;
+  max-width: 92vw;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  animation: atenna-welcome-in 420ms cubic-bezier(0.34,1.56,0.64,1) both;
+}
+
+@keyframes atenna-welcome-in {
+  from { opacity:0; transform: scale(0.88) translateY(16px); }
+  to   { opacity:1; transform: scale(1) translateY(0); }
+}
+
+.atenna-pro-welcome__burst {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.atenna-pro-welcome__logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  animation: atenna-bounce 1.8s ease-in-out 2;
+}
+
+.atenna-pro-welcome__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--at-text, #e8e8e8);
+  margin-bottom: 4px;
+}
+
+.atenna-pro-welcome__sub {
+  font-size: 13px;
+  color: var(--at-green, #22c55e);
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.atenna-pro-welcome__perks {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.atenna-pro-welcome__perks li {
+  font-size: 12px;
+  color: var(--at-text, #e8e8e8);
+  opacity: 0.8;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  animation: atenna-fade-up 300ms ease both;
+}
+
+.atenna-pro-welcome__perks li:nth-child(1) { animation-delay: 200ms; }
+.atenna-pro-welcome__perks li:nth-child(2) { animation-delay: 280ms; }
+.atenna-pro-welcome__perks li:nth-child(3) { animation-delay: 360ms; }
+.atenna-pro-welcome__perks li:nth-child(4) { animation-delay: 440ms; }
+
+.atenna-pro-welcome__check {
+  color: var(--at-green, #22c55e);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.atenna-pro-welcome__btn {
+  width: 100%;
+  padding: 11px;
+  background: var(--at-green, #22c55e);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 150ms;
+  animation: atenna-fade-up 300ms 500ms ease both;
+}
+
+.atenna-pro-welcome__btn:hover { opacity: 0.88; }
+
+/* ── Upload Widget (atenna-upw) ─────────────────────────────── */
+.atenna-upw {
+  font-family: inherit;
+  color: var(--at-text);
+  font-size: 12px;
+}
+
+/* Loading */
+.atenna-upw__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0 4px;
+}
+
+/* Spinner ring + logo no centro */
+.atenna-upw__spin-wrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.atenna-upw__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2.5px solid var(--at-border);
+  border-top-color: var(--at-green);
+  border-right-color: var(--at-green);
+  animation: atenna-spin 1s cubic-bezier(0.4,0,0.6,1) infinite;
+}
+
+@keyframes atenna-spin {
+  to { transform: rotate(360deg); }
+}
+
+.atenna-upw__spin-logo {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  object-fit: contain;
+  animation: atenna-bounce 1.6s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes atenna-bounce {
+  0%, 100% { transform: translateY(0) scale(1);   opacity: 0.9; }
+  50%       { transform: translateY(-3px) scale(1.06); opacity: 1; }
+}
+
+.atenna-upw__phrase {
+  font-size: 11px;
+  color: var(--at-text);
+  opacity: 0.55;
+  text-align: center;
+  min-height: 16px;
+  transition: opacity 180ms ease;
+}
+
+/* Shared filename label */
+.atenna-upw__fname {
+  font-size: 11px;
+  color: var(--at-text);
+  opacity: 0.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Ready state */
+.atenna-upw__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.atenna-upw__head .atenna-upw__fname {
+  opacity: 0.45;
+  flex: 1;
+  min-width: 0;
+}
+
+.atenna-upw__badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.atenna-upw__badge--ok {
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--at-green);
+}
+
+.atenna-upw__badge--warn {
+  background: rgba(234, 179, 8, 0.12);
+  color: #ca9a0a;
+}
+
+[data-theme="dark"] .atenna-upw__badge--warn,
+.atenna-modal--dark .atenna-upw__badge--warn {
+  color: #facc15;
+}
+
+.atenna-upw__findings {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.atenna-upw__finding {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: var(--at-card-bg);
+  border: 1px solid var(--at-border);
+}
+
+.atenna-upw__finding-type {
+  color: var(--at-text);
+  opacity: 0.8;
+  font-size: 11px;
+}
+
+.atenna-upw__finding-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ca9a0a;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-theme="dark"] .atenna-upw__finding-count,
+.atenna-modal--dark .atenna-upw__finding-count {
+  color: #facc15;
+}
+
+.atenna-upw__ok-msg {
+  font-size: 11px;
+  color: var(--at-green);
+  opacity: 0.85;
+  margin-bottom: 10px;
+}
+
+.atenna-upw__notice {
+  font-size: 10px;
+  color: var(--at-text);
+  opacity: 0.38;
+  margin-bottom: 8px;
+  font-style: italic;
+}
+
+.atenna-upw__bar {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--at-border);
+  flex-wrap: wrap;
+}
+
+/* Error state */
+.atenna-upw__error {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.atenna-upw__error-msg {
+  font-size: 11px;
+  color: var(--at-text);
+  opacity: 0.7;
+  line-height: 1.45;
+}
+
+/* ── Quota / cota atingida ──────────────────────────────── */
+.atenna-upw__quota {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.atenna-upw__quota-x {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ef4444;
+  animation: atenna-x-in 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  margin-bottom: 2px;
+}
+
+.atenna-upw__quota-x svg {
+  width: 20px;
+  height: 20px;
+}
+
+@keyframes atenna-x-in {
+  from { opacity: 0; transform: scale(0.5) rotate(-20deg); }
+  to   { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+.atenna-upw__quota-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--at-text);
+  animation: atenna-fade-up 300ms 120ms ease both;
+}
+
+.atenna-upw__quota-msg {
+  font-size: 11px;
+  color: var(--at-text);
+  opacity: 0.55;
+  line-height: 1.5;
+  max-width: 260px;
+  animation: atenna-fade-up 300ms 200ms ease both;
+}
+
+@keyframes atenna-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Cards de plano inline */
+.atenna-upw__quota-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+  animation: atenna-fade-up 300ms 300ms ease both;
+}
+
+.atenna-upw__quota-card {
+  border: 1px solid var(--at-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-align: left;
+  position: relative;
+  background: var(--at-card-bg);
+}
+
+.atenna-upw__quota-card--featured {
+  border-color: #6366f1;
+  border-width: 1.5px;
+}
+
+.atenna-upw__quota-tag {
+  position: absolute;
+  top: -9px;
+  right: 12px;
+  background: #6366f1;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+
+.atenna-upw__quota-plan {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--at-text);
+  margin-bottom: 2px;
+}
+
+.atenna-upw__quota-price {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-bottom: 2px;
+}
+
+.atenna-upw__quota-price strong {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--at-text);
+}
+
+.atenna-upw__quota-price span {
+  font-size: 11px;
+  color: var(--at-text);
+  opacity: 0.45;
+}
+
+.atenna-upw__quota-desc {
+  font-size: 10px;
+  color: var(--at-text);
+  opacity: 0.45;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.atenna-upw__quota-btn {
+  width: 100%;
+  padding: 8px;
+  border-radius: 7px;
+  border: 1px solid var(--at-border);
+  background: transparent;
+  color: var(--at-text);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+
+.atenna-upw__quota-btn:hover {
+  background: var(--at-card-bg);
+  border-color: var(--at-text);
+}
+
+.atenna-upw__quota-btn--primary {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #fff;
+  font-weight: 600;
+}
+
+.atenna-upw__quota-btn--primary:hover {
+  opacity: 0.88;
+  background: #6366f1;
+}
+
+/* Fitts: botão primário maior que o secundário */
+.atenna-upw__btn--primary {
+  padding: 9px 18px;
+  font-size: 12.5px;
+}
+
+/* Ícone dentro dos botões do widget */
+.atenna-upw__btn-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+/* Botão "Proteger documento" — verde sólido + shimmer sutil */
+.atenna-upw__btn--protect {
+  background: var(--at-green);
+  border-color: var(--at-green);
+  color: #fff;
+  overflow: hidden;
+  position: relative;
+}
+
+.atenna-upw__btn--protect::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+  animation: atenna-shimmer 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes atenna-shimmer {
+  0%   { left: -60%; }
+  60%  { left: 120%; }
+  100% { left: 120%; }
+}
+
+.atenna-upw__btn--protect:hover {
+  opacity: 0.88;
+  background: var(--at-green);
+}
+
+/* Hick: ação destrutiva ("Usar sem alteração") visualmente recessiva */
+.atenna-upw__btn--danger {
+  background: transparent;
+  border: 1px solid var(--at-border);
+  color: var(--at-text);
+  opacity: 0.55;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 120ms, border-color 120ms;
+  position: relative;
+}
+
+.atenna-upw__btn--danger:hover {
+  opacity: 0.85;
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+/* Miller: "N tipos adicional" collapse row */
+.atenna-upw__finding--more {
+  justify-content: center;
+  opacity: 0.45;
+  font-size: 10px;
+  font-style: italic;
+  background: transparent;
+  border-style: dashed;
+}
+
+/* Peak-End: success state */
+.atenna-upw__success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 0 8px;
+}
+
+.atenna-upw__success-icon {
+  font-size: 22px;
+  color: var(--at-green);
+  line-height: 1;
+}
+
+.atenna-upw__success-msg {
+  font-size: 12px;
+  color: var(--at-text);
+  opacity: 0.6;
+}

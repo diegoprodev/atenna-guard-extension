@@ -4,6 +4,121 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.42.0] — 2026-05-17 (Checkout Audit — Zero Blind Spots + Subscriptions)
+
+### Backend (VPS)
+
+#### Auditoria completa do fluxo de checkout
+- Spec `docs/checkout-audit-spec.md` — 6 bugs identificados e corrigidos
+- **BUG-01 CRÍTICO corrigido**: `rate_limit.py::get_user_plan()` lia `user_plans` mas webhook só escrevia em `profiles` → usuário pagava e backend ainda bloqueava como free. Agora verifica `user_plans` + fallback para `profiles` com validação de `plan_expires_at`
+- **BUG-02**: Tabela `subscriptions` nunca populada — agora escrita em `/checkout/create` (status=pending) e webhook PAYMENT_CONFIRMED (status=active)
+- **BUG-03**: `checkout_events` sem registro para assinaturas — agora registra `event_type=initiated` na criação e `event_type=paid` no webhook
+- **BUG-04**: `user_plans` sem colunas `status`, `billing_period`, `plan_expires_at`, `asaas_subscription_id` — migração aplicada
+- **BUG-05**: `PAYMENT_OVERDUE` não marcava `past_due` no admin — `_mark_past_due()` implementado
+- **BUG-06**: `SUBSCRIPTION_CREATED` sem handler — adicionado registro em `subscriptions`
+
+#### `_promote_to_pro()` agora escreve todas as tabelas
+Após `PAYMENT_RECEIVED` / `PAYMENT_CONFIRMED`:
+- `profiles` → `plan`, `plan_type`, `plan_expires_at`, `updated_at`
+- `user_plans` → `plan_type=pro`, `status=active`, `billing_period`, `plan_expires_at`
+- `subscriptions` → `plan=pro`, `status=active`, `valid_until`
+- `checkout_events` → `event_type=paid`
+- `dlp_events` → audit log LGPD
+
+#### `_downgrade_to_free()` agora escreve todas as tabelas
+- `profiles` → `plan=free`, `plan_type=free`, `plan_expires_at=null`
+- `user_plans` → `plan_type=free`, `status=canceled`
+- `subscriptions` → `status=cancelled`
+- `dlp_events` → audit log
+
+#### Assinaturas recorrentes (migração de checkout one-time)
+- `/checkout/create` migrado de `/checkouts` para `/subscriptions` Asaas
+- Renovação automática: mensal (30 dias) e anual (365 dias)
+- `_get_or_create_customer()` — reutiliza customer Asaas por email
+- `SUBSCRIPTION_CANCELLED` → downgrade automático para free
+
+---
+
+## [2.41.0] — 2026-05-17 (Super Admin — Sync, Preços, OpenAI)
+
+### Backend (VPS)
+
+#### Super Admin — sincronização corrigida
+- `routes/admin/users.py::_safe_user()` lia `user_metadata.plan_type` (sempre vazio para email/senha) — agora busca `profiles` em batch e usa como fonte de verdade
+- `routes/admin/plans.py` migrado para ler/escrever `profiles` ao invés de `user_plans`
+- Atribuir plano pelo admin atualiza `profiles` (fonte de verdade extensão) + sincroniza `user_plans`
+
+#### Preços e planos corrigidos
+- Pro Mensal: R$29,90/mês (era R$49,90)
+- Pro Anual: R$197,00/ano
+- Plano Enterprise removido — apenas Free e Pro
+- Links de checkout inseridos nos cards do admin
+
+#### OpenAI status
+- Nova API key configurada no VPS `.env` — status volta a `ok` no painel
+
+---
+
+## [2.40.0] — 2026-05-17 (Nome do Usuário — Personalização)
+
+### Supabase
+- Coluna `display_name text` adicionada em `profiles`
+- Trigger `handle_new_user()` atualizado para salvar `display_name` do `user_metadata` no cadastro (suporte a login social futuro)
+
+### Extension — `src/core/auth.ts`
+- `Session` interface: campo `display_name?: string`
+- `signUpWithPassword(email, password, displayName?)` — passa `data.display_name` para Supabase
+- `fetchDisplayName(session)` — busca `profiles.display_name` e cacheia na sessão
+- `saveDisplayName(session, name)` — salva em `profiles` e atualiza cache local
+- `getActiveSession()` — lazy-load de `display_name` se não estiver em cache
+
+### Extension — `src/ui/modal.ts`
+- Formulário de signup: campo "Seu nome" adicionado (antes do email)
+- Configurações → Personalização: campo "Seu nome" com botão Salvar — usuários existentes podem definir nome
+- Header das configurações: exibe `display_name` ao invés do email
+- Tela de boas-vindas Pro: `"Parabéns, [nome]!"` usa `display_name` com fallback para prefixo do email
+
+---
+
+## [2.39.0] — 2026-05-17 (Super Admin — Senha, Role, DB Columns)
+
+### Supabase
+- Colunas adicionadas em `profiles`: `plan_type`, `plan_expires_at`, `asaas_subscription_id`, `asaas_customer_id`
+- View `admin_plan_overview` criada com `SECURITY INVOKER` (corrige alerta security_definer_view)
+- Índices em `profiles(plan_type)` e `profiles(plan_expires_at)`
+
+### Backend (VPS)
+- `app_metadata.role = 'super_admin'` setado para `devdiegopro@gmail.com`
+- Senha do usuário admin redefinida via Supabase Admin API
+- Endpoint `GET /admin/plans` com filtros `plan_type`, `expiring_days`, `limit`, `offset`
+
+---
+
+## [2.38.0] — 2026-05-17 (Pro Welcome Fix + Upload Badge + Quota UX)
+
+### Extension — `src/ui/modal.ts`
+
+#### Pro welcome screen — bug crítico corrigido
+- `openModal` criava overlay vazio antes de mostrar o welcome, bloqueando fundo — corrigido: `close()` chamado antes de `showProWelcomeOverlay()`
+- "Começar agora" agora abre o modal normal via callback `onDismiss` ao invés de apenas remover o overlay
+- Clicar no backdrop do welcome também chama `onDismiss`
+- Welcome nunca reabre após dismiss (flag `PRO_WELCOME_KEY` consumida uma única vez)
+
+#### Navbar cleanup
+- "Pro ✓" removido do usage badge (redundante com badge no título esquerdo)
+- Usage badge oculto para usuários Pro
+
+#### Upload badge — re-sync de plano
+- `openUploadFromBadge()` chama `syncPlanFromSupabase` antes de verificar quota
+- Transição free→pro detectada na hora: abre welcome screen sem precisar reabrir extensão
+
+#### Pro welcome screen
+- `showProWelcomeOverlay(session, onDismiss?)` — aceita callback
+- Logo com animação bounce, bullets com fade-up escalonado
+- Detecta `display_name` para personalização
+
+---
+
 ## [2.37.0] — 2026-05-16 (UI — Narrativa, Badge Hover, Shimmer, Planos Modal)
 
 ### Features

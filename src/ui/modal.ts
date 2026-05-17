@@ -1,7 +1,7 @@
 import { getCurrentInput, getInputText, setInputText } from '../core/inputHandler';
 import { getUsage, incrementUsage, isAtLimit, isAtAnyLimit, DAILY_LIMIT, getTotalCount, incrementTotalCount, getMonthlyUsage, MONTHLY_LIMIT, incrementMonthlyUsage, syncUsageFromSupabase } from '../core/usageCounter';
-import { isPro, syncPlanFromSupabase } from '../core/planManager';
-import { getActiveSession, signInWithPassword, signUpWithPassword, resetPassword } from '../core/auth';
+import { isPro, syncPlanFromSupabase, consumeProWelcome } from '../core/planManager';
+import { getActiveSession, signInWithPassword, signUpWithPassword, resetPassword, saveDisplayName } from '../core/auth';
 import { track, trackEvent } from '../core/analytics';
 import { getHistory, addToHistory, toggleFavorite } from '../core/history';
 import type { PromptOrigin, PromptType } from '../core/analytics';
@@ -615,16 +615,17 @@ function renderSettingsPage(
   const userCard = document.createElement('div');
   userCard.className = 'atenna-settings__user-card';
 
+  const displayName = session.display_name || session.email;
   const avatar = document.createElement('div');
   avatar.className = 'atenna-settings__avatar';
-  avatar.textContent = (session.email?.[0] ?? 'A').toUpperCase();
+  avatar.textContent = (displayName[0] ?? 'A').toUpperCase();
 
   const userInfo = document.createElement('div');
   userInfo.className = 'atenna-settings__user-info';
 
   const emailEl = document.createElement('div');
   emailEl.className = 'atenna-settings__user-email';
-  emailEl.textContent = session.email;
+  emailEl.textContent = session.display_name || session.email;
 
   const planBadge = document.createElement('span');
   planBadge.className = `atenna-settings__plan-badge${pro ? ' atenna-settings__plan-badge--pro' : ''}`;
@@ -786,6 +787,49 @@ function renderSettingsPage(
       personalSection.className = 'atenna-settings__section';
       personalSection.style.cssText = S_SECTION;
 
+      // ── Nome de exibição ─────────────────────────────
+      {
+        const nameRow = document.createElement('div');
+        nameRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 14px;gap:12px;box-sizing:border-box;';
+
+        const nameLabel = document.createElement('span');
+        nameLabel.style.cssText = `font-size:13px;color:${_tc};font-weight:500;white-space:nowrap;opacity:0.85;font-family:inherit;`;
+        nameLabel.textContent = 'Seu nome';
+
+        const nameRight = document.createElement('div');
+        nameRight.style.cssText = 'display:flex;align-items:center;gap:8px;';
+
+        const nameField = document.createElement('input');
+        nameField.type = 'text';
+        nameField.className = 'atenna-modal__login-input';
+        nameField.style.cssText = 'padding:6px 10px;font-size:12px;width:160px;';
+        nameField.placeholder = 'Como posso te chamar?';
+        nameField.value = session.display_name || '';
+
+        const saveNameBtn = document.createElement('button');
+        saveNameBtn.className = 'atenna-doc-action-btn';
+        saveNameBtn.textContent = 'Salvar';
+        saveNameBtn.style.cssText = 'padding:5px 12px;font-size:12px;';
+        saveNameBtn.addEventListener('click', async () => {
+          const val = nameField.value.trim();
+          if (!val) return;
+          saveNameBtn.disabled = true;
+          saveNameBtn.textContent = '✓';
+          await saveDisplayName(session, val);
+          // Atualizar avatar e nome no header imediatamente
+          const avatarEl = document.querySelector('.atenna-settings__avatar') as HTMLElement | null;
+          if (avatarEl) avatarEl.textContent = val[0].toUpperCase();
+          const emailEl2 = document.querySelector('.atenna-settings__user-email') as HTMLElement | null;
+          if (emailEl2) emailEl2.textContent = val;
+          setTimeout(() => { saveNameBtn.disabled = false; saveNameBtn.textContent = 'Salvar'; }, 1500);
+        });
+
+        nameRight.appendChild(nameField);
+        nameRight.appendChild(saveNameBtn);
+        nameRow.appendChild(nameLabel);
+        nameRow.appendChild(nameRight);
+        personalSection.appendChild(nameRow);
+      }
 
       // ── Badge color picker ────────────────────────────
       {
@@ -918,6 +962,9 @@ function renderSettingsPage(
           },
           onCancel: () => {
             void trackEvent('document_upload_cancelled');
+          },
+          onUpgrade: (plan) => {
+            void openCheckout('upload_quota_gate_settings', undefined, plan);
           },
         });
 
@@ -1076,81 +1123,80 @@ export function generateFromBadge(): Promise<void> | void {
 }
 
 export async function openUploadFromBadge(): Promise<void> {
-  // If an upload overlay is already open, close it
-  const existing = document.getElementById('atenna-upload-overlay');
-  if (existing) { existing.remove(); return; }
-
   const session = await getActiveSession();
   if (!session) return;
 
-  const pro = await isPro();
+  // Always re-sync plan so DB changes (e.g. manual upgrade) are reflected immediately
+  const { upgradedToPro } = await syncPlanFromSupabase(session);
+  if (upgradedToPro) {
+    showProWelcomeOverlay(session);
+    return;
+  }
 
-  // Lightweight overlay — just the upload widget, no full settings page
-  const overlay = document.createElement('div');
-  overlay.id = 'atenna-upload-overlay';
-  overlay.style.cssText = [
-    'position:fixed', 'inset:0', 'z-index:2147483646',
-    'display:flex', 'align-items:center', 'justify-content:center',
-    'background:rgba(0,0,0,0.45)', 'backdrop-filter:blur(2px)',
-  ].join(';');
-
-  const panel = document.createElement('div');
-  panel.style.cssText = [
-    'background:var(--at-card-bg,#1a1a2e)', 'border-radius:12px',
-    'padding:20px', 'width:340px', 'max-width:90vw',
-    'box-shadow:0 8px 32px rgba(0,0,0,0.5)',
-    'border:1px solid var(--at-border,rgba(255,255,255,0.08))',
-    'position:relative',
-  ].join(';');
-
-  const close = document.createElement('button');
-  close.textContent = '×';
-  close.style.cssText = 'position:absolute;top:10px;right:12px;background:none;border:none;color:var(--at-text-muted,#888);font-size:18px;cursor:pointer;line-height:1;';
-  close.addEventListener('click', () => overlay.remove());
-
-  const title = document.createElement('div');
-  title.style.cssText = 'font-size:13px;font-weight:600;color:var(--at-text,#e2e8f0);margin-bottom:14px;';
-  title.textContent = 'Analisar documento';
-
-  const widgetContainer = document.createElement('div');
-  widgetContainer.id = 'upload-widget-container';
-
-  panel.appendChild(close);
-  panel.appendChild(title);
-  panel.appendChild(widgetContainer);
-  overlay.appendChild(panel);
-
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-
-  document.body.appendChild(overlay);
-
-  // Capture active element before overlay opens (overlay steals focus)
+  // Capture active element before file picker steals focus
   const activeTarget = document.activeElement as HTMLTextAreaElement | HTMLElement | null;
 
-  const { UploadWidget } = await import('./upload-widget');
-  new UploadWidget({
-    targetElement: widgetContainer,
-    maxSize: {
-      txt: 1024 * 1024,
-      md: 1024 * 1024,
-      csv: 5 * 1024 * 1024,
-      json: 1024 * 1024,
-      pdf: 10 * 1024 * 1024,
-      docx: 10 * 1024 * 1024,
-      xlsx: 10 * 1024 * 1024,
-    },
-    onReady: (content: string, _preview: string, riskLevel: string, rewritten?: string) => {
-      void trackEvent('document_ready_to_send', { risk_level: riskLevel, was_rewritten: !!rewritten });
-      const text = rewritten ?? content;
-      // Show action bar (Copiar + Aplicar) inside the overlay panel
-      // Override Aplicar to also close overlay and insert into original target
-      const barContainer = document.createElement('div');
-      panel.appendChild(barContainer);
-      renderDocumentActionBar(barContainer, text);
-      // Wrap the Aplicar button to also close overlay + insert
-      const applyBtn = barContainer.querySelector<HTMLButtonElement>('.atenna-doc-action-btn--primary');
-      if (applyBtn) {
-        applyBtn.addEventListener('click', () => {
+  // Open native OS file picker directly — no intermediate modal
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.txt,.md,.csv,.json,.pdf,.docx,.doc,.xlsx,.xls';
+  input.style.display = 'none';
+  document.body.appendChild(input);
+
+  input.addEventListener('change', async () => {
+    const file = input.files?.[0];
+    input.remove();
+    if (!file) return;
+
+    // Show a minimal result overlay only after file is selected and processed
+    const { UploadWidget } = await import('./upload-widget');
+
+    const overlay = document.createElement('div');
+    overlay.id = 'atenna-upload-overlay';
+    overlay.style.cssText = [
+      'position:fixed', 'inset:0', 'z-index:2147483646',
+      'display:flex', 'align-items:center', 'justify-content:center',
+      'background:rgba(0,0,0,0.45)', 'backdrop-filter:blur(2px)',
+    ].join(';');
+
+    const panel = document.createElement('div');
+    panel.style.cssText = [
+      'background:var(--at-card-bg,#1a1a2e)', 'border-radius:12px',
+      'padding:20px', 'width:340px', 'max-width:90vw',
+      'box-shadow:0 8px 32px rgba(0,0,0,0.5)',
+      'border:1px solid var(--at-border,rgba(255,255,255,0.08))',
+      'position:relative',
+    ].join(';');
+
+    const close = document.createElement('button');
+    close.textContent = '×';
+    close.style.cssText = 'position:absolute;top:10px;right:12px;background:none;border:none;color:var(--at-text-muted,#888);font-size:18px;cursor:pointer;line-height:1;';
+    close.addEventListener('click', () => overlay.remove());
+
+    const widgetContainer = document.createElement('div');
+    widgetContainer.id = 'upload-widget-container';
+
+    panel.appendChild(close);
+    panel.appendChild(widgetContainer);
+    overlay.appendChild(panel);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+
+    const widget = new UploadWidget({
+      targetElement: widgetContainer,
+      maxSize: {
+        txt: 1024 * 1024,
+        md: 1024 * 1024,
+        csv: 5 * 1024 * 1024,
+        json: 1024 * 1024,
+        pdf: 10 * 1024 * 1024,
+        docx: 10 * 1024 * 1024,
+        xlsx: 10 * 1024 * 1024,
+      },
+      onReady: (content: string, _preview: string, riskLevel: string, rewritten?: string) => {
+        void trackEvent('document_ready_to_send', { risk_level: riskLevel, was_rewritten: !!rewritten });
+
+        const applyToTarget = (text: string) => {
           overlay.remove();
           const target = activeTarget as HTMLTextAreaElement | null;
           if (target && target.tagName === 'TEXTAREA') {
@@ -1162,16 +1208,86 @@ export async function openUploadFromBadge(): Promise<void> {
             (activeTarget as HTMLElement).focus();
             document.execCommand('insertText', false, text);
           }
-        });
-      }
-    },
-    onError: (error: string) => {
-      void trackEvent('document_upload_error', { error });
-    },
-    onCancel: () => {
-      overlay.remove();
-    },
+        };
+
+        // "Proteger documento" clicked → aplica direto, sem passo intermediário
+        if (rewritten !== undefined) {
+          applyToTarget(rewritten);
+          return;
+        }
+
+        // Documento limpo → mostra barra Copiar + Aplicar
+        const text = content;
+        const barContainer = document.createElement('div');
+        panel.appendChild(barContainer);
+        renderDocumentActionBar(barContainer, text);
+        const applyBtn = barContainer.querySelector<HTMLButtonElement>('.atenna-doc-action-btn--primary');
+        if (applyBtn) {
+          applyBtn.addEventListener('click', () => applyToTarget(text));
+        }
+      },
+      onError: (error: string) => {
+        void trackEvent('document_upload_error', { error });
+      },
+      onCancel: () => {
+        overlay.remove();
+      },
+      onUpgrade: (plan) => {
+        overlay.remove();
+        void openCheckout('upload_quota_gate', undefined, plan);
+      },
+    });
+
+    // Trigger processing immediately with the selected file
+    widget.handleFileSelect(file);
   });
+
+  input.click();
+}
+
+function showProWelcomeOverlay(session: { email: string; display_name?: string }, onDismiss?: () => void): void {
+  const existing = document.getElementById('atenna-pro-welcome');
+  if (existing) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'atenna-pro-welcome';
+  overlay.style.cssText = [
+    'position:fixed', 'inset:0', 'z-index:2147483647',
+    'display:flex', 'align-items:center', 'justify-content:center',
+    'background:rgba(0,0,0,0.55)', 'backdrop-filter:blur(4px)',
+  ].join(';');
+
+  const panel = document.createElement('div');
+  panel.className = 'atenna-pro-welcome__panel';
+
+  const logoUrl = getLogoUrl();
+  const name = session.display_name || session.email.split('@')[0];
+
+  panel.innerHTML = `
+    <div class="atenna-pro-welcome__burst">
+      ${logoUrl ? `<img src="${logoUrl}" class="atenna-pro-welcome__logo" alt="Atenna"/>` : ''}
+    </div>
+    <div class="atenna-pro-welcome__title">Parabéns, ${name}!</div>
+    <div class="atenna-pro-welcome__sub">Você agora é Atenna Pro.</div>
+    <ul class="atenna-pro-welcome__perks">
+      <li><span class="atenna-pro-welcome__check">✓</span> 300 refinamentos de prompt por mês</li>
+      <li><span class="atenna-pro-welcome__check">✓</span> Proteção DLP ilimitada em documentos</li>
+      <li><span class="atenna-pro-welcome__check">✓</span> Análise de PDF, DOCX e Excel sem cotas</li>
+      <li><span class="atenna-pro-welcome__check">✓</span> Histórico completo de prompts</li>
+    </ul>
+    <button class="atenna-pro-welcome__btn">Começar agora</button>
+  `;
+
+  panel.querySelector('.atenna-pro-welcome__btn')!.addEventListener('click', () => {
+    overlay.remove();
+    onDismiss?.();
+  });
+
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) { overlay.remove(); onDismiss?.(); }
+  });
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
 }
 
 export async function openSettingsOverlay(): Promise<void> {
@@ -1276,8 +1392,13 @@ async function openModal(autoGenerate = false): Promise<void> {
     return;
   }
 
-  // ── Session exists: Check post-login onboarding ──────
-  await syncPlanFromSupabase(session);
+  // ── Session exists: sync plan + check welcome ──────────
+  const { upgradedToPro } = await syncPlanFromSupabase(session);
+  if (upgradedToPro || await consumeProWelcome()) {
+    close(); // remove empty modal overlay before showing welcome
+    showProWelcomeOverlay(session, () => openModal(autoGenerate));
+    return;
+  }
 
   const appOnboardingSeen = await new Promise<boolean>(resolve => {
     try { chrome.storage.local.get('atenna_app_onboarding_seen', r => resolve(!!r['atenna_app_onboarding_seen'])); }
@@ -2207,6 +2328,20 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
   const inputGroup = document.createElement('div');
   inputGroup.className = 'atenna-modal__login-group';
 
+  // Nome
+  const nameWrapper = document.createElement('div');
+  nameWrapper.className = 'atenna-modal__input-wrapper';
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.className = 'atenna-modal__login-input';
+  nameInput.placeholder = 'Seu nome';
+  nameInput.autocomplete = 'name';
+  const nameIcon = document.createElement('span');
+  nameIcon.className = 'atenna-modal__input-icon-left';
+  nameIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+  nameWrapper.appendChild(nameIcon);
+  nameWrapper.appendChild(nameInput);
+
   // Email com ícone
   const emailWrapper = document.createElement('div');
   emailWrapper.className = 'atenna-modal__input-wrapper';
@@ -2302,10 +2437,12 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
   });
 
   const handleClick = async () => {
-    const email = emailInput.value.trim();
-    const pwd = passwordInput.value;
+    const name    = nameInput.value.trim();
+    const email   = emailInput.value.trim();
+    const pwd     = passwordInput.value;
     const confirm = confirmInput.value;
 
+    if (!name)  { setStatus('Informe seu nome', 'warning'); return; }
     if (!email) { setStatus('Informe seu email', 'warning'); return; }
     if (pwd.length < 6) { setStatus('Senha deve ter no mínimo 6 caracteres', 'warning'); return; }
     if (pwd !== confirm) { setStatus('As senhas não conferem', 'warning'); return; }
@@ -2316,7 +2453,7 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
     btn.textContent = 'Criando…';
     setStatus('', '');
 
-    const result = await signUpWithPassword(email, pwd);
+    const result = await signUpWithPassword(email, pwd, name);
     if (result.error) {
       void trackEvent('signup_error', { error: result.error });
       setStatus(result.error, 'error');
@@ -2333,12 +2470,13 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
   };
 
   btn.addEventListener('click', handleClick);
-  [emailInput, passwordInput, confirmInput].forEach(input => {
+  [nameInput, emailInput, passwordInput, confirmInput].forEach(input => {
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') void handleClick();
     });
   });
 
+  inputGroup.appendChild(nameWrapper);
   inputGroup.appendChild(emailWrapper);
   inputGroup.appendChild(passwordWrapper);
   inputGroup.appendChild(confirmWrapper);
@@ -2605,8 +2743,7 @@ function buildCard(
 
 async function updateUsageBadge(badge: HTMLElement, dailyCount: number, pro = false): Promise<void> {
   if (pro) {
-    badge.textContent = 'Pro ✓';
-    badge.className   = 'atenna-modal__usage atenna-modal__usage--pro';
+    badge.style.display = 'none'; // Pro badge já aparece no título — sem redundância
     return;
   }
   const remaining = Math.max(0, DAILY_LIMIT - dailyCount);

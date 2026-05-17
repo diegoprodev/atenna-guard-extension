@@ -7,6 +7,7 @@ export interface Session {
   access_token:  string;
   refresh_token?: string;
   email:         string;
+  display_name?: string;
   expires_at:    number; // unix seconds
 }
 
@@ -105,6 +106,16 @@ export async function getActiveSession(): Promise<Session | null> {
     // Offline — trust cached session to avoid locking out users without internet
   }
 
+  // Lazy-load display_name if not cached yet
+  if (!session.display_name) {
+    const name = await fetchDisplayName(session);
+    if (name) {
+      const updated = { ...session, display_name: name };
+      await storeSession(updated);
+      return updated;
+    }
+  }
+
   return session;
 }
 
@@ -152,12 +163,16 @@ export async function signInWithPassword(email: string, password: string): Promi
   }
 }
 
-export async function signUpWithPassword(email: string, password: string): Promise<{ error?: string }> {
+export async function signUpWithPassword(email: string, password: string, displayName?: string): Promise<{ error?: string }> {
   try {
     const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
-      body:    JSON.stringify({ email, password, options: { emailRedirectTo: getCallbackUrl() } }),
+      body:    JSON.stringify({
+        email, password,
+        data: displayName ? { display_name: displayName } : undefined,
+        options: { emailRedirectTo: getCallbackUrl() },
+      }),
     });
     if (res.status === 400) {
       try {
@@ -196,6 +211,40 @@ export async function resetPassword(email: string): Promise<{ error?: string }> 
 
 function getCallbackUrl(): string {
   return 'https://atennaplugin.maestro-n8n.site/auth/callback';
+}
+
+export async function fetchDisplayName(session: Session): Promise<string | undefined> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/profiles?id=eq.${decodeJwtPayload(session.access_token).sub}&select=display_name`,
+      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${session.access_token}` } }
+    );
+    if (!res.ok) return undefined;
+    const data = await res.json() as Array<{ display_name?: string }>;
+    return data[0]?.display_name ?? undefined;
+  } catch { return undefined; }
+}
+
+export async function saveDisplayName(session: Session, name: string): Promise<void> {
+  try {
+    const userId = decodeJwtPayload(session.access_token).sub as string;
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`,
+      {
+        method:  'PATCH',
+        headers: {
+          'apikey':        SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type':  'application/json',
+          'Prefer':        'return=minimal',
+        },
+        body: JSON.stringify({ display_name: name }),
+      }
+    );
+    // Atualiza cache local
+    const stored = await getStoredSession();
+    if (stored) await storeSession({ ...stored, display_name: name });
+  } catch { /* silent */ }
 }
 
 export async function signOut(): Promise<void> {

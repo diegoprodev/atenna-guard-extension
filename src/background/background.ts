@@ -99,15 +99,17 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
   // ── Checkout session creation ─────────────────────────────
   if (msg.type === 'ATENNA_CHECKOUT') {
+    const plan = (msg.plan === 'monthly') ? 'monthly' : 'yearly';
     getStoredJWT().then(jwt => {
       if (!jwt) { sendResponse({ ok: false, error: 'auth_required' }); return; }
       return fetch(CHECKOUT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwt}` },
+        body: JSON.stringify({ plan }),
       })
         .then(res => {
           if (!res.ok) { sendResponse({ ok: false, status: res.status }); return; }
-          return res.json().then(data => sendResponse({ ok: true, url: data.url }));
+          return res.json().then(data => sendResponse({ ok: true, url: data.url, plan: data.plan }));
         });
     }).catch(err => sendResponse({ ok: false, error: String(err) }));
     return true;
