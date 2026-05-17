@@ -1252,19 +1252,15 @@ export async function openUploadFromBadge(): Promise<void> {
         };
 
         // "Proteger documento" clicked → aplica direto, sem passo intermediário
-        if (rewritten !== undefined) {
-          applyToTarget(rewritten);
-          return;
-        }
-
-        // Documento limpo → mostra barra Copiar + Aplicar
-        const text = content;
+        // content = texto completo mascarado (ou intacto se sem PII)
+        // rewritten = alias legado, mesmo valor — aplica direto
+        const finalText = rewritten !== undefined ? rewritten : content;
         const barContainer = document.createElement('div');
         panel.appendChild(barContainer);
-        renderDocumentActionBar(barContainer, text);
+        renderDocumentActionBar(barContainer, finalText);
         const applyBtn = barContainer.querySelector<HTMLButtonElement>('.atenna-doc-action-btn--primary');
         if (applyBtn) {
-          applyBtn.addEventListener('click', () => applyToTarget(text));
+          applyBtn.addEventListener('click', () => applyToTarget(finalText));
         }
       },
       onError: (error: string) => {

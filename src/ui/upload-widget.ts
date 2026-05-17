@@ -46,11 +46,13 @@ export interface UploadWidgetConfig {
   onUpgrade?: (plan: 'yearly' | 'monthly') => void;
 }
 
-interface BackendDlpPayload {
-  masked_summary: string;
+interface ProtectPayload {
+  masked_text: string;
   risk_level: string;
-  findings: Array<{ entity_type: string; count: number; risk_level?: string }>;
+  findings: Array<{ entity_type: string; count: number }>;
+  findings_count: number;
   blocked: boolean;
+  char_count: number;
 }
 
 interface UploadState {
@@ -142,52 +144,19 @@ export class UploadWidget {
   private async uploadFile(file: File): Promise<void> {
     const ext = file.name.split('.').pop()?.toLowerCase() || 'txt';
     try {
-      if (BINARY_TYPES.has(ext)) {
-        const payload = await this.extractViaBackend(file);
-        const risk = (payload.risk_level as 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH') || 'NONE';
-        this.state = {
-          phase: 'ready',
-          file,
-          dlpRisk: risk,
-          findings: payload.findings,
-          extractedContent: payload.masked_summary,
-          isBinary: true,
-        };
-        this.render();
-        void trackEvent('document_upload_success', { file_type: ext, dlp_risk: risk });
-      } else {
-        const raw = await this.readFile(file);
-        if (!this.isValidUtf8(raw)) throw new Error('Arquivo corrompido ou encoding não suportado.');
-        const content = this.normalizeText(raw, ext);
-        if (content.length > 200_000) throw new Error(`Documento muito extenso (${content.length} chars). Máximo: 200.000.`);
-
-        // Text files: scan via backend
-        const token = await this.getAuthToken();
-        if (!token) throw new Error('Sessão expirada. Faça login novamente.');
-
-        const blob = new Blob([content], { type: 'text/plain' });
-        const formData = new FormData();
-        formData.append('file', new File([blob], file.name, { type: 'text/plain' }));
-        const resp = await fetch(`${this.backendUrl}/document/upload`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` },
-          body: formData,
-        });
-        if (!resp.ok) throw new Error(`Erro ao analisar arquivo (${resp.status})`);
-        const data = await resp.json() as BackendDlpPayload;
-        const risk = (data.risk_level as 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH') || 'NONE';
-        this.state = {
-          phase: 'ready',
-          file,
-          dlpRisk: risk,
-          findings: data.findings,
-          extractedContent: data.masked_summary,
-          originalContent: content,
-          isBinary: false,
-        };
-        this.render();
-        void trackEvent('document_upload_success', { file_type: ext, dlp_risk: risk });
-      }
+      // Todos os tipos usam /document/protect — retorna texto completo mascarado
+      const payload = await this.protectViaBackend(file);
+      const risk = (payload.risk_level as 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH') || 'NONE';
+      this.state = {
+        phase: 'ready',
+        file,
+        dlpRisk: risk,
+        findings: payload.findings,
+        extractedContent: payload.masked_text, // texto completo com PII substituída
+        isBinary: BINARY_TYPES.has(ext),
+      };
+      this.render();
+      void trackEvent('document_upload_success', { file_type: ext, dlp_risk: risk, chars: payload.char_count });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this.state = { phase: 'error', file, error: msg };
@@ -196,21 +165,22 @@ export class UploadWidget {
     }
   }
 
-  private async extractViaBackend(file: File): Promise<BackendDlpPayload> {
+  private async protectViaBackend(file: File): Promise<ProtectPayload> {
     const token = await this.getAuthToken();
     if (!token) throw new Error('Sessão expirada. Faça login novamente.');
     const formData = new FormData();
     formData.append('file', file, file.name);
-    const resp = await fetch(`${this.backendUrl}/document/upload`, {
+    const resp = await fetch(`${this.backendUrl}/document/protect`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
       body: formData,
     });
     if (!resp.ok) {
-      const body = await resp.text().catch(() => '');
-      throw new Error(`Falha ao processar arquivo (${resp.status}). ${body.slice(0, 120)}`);
+      let detail = '';
+      try { detail = (await resp.json()).detail ?? ''; } catch { detail = await resp.text().catch(() => ''); }
+      throw new Error(`Falha ao processar arquivo (${resp.status}). ${String(detail).slice(0, 120)}`);
     }
-    return resp.json() as Promise<BackendDlpPayload>;
+    return resp.json() as Promise<ProtectPayload>;
   }
 
   private async readFile(file: File): Promise<string> {
