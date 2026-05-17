@@ -1196,18 +1196,59 @@ export async function openUploadFromBadge(): Promise<void> {
       onReady: (content: string, _preview: string, riskLevel: string, rewritten?: string) => {
         void trackEvent('document_ready_to_send', { risk_level: riskLevel, was_rewritten: !!rewritten });
 
+        const injectText = (text: string): boolean => {
+          // Priority 1: element focused when badge was clicked (still in DOM and visible)
+          const prior = activeTarget as HTMLElement | null;
+          if (prior && document.body.contains(prior)) {
+            if ((prior as HTMLTextAreaElement).tagName === 'TEXTAREA') {
+              const ta = prior as HTMLTextAreaElement;
+              const start = ta.selectionStart ?? ta.value.length;
+              ta.value = ta.value.slice(0, start) + text + ta.value.slice(start);
+              ta.dispatchEvent(new Event('input', { bubbles: true }));
+              ta.focus();
+              return true;
+            }
+            if (prior.isContentEditable) {
+              prior.focus();
+              document.execCommand('selectAll', false);
+              document.execCommand('insertText', false, text);
+              prior.dispatchEvent(new Event('input', { bubbles: true }));
+              return true;
+            }
+          }
+          // Priority 2: well-known platform selectors (ChatGPT, Claude, Gemini)
+          const platformSelectors = [
+            '#prompt-textarea',                              // ChatGPT
+            'div[contenteditable="true"][data-placeholder]',// Claude
+            '.ql-editor',                                   // Gemini / Quill
+            'div[contenteditable="true"]',                  // fallback CE
+            'textarea',                                     // fallback textarea
+          ];
+          for (const sel of platformSelectors) {
+            const el = document.querySelector(sel) as HTMLElement | null;
+            if (!el) continue;
+            if ((el as HTMLTextAreaElement).tagName === 'TEXTAREA') {
+              const ta = el as HTMLTextAreaElement;
+              ta.value = text;
+              ta.dispatchEvent(new Event('input', { bubbles: true }));
+              ta.focus();
+              return true;
+            }
+            if (el.isContentEditable) {
+              el.focus();
+              document.execCommand('selectAll', false);
+              document.execCommand('insertText', false, text);
+              el.dispatchEvent(new Event('input', { bubbles: true }));
+              return true;
+            }
+          }
+          return false;
+        };
+
         const applyToTarget = (text: string) => {
           overlay.remove();
-          const target = activeTarget as HTMLTextAreaElement | null;
-          if (target && target.tagName === 'TEXTAREA') {
-            const start = target.selectionStart ?? target.value.length;
-            target.value = target.value.slice(0, start) + text + target.value.slice(start);
-            target.dispatchEvent(new Event('input', { bubbles: true }));
-            target.focus();
-          } else if (activeTarget && (activeTarget as HTMLElement).isContentEditable) {
-            (activeTarget as HTMLElement).focus();
-            document.execCommand('insertText', false, text);
-          }
+          const ok = injectText(text);
+          if (!ok) showToast('Campo de texto não encontrado — use Copiar.');
         };
 
         // "Proteger documento" clicked → aplica direto, sem passo intermediário
