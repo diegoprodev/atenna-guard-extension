@@ -64,6 +64,9 @@ async function init(): Promise<void> {
 // Listen for messages from popup
 try {
   chrome.runtime.onMessage.addListener((msg: { type?: string; content?: string }) => {
+    if (msg?.type === 'TOGGLE_MODAL') {
+      void toggleModal();
+    }
     if (msg?.type === 'OPEN_SETTINGS') {
       void openSettingsOverlay();
     }
