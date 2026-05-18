@@ -21,7 +21,8 @@ from document.limits import (
     DocumentErrorCode,
 )
 from document.sanitizer import validate_upload, chunk_text, cleanup_buffers, build_safe_summary
-from document.parsers.pdf_parser import parse_pdf
+from document.parsers.pdf_parser_v2 import parse_pdf_v2
+from document.parsers.pdf_parser import parse_pdf as parse_pdf_fallback
 from document.parsers.docx_parser import parse_docx
 from document.parsers.xlsx_parser import parse_xlsx
 from document.parsers.csv_parser import parse_csv
@@ -132,12 +133,33 @@ async def upload_document(
     async with _semaphore:
         with obs.parse_context(filetype):
             if filetype == "pdf":
-                parse_result: Any = await parse_pdf(file_bytes)
+                # Try V2 (native + vision)
+                try:
+                    parse_result: Any = await parse_pdf_v2(file_bytes)
+                except Exception as e:
+                    # Fallback to simple parser if V2 fails
+                    print(f"[PDF-V2-ERROR] {e}, using fallback")
+                    parse_result = await parse_pdf_fallback(file_bytes)
+                    # Patch parse_result to add new fields if missing
+                    if not hasattr(parse_result, 'has_images'):
+                        parse_result = type('obj', (object,), {
+                            **parse_result.__dict__,
+                            'has_images': False,
+                            'has_tables': False,
+                            'extraction_method': 'fallback'
+                        })()
+
                 pages_parsed   = parse_result.pages_parsed
                 total_pages    = parse_result.total_pages
                 truncated      = parse_result.truncated
-                scan_only      = parse_result.scan_only
+                scan_only      = getattr(parse_result, 'scan_only', False)
                 extracted_text = parse_result.text
+
+                # Log extraction method for observability
+                extraction_method = getattr(parse_result, 'extraction_method', 'unknown')
+                has_images = getattr(parse_result, 'has_images', False)
+                has_tables = getattr(parse_result, 'has_tables', False)
+                print(f"[PDF-EXTRACTION] method={extraction_method}, pages={pages_parsed}, has_images={has_images}, has_tables={has_tables}")
             elif filetype == "docx":
                 parse_result   = await parse_docx(file_bytes)
                 pages_parsed   = 1
