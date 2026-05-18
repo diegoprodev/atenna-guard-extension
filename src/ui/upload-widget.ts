@@ -40,7 +40,7 @@ async function incrementUploadUsage(): Promise<number> {
 export interface UploadWidgetConfig {
   targetElement: HTMLElement;
   maxSize: Record<string, number>;
-  onReady: (content: string, preview: string, riskLevel: string, rewritten?: string) => void;
+  onReady: (content: string, preview: string, riskLevel: string, rewritten?: string, fileName?: string) => void;
   onError: (error: string) => void;
   onCancel: () => void;
   onUpgrade?: (plan: 'yearly' | 'monthly') => void;
@@ -49,7 +49,7 @@ export interface UploadWidgetConfig {
 interface ProtectPayload {
   masked_text: string;
   risk_level: string;
-  findings: Array<{ entity_type: string; count: number }>;
+  findings: Array<{ entity_type: string; count: number; value?: string | null }>;
   findings_count: number;
   blocked: boolean;
   char_count: number;
@@ -59,7 +59,7 @@ interface UploadState {
   phase: 'loading' | 'ready' | 'error' | 'quota';
   file?: File;
   dlpRisk?: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH';
-  findings?: Array<{ entity_type: string; count: number }>;
+  findings?: Array<{ entity_type: string; count: number; value?: string | null }>;
   extractedContent?: string;
   originalContent?: string;
   isBinary?: boolean;
@@ -87,6 +87,8 @@ const ENTITY_LABELS: Record<string, string> = {
   TOKEN: 'Token', BANK_ACCOUNT: 'Conta bancária', PIX: 'Chave Pix',
   NAME: 'Nome', ADDRESS: 'Endereço', MEDICAL_DATA: 'Dado de saúde',
   PASSPORT: 'Passaporte', PIS_PASEP: 'PIS/PASEP', TITULO_ELEITOR: 'Título de eleitor',
+  VEHICLE_PLATE: 'Placa veicular', PROCESS_NUMBER: 'Número de processo',
+  LEGAL_CONTEXT: 'Contexto jurídico', CONFIDENTIAL_DOCUMENT: 'Documento confidencial',
 };
 
 export class UploadWidget {
@@ -210,11 +212,19 @@ export class UploadWidget {
   private get backendUrl(): string { return 'https://atennaplugin.maestro-n8n.site'; }
 
   private async getAuthToken(): Promise<string | null> {
+    // Try direct storage first (works in top-level content scripts)
+    try {
+      const r = await chrome.storage.local.get('atenna_jwt');
+      const session = r['atenna_jwt'] as { access_token?: string } | undefined;
+      if (session?.access_token) return session.access_token;
+    } catch { /* storage not available in this context (iframe) — fall through */ }
+
+    // Fallback: ask background service worker (always has storage access)
     return new Promise(resolve => {
       try {
-        chrome.storage.local.get('atenna_jwt', r => {
-          const session = r['atenna_jwt'] as { access_token?: string } | undefined;
-          resolve(session?.access_token ?? null);
+        chrome.runtime.sendMessage({ type: 'GET_AUTH_TOKEN' }, (resp) => {
+          if (chrome.runtime.lastError) { resolve(null); return; }
+          resolve((resp as { token?: string })?.token ?? null);
         });
       } catch { resolve(null); }
     });
@@ -282,11 +292,8 @@ export class UploadWidget {
     const { file, dlpRisk, findings = [], isBinary, extractedContent } = this.state;
     const hasRisk = dlpRisk === 'MEDIUM' || dlpRisk === 'HIGH';
 
-    // Miller: cap at 5 findings displayed; collapse the rest
+    // Show ALL findings (no truncation) — important for debugging false positives
     const filtered = findings.filter(f => f.count > 0);
-    const MAX_VISIBLE = 5;
-    const visible = filtered.slice(0, MAX_VISIBLE);
-    const hidden  = filtered.slice(MAX_VISIBLE);
 
     // Header row: filename + risk badge
     const head = document.createElement('div');
@@ -305,22 +312,29 @@ export class UploadWidget {
     head.appendChild(badge);
     this.container.appendChild(head);
 
-    // Findings list — Miller: max 5 visible + collapse
-    if (visible.length > 0) {
+    // Findings list — show ALL types (no truncation)
+    if (filtered.length > 0) {
       const list = document.createElement('ul');
       list.className = 'atenna-upw__findings';
-      for (const f of visible) {
+      for (const f of filtered) {
         const li = document.createElement('li');
         li.className = 'atenna-upw__finding';
         const label = ENTITY_LABELS[f.entity_type] ?? f.entity_type;
-        li.innerHTML = `<span class="atenna-upw__finding-type">${label}</span><span class="atenna-upw__finding-count">${f.count}×</span>`;
+        // Only show detected value for actual PII types, not contextual classifiers
+        const CONTEXT_TYPES = new Set(['LEGAL_CONTEXT', 'CONFIDENTIAL_DOCUMENT']);
+        const tooltipText = (!CONTEXT_TYPES.has(f.entity_type) && f.value)
+          ? `Detectado: ${f.value}`
+          : null;
+        const typeSpan = document.createElement('span');
+        typeSpan.className = 'atenna-upw__finding-type';
+        typeSpan.textContent = label;
+        if (tooltipText) typeSpan.title = tooltipText;
+        const countSpan = document.createElement('span');
+        countSpan.className = 'atenna-upw__finding-count';
+        countSpan.textContent = `${f.count}×`;
+        li.appendChild(typeSpan);
+        li.appendChild(countSpan);
         list.appendChild(li);
-      }
-      if (hidden.length > 0) {
-        const more = document.createElement('li');
-        more.className = 'atenna-upw__finding atenna-upw__finding--more';
-        more.textContent = `+ ${hidden.length} tipo${hidden.length > 1 ? 's' : ''} adicional`;
-        list.appendChild(more);
       }
       this.container.appendChild(list);
     } else if (!hasRisk) {
@@ -346,7 +360,8 @@ export class UploadWidget {
       protectBtn.classList.add('atenna-upw__btn--protect');
       protectBtn.addEventListener('click', () => {
         const content = extractedContent ?? '';
-        this.showSuccess(() => this.config.onReady(content, content.slice(0, 300), dlpRisk ?? 'HIGH', content));
+        const fileName = this.state.file?.name ?? 'documento.txt';
+        this.showSuccess(() => this.config.onReady(content, content.slice(0, 300), dlpRisk ?? 'HIGH', content, fileName));
       });
       bar.appendChild(protectBtn);
 
@@ -359,7 +374,8 @@ export class UploadWidget {
         );
         origBtn.addEventListener('click', () => {
           const orig = this.state.originalContent!;
-          this.showSuccess(() => this.config.onReady(orig, orig.slice(0, 300), dlpRisk ?? 'HIGH'));
+          const fName = this.state.file?.name ?? 'documento.txt';
+          this.showSuccess(() => this.config.onReady(orig, orig.slice(0, 300), dlpRisk ?? 'HIGH', undefined, fName));
         });
         bar.appendChild(origBtn);
       }
@@ -368,7 +384,8 @@ export class UploadWidget {
       const applyBtn = this.makeBtn('Aplicar no texto', 'primary', 'Insere o conteúdo no campo de texto ativo');
       applyBtn.addEventListener('click', () => {
         const content = extractedContent ?? this.state.originalContent ?? '';
-        this.showSuccess(() => this.config.onReady(content, content.slice(0, 300), dlpRisk ?? 'NONE'));
+        const fName = this.state.file?.name ?? 'documento.txt';
+        this.showSuccess(() => this.config.onReady(content, content.slice(0, 300), dlpRisk ?? 'NONE', undefined, fName));
       });
       bar.appendChild(applyBtn);
 

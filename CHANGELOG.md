@@ -4,6 +4,66 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.43.0] — 2026-05-18 (Document Protection UX + DLP False Positives Fix)
+
+### Frontend (Chrome Extension)
+
+#### Document file attachment injection (ChatGPT/Claude.ai/Gemini badge)
+- `modal.ts::applyAsFileAttachment()` — synthetic drop event + file input assignment (no clipboard permission needed)
+- Dispatches `dragover` + `drop` + `dragleave` on detected platform input zones (#prompt-textarea, contenteditable, etc.)
+- Always extracts original filename, always uses `.txt` extension (text/plain content)
+- Fallback: if drop/file-input fails, injects text directly into input field
+- Fixes: sticky ChatGPT drop overlay (added `dragleave` cleanup), file extension confusion (Word encoding dialog on `.doc`)
+
+#### Document findings UI — show all entity types
+- `upload-widget.ts::renderReady()` — removed 5-finding cap; displays ALL detected entity types
+- Before: showed "5 findings + 2 tipos adicional" (hidden)
+- After: lists all findings for debugging false positives
+
+#### File badge overlay UX improvements
+- Removed `dragenter` from event sequence (was triggering sticky platform UI)
+- Added `dismissDragOverlay()` post-drop to force close any visible drag zones
+- Wait time increased from 300ms to 400ms for platform handlers to process file attachment
+
+### Backend (VPS)
+
+#### Document extraction pipeline improvements
+- `doc_parser.py` — primary: `striprtf` library (handles complex RTF with tables, nested groups, encoding)
+- Secondary fallback: regex-based RTF stripper if striprtf unavailable
+- Extraction limits: MAX_CHARS 500K → **2M** (~1000 pages), timeout 8s → **60s** (large files)
+- `parse_doc()` now handles RTF detection + mammoth (DOCX) + olefile (OLE2 binary) with proper priority order
+
+#### DLP false positive elimination
+- `scanner.py::CREDIT_CARD` regex — context-aware pattern
+- Before: `(?<!\d)(\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{1,4})(?!\d)` (matches any number sequence)
+- After: `(?i)(?:cartao|credito|credit\s+card|visa|mastercard|amex|elo|diners)[^0-9]*(?<!\d)(\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{1,4})(?!\d)`
+- Requires "cartão"/"crédito"/"visa"/etc. within same paragraph to flag credit card
+- Eliminates false positives on institutional documents with numbered tables/lists/ISBNs
+
+#### File upload size validation
+- nginx `client_max_body_size` — 1MB → **55MB** (handles large documents like 9.73MB books)
+- FastAPI MaxUploadSize — 50MB limit enforced in `/document/protect`
+- `docker compose restart nginx` — required for bind-mounted config to reload
+
+### Fixes & Bug Resolutions
+
+| Issue | Root Cause | Fix | Status |
+|-------|-----------|-----|--------|
+| ChatGPT overlay stuck | `dragenter` triggered platform UI without cleanup | Removed dragenter, added post-drop `dragleave` | ✅ |
+| File opens as corrupted in Word | Named `.doc` but content is `.txt` | Always use `.txt` extension | ✅ |
+| RTF binary garbage at EOF | Manual regex stripper misses balanced braces | Upgraded to `striprtf` library | ✅ |
+| Credit card false positives (5×) | Overly broad regex on any number sequence | Context-aware regex (requires "cartão"/"visa" nearby) | ✅ |
+| Hidden entity types ("2 tipos adicional") | 5-finding UI cap | Show all findings, no truncation | ✅ |
+| Upload fails on 9.73MB .doc file | nginx default 1MB limit | Set `client_max_body_size 55m` | ✅ |
+| Extraction times out on large RTF | 8s timeout insufficient for 9.73MB regex ops | Increased to 60s, uses faster `striprtf` | ✅ |
+
+### Known Limitations
+
+- **`.doc` (OLE2 binary) extraction quality** — large, complex Word documents may produce incomplete/corrupted text. Reason: OLE2 format is undocumented legacy; Python libraries (olefile) only extract text streams, not formatted tables/images.
+- **Recommendation for v2.44+**: Restrict initial file support to **PDF + CSV + TXT** (high-quality extraction) and add `.doc`/`.docx` in future release with production-grade solution (possibly LibreOffice UNO bridge or commercial parser).
+
+---
+
 ## [2.42.0] — 2026-05-17 (Checkout Audit — Zero Blind Spots + Subscriptions)
 
 ### Backend (VPS)

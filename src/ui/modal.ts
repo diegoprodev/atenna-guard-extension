@@ -1193,10 +1193,78 @@ export async function openUploadFromBadge(): Promise<void> {
         docx: 10 * 1024 * 1024,
         xlsx: 10 * 1024 * 1024,
       },
-      onReady: (content: string, _preview: string, riskLevel: string, rewritten?: string) => {
+      onReady: (content: string, _preview: string, riskLevel: string, rewritten?: string, fileName?: string) => {
         void trackEvent('document_ready_to_send', { risk_level: riskLevel, was_rewritten: !!rewritten });
 
-        const injectText = (text: string): boolean => {
+        // Try to inject text as a file attachment (shows as badge above input).
+        // Always use .txt extension so platforms treat content as plain text, not binary Word doc.
+        const applyAsFileAttachment = async (text: string, originalName: string): Promise<boolean> => {
+          const baseName = originalName.replace(/\.[^.]+$/, '');
+          const safeFileName = `${baseName}.txt`;
+          const file = new File([text], safeFileName, { type: 'text/plain' });
+          const dt = new DataTransfer();
+          dt.items.add(file);
+
+          const dismissDragOverlay = () => {
+            // Fire dragleave on document + body to dismiss any platform drop overlay
+            try {
+              document.dispatchEvent(new DragEvent('dragleave', { bubbles: false }));
+              document.body.dispatchEvent(new DragEvent('dragleave', { bubbles: true }));
+            } catch { /* ignore */ }
+          };
+
+          // Strategy 1: synthetic drop on the platform's known drop zone
+          // Dispatch drop directly without dragenter/dragover to avoid triggering sticky drop overlays.
+          const dropZoneSelectors = [
+            '#prompt-textarea',                              // ChatGPT
+            'div[contenteditable="true"][data-placeholder]',// Claude.ai
+            '.ql-editor',                                   // Gemini
+            'div[contenteditable="true"]',                  // generic
+            'textarea',
+          ];
+          for (const sel of dropZoneSelectors) {
+            const el = document.querySelector(sel);
+            if (!el) continue;
+            try {
+              // dragover with preventDefault is required for drop to fire in some browsers
+              const overEv = new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true });
+              el.dispatchEvent(overEv);
+              const dropEv = new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true });
+              el.dispatchEvent(dropEv);
+              // Always dismiss any drag overlay the platform might have shown
+              dismissDragOverlay();
+              await new Promise(r => setTimeout(r, 400));
+              // Verify badge appeared by checking for file/attachment elements
+              const attached = document.querySelector(
+                '[data-testid*="file-upload"], [class*="file-chip"], [class*="attachment"]'
+              );
+              if (attached) return true;
+            } catch { /* continue */ }
+          }
+          dismissDragOverlay();
+
+          // Strategy 2: set files directly on the platform's file input
+          const fileInputSelectors = [
+            'input[type="file"][multiple]',   // ChatGPT
+            'input[type="file"]',             // Claude, Gemini
+            'input[accept]',                  // Gemini alternate
+          ];
+          for (const sel of fileInputSelectors) {
+            const inp = document.querySelector(sel) as HTMLInputElement | null;
+            if (!inp) continue;
+            try {
+              inp.files = dt.files;
+              inp.dispatchEvent(new Event('change', { bubbles: true }));
+              inp.dispatchEvent(new Event('input',  { bubbles: true }));
+              await new Promise(r => setTimeout(r, 400));
+              return true;
+            } catch { /* continue */ }
+          }
+
+          return false;
+        };
+
+        const injectTextFallback = (text: string): boolean => {
           // Priority 1: element focused when badge was clicked (still in DOM and visible)
           const prior = activeTarget as HTMLElement | null;
           if (prior && document.body.contains(prior)) {
@@ -1216,13 +1284,13 @@ export async function openUploadFromBadge(): Promise<void> {
               return true;
             }
           }
-          // Priority 2: well-known platform selectors (ChatGPT, Claude, Gemini)
+          // Priority 2: well-known platform selectors
           const platformSelectors = [
-            '#prompt-textarea',                              // ChatGPT
-            'div[contenteditable="true"][data-placeholder]',// Claude
-            '.ql-editor',                                   // Gemini / Quill
-            'div[contenteditable="true"]',                  // fallback CE
-            'textarea',                                     // fallback textarea
+            '#prompt-textarea',
+            'div[contenteditable="true"][data-placeholder]',
+            '.ql-editor',
+            'div[contenteditable="true"]',
+            'textarea',
           ];
           for (const sel of platformSelectors) {
             const el = document.querySelector(sel) as HTMLElement | null;
@@ -1245,22 +1313,28 @@ export async function openUploadFromBadge(): Promise<void> {
           return false;
         };
 
-        const applyToTarget = (text: string) => {
+        const applyToTarget = (text: string, fileName?: string) => {
           overlay.remove();
-          const ok = injectText(text);
-          if (!ok) showToast('Campo de texto não encontrado — use Copiar.');
+          void applyAsFileAttachment(text, fileName ?? 'documento.txt').then(ok => {
+            if (!ok) {
+              const textOk = injectTextFallback(text);
+              if (!textOk) showToast('Campo de texto não encontrado — use Copiar.');
+            }
+          });
         };
 
-        // "Proteger documento" clicked → aplica direto, sem passo intermediário
-        // content = texto completo mascarado (ou intacto se sem PII)
-        // rewritten = alias legado, mesmo valor — aplica direto
-        const finalText = rewritten !== undefined ? rewritten : content;
+        // Document with PII: inject directly as file attachment (badge above input)
+        if (rewritten !== undefined) {
+          applyToTarget(rewritten, fileName);
+          return;
+        }
+        // Clean document (no PII found): show Copiar/Aplicar bar
         const barContainer = document.createElement('div');
         panel.appendChild(barContainer);
-        renderDocumentActionBar(barContainer, finalText);
+        renderDocumentActionBar(barContainer, content);
         const applyBtn = barContainer.querySelector<HTMLButtonElement>('.atenna-doc-action-btn--primary');
         if (applyBtn) {
-          applyBtn.addEventListener('click', () => applyToTarget(finalText));
+          applyBtn.addEventListener('click', () => applyToTarget(content, fileName));
         }
       },
       onError: (error: string) => {

@@ -115,6 +115,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
 
+  // ── Auth token relay (for content scripts in iframes) ────
+  if (msg.type === 'GET_AUTH_TOKEN') {
+    getStoredJWT().then(jwt => sendResponse({ token: jwt ?? null })).catch(() => sendResponse({ token: null }));
+    return true;
+  }
+
   // ── Analytics (fire-and-forget, no response needed) ──────
   if (msg.type === 'ATENNA_TRACK') {
     fetch(ANALYTICS_URL, {
