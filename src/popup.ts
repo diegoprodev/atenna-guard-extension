@@ -46,7 +46,7 @@ async function initPopup(): Promise<void> {
   const [session, tabInfo] = await Promise.all([getActiveSession(), getActiveTabInfo()]);
 
   if (!session) {
-    renderLogin(container);
+    void toggleModal();
     return;
   }
 
@@ -166,7 +166,7 @@ function renderHome(
       ['atenna_plan', 'atenna_app_onboarding_seen', 'atenna_onboarding_seen'],
       () => r()
     ));
-    renderLogin(container);
+    void toggleModal();
   });
 }
 
