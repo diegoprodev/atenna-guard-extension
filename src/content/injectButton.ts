@@ -16,6 +16,7 @@ const BADGE_RIGHT_OFFSET = 90;
 const BADGE_GAP          = 10; // px gap between badge bottom and input top
 
 import { getBadgeColor } from '../core/userSettings';
+import { sk } from '../core/scopedStorage';
 
 let currentCleanup: (() => void) | undefined;
 let rafId:          number | undefined;
@@ -28,8 +29,9 @@ let autoBannerEnabled = true;
 // Read persisted setting at module load — only in top frame (iframes block storage access)
 if (window === window.top) {
   try {
-    chrome.storage.local.get('atenna_settings', (result) => {
-      const s = result['atenna_settings'] as { autoBanner?: boolean } | undefined;
+    const settingsKey = sk('atenna_settings');
+    chrome.storage.local.get(settingsKey, (result) => {
+      const s = result[settingsKey] as { autoBanner?: boolean } | undefined;
       if (s && typeof s.autoBanner === 'boolean') autoBannerEnabled = s.autoBanner;
     });
   } catch { /* non-extension env */ }
@@ -38,7 +40,7 @@ if (window === window.top) {
 export function setAutoBanner(enabled: boolean): void {
   autoBannerEnabled = enabled;
   if (window === window.top) {
-    try { chrome.storage.local.set({ atenna_settings: { autoBanner: enabled } }); } catch { /* */ }
+    try { chrome.storage.local.set({ [sk('atenna_settings')]: { autoBanner: enabled } }); } catch { /* */ }
   }
 }
 

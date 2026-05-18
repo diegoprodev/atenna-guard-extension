@@ -1,3 +1,5 @@
+import { sk } from './scopedStorage';
+
 const STATS_KEY      = 'atenna_dlp_stats';
 const SUPABASE_URL   = 'https://kezbssjmgwtrunqeoyir.supabase.co';
 const SUPABASE_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlemJzc2ptZ3d0cnVucWVveWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MzY0NzcsImV4cCI6MjA5MzUxMjQ3N30.c2YNPrG7WcbwtFij8UJlS7BNxY_XeaKoeqPlrKHloKs';
@@ -19,8 +21,9 @@ const DEFAULT_STATS: DlpStats = {
 function storageGet(): Promise<DlpStats> {
   return new Promise(resolve => {
     try {
-      chrome.storage.local.get(STATS_KEY, r => {
-        resolve((r[STATS_KEY] as DlpStats) ?? { ...DEFAULT_STATS });
+      const key = sk(STATS_KEY);
+      chrome.storage.local.get(key, r => {
+        resolve((r[key] as DlpStats) ?? { ...DEFAULT_STATS });
       });
     } catch { resolve({ ...DEFAULT_STATS }); }
   });
@@ -28,7 +31,7 @@ function storageGet(): Promise<DlpStats> {
 
 function storageSet(s: DlpStats): Promise<void> {
   return new Promise(resolve => {
-    try { chrome.storage.local.set({ [STATS_KEY]: s }, resolve); }
+    try { chrome.storage.local.set({ [sk(STATS_KEY)]: s }, resolve); }
     catch { resolve(); }
   });
 }

@@ -15,6 +15,7 @@ import { UploadWidget } from './upload-widget';
 import { getFlag } from '../core/featureFlags';
 import { getBadgeColor, saveBadgeColor, applyBadgeColorToDom } from '../core/userSettings';
 import type { BadgeColor } from '../core/userSettings';
+import { sk } from '../core/scopedStorage';
 
 const OVERLAY_ID  = 'atenna-modal-overlay';
 const SUCCESS_MS  = 500;
@@ -916,8 +917,9 @@ function renderSettingsPage(
       toggleInput.type = 'checkbox';
       toggleInput.className = 'atenna-modal__account-toggle';
 
-      chrome.storage.local.get('atenna_settings', (res) => {
-        const s = res['atenna_settings'] as { autoBanner?: boolean } | undefined;
+      const settingsKey = sk('atenna_settings');
+      chrome.storage.local.get(settingsKey, (res) => {
+        const s = res[settingsKey] as { autoBanner?: boolean } | undefined;
         toggleInput.checked = s?.autoBanner !== false;
       });
 
@@ -1453,15 +1455,16 @@ async function openModal(autoGenerate = false): Promise<void> {
 
   // Track daily return (async — non-blocking)
   const today = new Date().toISOString().split('T')[0];
+  const lastOpenKey = sk('atenna_last_open_date');
   const lastOpen = await new Promise<string | null>(resolve => {
-    try { chrome.storage.local.get('atenna_last_open_date', r => resolve(r['atenna_last_open_date'] as string | null)); }
+    try { chrome.storage.local.get(lastOpenKey, r => resolve(r[lastOpenKey] as string | null)); }
     catch { resolve(null); }
   });
   if (lastOpen && lastOpen !== today) {
     void trackEvent('daily_return');
   }
   await new Promise(resolve => {
-    try { chrome.storage.local.set({ atenna_last_open_date: today }, resolve); }
+    try { chrome.storage.local.set({ [lastOpenKey]: today }, resolve); }
     catch { resolve(undefined); }
   });
 
@@ -1511,13 +1514,14 @@ async function openModal(autoGenerate = false): Promise<void> {
     return;
   }
 
+  const appOnbKey = sk('atenna_app_onboarding_seen');
   const appOnboardingSeen = await new Promise<boolean>(resolve => {
-    try { chrome.storage.local.get('atenna_app_onboarding_seen', r => resolve(!!r['atenna_app_onboarding_seen'])); }
+    try { chrome.storage.local.get(appOnbKey, r => resolve(!!r[appOnbKey])); }
     catch { resolve(true); }
   });
 
   if (!appOnboardingSeen) {
-    chrome.storage.local.set({ atenna_app_onboarding_seen: true });
+    chrome.storage.local.set({ [appOnbKey]: true });
     renderPostLoginOnboarding(modal, close);
     modal.querySelector('.atenna-modal__close')?.addEventListener('click', close);
     return;

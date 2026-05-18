@@ -1,3 +1,5 @@
+import { sk } from './scopedStorage';
+
 const PLAN_KEY         = 'atenna_plan';
 const PRO_WELCOME_KEY  = 'atenna_pro_welcome_pending';
 const SUPABASE_URL      = 'https://kezbssjmgwtrunqeoyir.supabase.co';
@@ -13,8 +15,9 @@ export interface Plan {
 async function storagePlanGet(): Promise<Plan | undefined> {
   return new Promise(resolve => {
     try {
-      chrome.storage.local.get(PLAN_KEY, r =>
-        resolve(r[PLAN_KEY] as Plan | undefined)
+      const key = sk(PLAN_KEY);
+      chrome.storage.local.get(key, r =>
+        resolve(r[key] as Plan | undefined)
       );
     } catch { resolve(undefined); }
   });
@@ -23,7 +26,7 @@ async function storagePlanGet(): Promise<Plan | undefined> {
 export async function setPlan(plan: Plan): Promise<void> {
   return new Promise(resolve => {
     try {
-      chrome.storage.local.set({ [PLAN_KEY]: plan }, () => resolve());
+      chrome.storage.local.set({ [sk(PLAN_KEY)]: plan }, () => resolve());
     } catch { resolve(); }
   });
 }
@@ -77,7 +80,7 @@ export async function syncPlanFromSupabase(
       if (wasFreeBefore) {
         // Mark welcome pending so next modal open shows congrats screen
         await new Promise<void>(r => {
-          try { chrome.storage.local.set({ [PRO_WELCOME_KEY]: true }, () => r()); }
+          try { chrome.storage.local.set({ [sk(PRO_WELCOME_KEY)]: true }, () => r()); }
           catch { r(); }
         });
         return { upgradedToPro: true };
@@ -93,9 +96,10 @@ export async function syncPlanFromSupabase(
 export async function consumeProWelcome(): Promise<boolean> {
   return new Promise(resolve => {
     try {
-      chrome.storage.local.get(PRO_WELCOME_KEY, r => {
-        const pending = !!r[PRO_WELCOME_KEY];
-        if (pending) chrome.storage.local.remove(PRO_WELCOME_KEY, () => resolve(true));
+      const key = sk(PRO_WELCOME_KEY);
+      chrome.storage.local.get(key, r => {
+        const pending = !!r[key];
+        if (pending) chrome.storage.local.remove(key, () => resolve(true));
         else resolve(false);
       });
     } catch { resolve(false); }

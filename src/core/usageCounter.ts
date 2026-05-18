@@ -1,3 +1,5 @@
+import { sk } from './scopedStorage';
+
 const STORAGE_KEY  = 'atenna_usage';
 const TOTAL_KEY    = 'atenna_total_count';
 const MONTHLY_KEY  = 'atenna_monthly_usage';
@@ -21,8 +23,9 @@ function midnightTonight(): number {
 async function storageGet(): Promise<UsageData | undefined> {
   return new Promise((resolve) => {
     try {
-      chrome.storage.local.get(STORAGE_KEY, (result) =>
-        resolve(result[STORAGE_KEY] as UsageData | undefined)
+      const key = sk(STORAGE_KEY);
+      chrome.storage.local.get(key, (result) =>
+        resolve(result[key] as UsageData | undefined)
       );
     } catch {
       resolve(undefined);
@@ -33,7 +36,7 @@ async function storageGet(): Promise<UsageData | undefined> {
 async function storageSet(data: UsageData): Promise<void> {
   return new Promise((resolve) => {
     try {
-      chrome.storage.local.set({ [STORAGE_KEY]: data }, () => resolve());
+      chrome.storage.local.set({ [sk(STORAGE_KEY)]: data }, () => resolve());
     } catch {
       resolve();
     }
@@ -75,8 +78,9 @@ export async function isAtAnyLimit(usage: UsageData): Promise<boolean> {
 export async function getTotalCount(): Promise<number> {
   return new Promise(resolve => {
     try {
-      chrome.storage.local.get(TOTAL_KEY, r =>
-        resolve((r[TOTAL_KEY] as number) ?? 0)
+      const key = sk(TOTAL_KEY);
+      chrome.storage.local.get(key, r =>
+        resolve((r[key] as number) ?? 0)
       );
     } catch { resolve(0); }
   });
@@ -87,7 +91,7 @@ export async function incrementTotalCount(): Promise<number> {
   const next = current + 1;
   return new Promise(resolve => {
     try {
-      chrome.storage.local.set({ [TOTAL_KEY]: next }, () => resolve(next));
+      chrome.storage.local.set({ [sk(TOTAL_KEY)]: next }, () => resolve(next));
     } catch { resolve(next); }
   });
 }
@@ -108,11 +112,12 @@ function getCurrentMonth(): string {
 export async function getMonthlyUsage(): Promise<number> {
   return new Promise(resolve => {
     try {
-      chrome.storage.local.get(MONTHLY_KEY, r => {
-        const data = r[MONTHLY_KEY] as MonthlyData | undefined;
+      const key = sk(MONTHLY_KEY);
+      chrome.storage.local.get(key, r => {
+        const data = r[key] as MonthlyData | undefined;
         const currentMonth = getCurrentMonth();
         if (!data || data.resetMonth !== currentMonth) {
-          chrome.storage.local.set({ [MONTHLY_KEY]: { count: 0, resetMonth: currentMonth } }, () => resolve(0));
+          chrome.storage.local.set({ [sk(MONTHLY_KEY)]: { count: 0, resetMonth: currentMonth } }, () => resolve(0));
           return;
         }
         resolve(data.count);
@@ -127,7 +132,7 @@ export async function incrementMonthlyUsage(): Promise<number> {
   const currentMonth = getCurrentMonth();
   return new Promise(resolve => {
     try {
-      chrome.storage.local.set({ [MONTHLY_KEY]: { count: next, resetMonth: currentMonth } }, () => resolve(next));
+      chrome.storage.local.set({ [sk(MONTHLY_KEY)]: { count: next, resetMonth: currentMonth } }, () => resolve(next));
     } catch { resolve(next); }
   });
 }
@@ -185,8 +190,8 @@ export async function syncUsageFromSupabase(jwt: string): Promise<UsageSyncResul
     // Write merged back to local storage
     const currentMonth = getCurrentMonth();
     await Promise.all([
-      new Promise<void>(r => { try { chrome.storage.local.set({ [TOTAL_KEY]: mergedTotal }, () => r()); } catch { r(); } }),
-      new Promise<void>(r => { try { chrome.storage.local.set({ [MONTHLY_KEY]: { count: mergedMonthly, resetMonth: currentMonth } }, () => r()); } catch { r(); } }),
+      new Promise<void>(r => { try { chrome.storage.local.set({ [sk(TOTAL_KEY)]: mergedTotal }, () => r()); } catch { r(); } }),
+      new Promise<void>(r => { try { chrome.storage.local.set({ [sk(MONTHLY_KEY)]: { count: mergedMonthly, resetMonth: currentMonth } }, () => r()); } catch { r(); } }),
     ]);
 
     return { todayCount: mergedToday, monthlyCount: mergedMonthly, totalCount: mergedTotal };

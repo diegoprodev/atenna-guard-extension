@@ -1,7 +1,23 @@
 
+import { setStorageUser, userScopedKeys } from './scopedStorage';
+
 const SUPABASE_URL      = 'https://kezbssjmgwtrunqeoyir.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlemJzc2ptZ3d0cnVucWVveWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MzY0NzcsImV4cCI6MjA5MzUxMjQ3N30.c2YNPrG7WcbwtFij8UJlS7BNxY_XeaKoeqPlrKHloKs';
 const JWT_KEY           = 'atenna_jwt';
+
+// All user-specific storage keys (base names, scoped with __uid suffix at runtime)
+const USER_SCOPED_BASES = [
+  'atenna_history',
+  'atenna_usage',
+  'atenna_total_count',
+  'atenna_monthly_usage',
+  'atenna_dlp_stats',
+  'atenna_badge_color',
+  'atenna_settings',
+  'atenna_upload_count',
+  'atenna_plan',
+  'atenna_pro_welcome_pending',
+];
 
 export interface Session {
   access_token:  string;
@@ -24,22 +40,32 @@ export async function getStoredSession(): Promise<Session | null> {
 }
 
 export async function storeSession(session: Session): Promise<void> {
+  const payload = decodeJwtPayload(session.access_token);
+  const uid = payload?.sub as string | undefined;
+
+  // Activate user-scoped storage for this session
+  setStorageUser(uid ?? null);
+
   return new Promise(resolve => {
     try {
-      // Always clear cached plan when storing a new session (account switch or fresh login)
-      // so the next syncPlanFromSupabase reads from DB instead of inheriting a stale plan
-      chrome.storage.local.remove('atenna_plan', () => {
-        chrome.storage.local.set({ [JWT_KEY]: session }, () => resolve());
-      });
+      chrome.storage.local.set({ [JWT_KEY]: session }, () => resolve());
     } catch { resolve(); }
   });
 }
 
 export async function clearSession(): Promise<void> {
+  const stored = await getStoredSession();
+  const payload = stored ? decodeJwtPayload(stored.access_token) : null;
+  const uid = payload?.sub as string | undefined;
+
+  setStorageUser(null);
+
   return new Promise(resolve => {
     try {
-      // Clear session but keep onboarding_seen so it doesn't re-show on every logout
-      chrome.storage.local.remove(JWT_KEY, () => resolve());
+      // Remove session + all user-scoped data for this uid
+      const keysToRemove: string[] = [JWT_KEY];
+      if (uid) keysToRemove.push(...userScopedKeys(uid, USER_SCOPED_BASES));
+      chrome.storage.local.remove(keysToRemove, () => resolve());
     } catch { resolve(); }
   });
 }
@@ -84,6 +110,10 @@ async function refreshSession(session: Session): Promise<Session | null> {
 export async function getActiveSession(): Promise<Session | null> {
   const session = await getStoredSession();
   if (!session) return null;
+
+  // Restore scoped storage uid on every session load (e.g. after extension restart)
+  const payload = decodeJwtPayload(session.access_token);
+  setStorageUser((payload?.sub as string) ?? null);
 
   // Token expired or near expiry — try to refresh silently
   if (!isSessionValid(session)) {

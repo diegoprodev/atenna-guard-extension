@@ -1,3 +1,5 @@
+import { sk } from './scopedStorage';
+
 const HISTORY_KEY = 'atenna_history';
 const MAX_HISTORY = 20;
 
@@ -13,8 +15,9 @@ export interface PromptEntry {
 async function storageGet(): Promise<PromptEntry[]> {
   return new Promise((resolve) => {
     try {
-      chrome.storage.local.get(HISTORY_KEY, (result) =>
-        resolve((result[HISTORY_KEY] as PromptEntry[]) || [])
+      const key = sk(HISTORY_KEY);
+      chrome.storage.local.get(key, (result) =>
+        resolve((result[key] as PromptEntry[]) || [])
       );
     } catch {
       resolve([]);
@@ -25,7 +28,7 @@ async function storageGet(): Promise<PromptEntry[]> {
 async function storageSet(entries: PromptEntry[]): Promise<void> {
   return new Promise((resolve) => {
     try {
-      chrome.storage.local.set({ [HISTORY_KEY]: entries }, () => resolve());
+      chrome.storage.local.set({ [sk(HISTORY_KEY)]: entries }, () => resolve());
     } catch {
       resolve();
     }

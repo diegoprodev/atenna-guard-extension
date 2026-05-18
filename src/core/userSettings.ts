@@ -5,6 +5,8 @@
 
 const SUPABASE_URL = 'https://kezbssjmgwtrunqeoyir.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlemJzc2ptZ3d0cnVucWVveWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MzY0NzcsImV4cCI6MjA5MzUxMjQ3N30.c2YNPrG7WcbwtFij8UJlS7BNxY_XeaKoeqPlrKHloKs';
+import { sk } from './scopedStorage';
+
 const LOCAL_KEY    = 'atenna_badge_color';
 
 export type BadgeColor = 'green' | 'blue' | 'yellow' | 'white' | 'red' | 'transparent';
@@ -24,15 +26,16 @@ function authHeaders(jwt: string) {
 function localGet(): Promise<BadgeColor> {
   return new Promise(resolve => {
     try {
-      chrome.storage.local.get(LOCAL_KEY, r => {
-        resolve((r[LOCAL_KEY] as BadgeColor | undefined) ?? DEFAULT_COLOR);
+      const key = sk(LOCAL_KEY);
+      chrome.storage.local.get(key, r => {
+        resolve((r[key] as BadgeColor | undefined) ?? DEFAULT_COLOR);
       });
     } catch { resolve(DEFAULT_COLOR); }
   });
 }
 
 function localSet(color: BadgeColor): void {
-  try { chrome.storage.local.set({ [LOCAL_KEY]: color }); } catch { /* */ }
+  try { chrome.storage.local.set({ [sk(LOCAL_KEY)]: color }); } catch { /* */ }
 }
 
 // ── Supabase read/write ──────────────────────────────────────

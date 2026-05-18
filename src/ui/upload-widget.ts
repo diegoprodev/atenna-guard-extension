@@ -1,6 +1,8 @@
 import { trackEvent } from '../core/analytics';
 import { isPro } from '../core/planManager';
 
+import { sk } from '../core/scopedStorage';
+
 const UPLOAD_LIMIT_FREE = 5;
 const UPLOAD_COUNT_KEY  = 'atenna_upload_count';
 
@@ -16,8 +18,9 @@ const LOADING_PHRASES = [
 async function getUploadUsage(): Promise<number> {
   return new Promise(resolve => {
     try {
-      chrome.storage.local.get(UPLOAD_COUNT_KEY, r => {
-        const data = r[UPLOAD_COUNT_KEY] as { count: number; date: string } | undefined;
+      const key = sk(UPLOAD_COUNT_KEY);
+      chrome.storage.local.get(key, r => {
+        const data = r[key] as { count: number; date: string } | undefined;
         const today = new Date().toISOString().slice(0, 10);
         if (!data || data.date !== today) { resolve(0); return; }
         resolve(data.count);
@@ -32,7 +35,7 @@ async function incrementUploadUsage(): Promise<number> {
   const today = new Date().toISOString().slice(0, 10);
   return new Promise(resolve => {
     try {
-      chrome.storage.local.set({ [UPLOAD_COUNT_KEY]: { count: next, date: today } }, () => resolve(next));
+      chrome.storage.local.set({ [sk(UPLOAD_COUNT_KEY)]: { count: next, date: today } }, () => resolve(next));
     } catch { resolve(next); }
   });
 }
