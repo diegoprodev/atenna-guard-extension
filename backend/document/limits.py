@@ -6,13 +6,13 @@ Qualquer mudança aqui requer aprovação explícita (ver FASE_4.2B_DOCUMENT_LIM
 from __future__ import annotations
 
 # ── Upload ────────────────────────────────────────────────────────────────────
-MAX_UPLOAD_SIZE_BYTES: int = 10 * 1024 * 1024   # 10 MB
+MAX_UPLOAD_SIZE_BYTES: int = 100 * 1024 * 1024  # 100 MB (FASE 4.4 — large PDF/document investigation)
 MIN_FILE_SIZE_BYTES:   int = 64                   # arquivos menores = corrompidos/vazios
 
 # ── Extração ──────────────────────────────────────────────────────────────────
-MAX_PAGES:              int   = 50
-MAX_CHARS_EXTRACTED:    int   = 500_000           # ~250 páginas densas
-MAX_EXTRACTION_TIME_S:  float = 8.0               # hard timeout por request
+MAX_PAGES:              int   = 500               # 500 páginas (para PDFs grandes)
+MAX_CHARS_EXTRACTED:    int   = 2_000_000         # ~1000 páginas densas
+MAX_EXTRACTION_TIME_S:  float = 120.0             # 120s timeout (FASE 4.4 — large PDF/doc extraction)
 MAX_MEMORY_MB:          int   = 80
 
 # ── Chunking para DLP ─────────────────────────────────────────────────────────

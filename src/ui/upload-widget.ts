@@ -122,7 +122,7 @@ export class UploadWidget {
     if (!ext || !FILE_EXTENSIONS[ext]) {
       return { valid: false, error: 'Tipo não suportado. Formatos aceitos: PDF, DOCX, Excel, CSV, TXT, JSON' };
     }
-    const maxBytes = BINARY_TYPES.has(ext) ? 10 * 1024 * 1024 : 2 * 1024 * 1024;
+    const maxBytes = BINARY_TYPES.has(ext) ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
     if (file.size > maxBytes) {
       return { valid: false, error: `Arquivo muito grande. Máximo: ${maxBytes / (1024 * 1024)} MB` };
     }
