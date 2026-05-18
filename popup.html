@@ -129,7 +129,13 @@
       border-bottom: 1px solid #f5f5f5;
     }
     .ap-feature:last-child { border-bottom: none; }
-    .ap-feature__icon { font-size: 15px; flex-shrink: 0; }
+    .ap-feature__icon {
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 7px;
+      background: #f0fdf4; color: #16a34a;
+    }
+    .ap-feature__icon svg { display: block; }
+    .ap-platform__icon { display: flex; align-items: center; }
 
     /* Footer */
     .ap-footer {

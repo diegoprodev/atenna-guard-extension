@@ -31,12 +31,17 @@ async function openModalOnActiveTab(): Promise<void> {
   });
 }
 
-function getPlatformLabel(host: string): { name: string; icon: string } {
-  if (host.includes('chatgpt') || host.includes('openai')) return { name: 'ChatGPT', icon: '🤖' };
-  if (host.includes('claude')) return { name: 'Claude.ai', icon: '⚡' };
-  if (host.includes('gemini')) return { name: 'Gemini', icon: '✨' };
-  if (host.includes('copilot')) return { name: 'Copilot', icon: '🪁' };
-  return { name: host, icon: '🌐' };
+const SVG_SHIELD = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+const SVG_SPARKLE = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>`;
+const SVG_FILE = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
+const SVG_GLOBE = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
+
+function getPlatformLabel(host: string): { name: string; svg: string } {
+  if (host.includes('chatgpt') || host.includes('openai')) return { name: 'ChatGPT', svg: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>` };
+  if (host.includes('claude')) return { name: 'Claude.ai', svg: SVG_SPARKLE };
+  if (host.includes('gemini')) return { name: 'Gemini', svg: SVG_SPARKLE };
+  if (host.includes('copilot')) return { name: 'Copilot', svg: SVG_GLOBE };
+  return { name: host, svg: SVG_GLOBE };
 }
 
 async function initPopup(): Promise<void> {
@@ -95,7 +100,8 @@ function renderHome(
       <div class="ap-platform ap-platform--${supported ? 'ok' : 'warn'}">
         ${supported
           ? `<span class="ap-platform__dot ap-platform__dot--green"></span>
-             <span>${platform!.icon} ${platform!.name} — protegido e ativo</span>`
+             <span class="ap-platform__icon">${platform!.svg}</span>
+             <span>${platform!.name} — protegido e ativo</span>`
           : `<span class="ap-platform__dot ap-platform__dot--gray"></span>
              <span>Abra o ChatGPT, Claude.ai ou Gemini para ativar</span>`
         }
@@ -112,23 +118,23 @@ function renderHome(
         <div class="ap-tips">
           <div class="ap-tips__title">Plataformas suportadas</div>
           <div class="ap-tips__list">
-            <span>🤖 chatgpt.com</span>
-            <span>⚡ claude.ai</span>
-            <span>✨ gemini.google.com</span>
+            <span>chatgpt.com</span>
+            <span>claude.ai</span>
+            <span>gemini.google.com</span>
           </div>
         </div>
       ` : `
         <div class="ap-features">
           <div class="ap-feature">
-            <span class="ap-feature__icon">🛡️</span>
+            <span class="ap-feature__icon">${SVG_SHIELD}</span>
             <span>DLP — detecta CPF, cartão, senhas antes do envio</span>
           </div>
           <div class="ap-feature">
-            <span class="ap-feature__icon">✍️</span>
+            <span class="ap-feature__icon">${SVG_SPARKLE}</span>
             <span>Refine prompts com IA integrada</span>
           </div>
           <div class="ap-feature">
-            <span class="ap-feature__icon">📄</span>
+            <span class="ap-feature__icon">${SVG_FILE}</span>
             <span>Scan de documentos PDF/CSV até 100 MB</span>
           </div>
         </div>
