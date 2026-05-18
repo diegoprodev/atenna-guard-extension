@@ -2078,57 +2078,102 @@ function renderLimitReached(container: HTMLElement): void {
   container.appendChild(wrap);
 }
 
-// Static SVG icons for onboarding — safe for innerHTML
-const ONB_ICON_CLARITY = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`;
-const ONB_ICON_SHIELD  = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
-const ONB_ICON_FLOW    = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
+const ONB_STEPS: Array<{
+  icon: string;
+  tag: string;
+  title: string;
+  desc: string;
+  tip: string;
+}> = [
+  {
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#22c55e" opacity=".12"/><path d="M24 12c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12S30.627 12 24 12zm0 4l2.5 5 5.5.8-4 3.9.95 5.5L24 28.8l-4.95 2.4.95-5.5-4-3.9 5.5-.8L24 16z" fill="#22c55e"/></svg>`,
+    tag: 'Bem-vindo',
+    title: 'Atenna Safe Prompt',
+    desc: 'Seu co-piloto de segurança para ChatGPT, Claude e Gemini. Protege seus dados, refina seus prompts e digitaliza documentos — tudo antes do envio.',
+    tip: '💡 Funciona em qualquer aba do Chrome com ChatGPT, Claude.ai ou Gemini.',
+  },
+  {
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#22c55e" opacity=".12"/><rect x="12" y="30" width="24" height="3" rx="1.5" fill="#22c55e"/><circle cx="24" cy="20" r="6" stroke="#22c55e" stroke-width="2.2"/><path d="M20 26.5C17.5 27.5 15 29 15 30" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/><path d="M28 26.5C30.5 27.5 33 29 33 30" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/></svg>`,
+    tag: 'Passo 1 de 4',
+    title: 'Badge verde no campo de texto',
+    desc: 'Abra o ChatGPT, Claude.ai ou Gemini. Um badge verde aparecerá acima do campo de entrada. Clique nele para abrir o painel Atenna.',
+    tip: '💡 O badge só aparece quando você está autenticado. Se não aparecer, recarregue a página.',
+  },
+  {
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#22c55e" opacity=".12"/><path d="M16 32l4-4 3 3 6-8 5 9H16z" fill="#22c55e" opacity=".3"/><path d="M12 20h4M12 24h6M12 28h4" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/><rect x="20" y="13" width="16" height="22" rx="2" stroke="#22c55e" stroke-width="2"/><path d="M24 18h8M24 22h6M24 26h4" stroke="#22c55e" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+    tag: 'Passo 2 de 4',
+    title: 'Upload e Scan de Documentos',
+    desc: 'Envie PDFs, CSVs ou TXTs diretamente para o chat. O Atenna extrai o texto, escaneia PII (CPF, CNPJ, cartão) e aplica proteção antes de injetar como badge.',
+    tip: '💡 Clique no ícone de upload no badge ou arraste o arquivo para a área de chat. Suporte a arquivos de até 100 MB.',
+  },
+  {
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#22c55e" opacity=".12"/><path d="M14 34l3-3 4 4-7-1zm3-3l11-11" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round"/><circle cx="33" cy="16" r="5" stroke="#22c55e" stroke-width="2.2"/><path d="M30 16h6M33 13v6" stroke="#22c55e" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+    tag: 'Passo 3 de 4',
+    title: 'Proteção de Dados (DLP)',
+    desc: 'O ponto colorido no badge muda de cor automaticamente: verde = seguro, amarelo = atenção, vermelho = dados sensíveis detectados. Você decide se protege ou envia.',
+    tip: '💡 Detecta: CPF, CNPJ, cartão de crédito, chaves de API, senhas, emails, endereços e mais de 20 tipos de PII.',
+  },
+  {
+    icon: `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="22" fill="#22c55e" opacity=".12"/><path d="M15 28c0-2 1.5-3.5 3-4l1.5-8 4 2 4-2 1.5 8c1.5.5 3 2 3 4" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 31h12" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round"/><path d="M21 24l2 2 4-4" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    tag: 'Passo 4 de 4',
+    title: 'Prompt Builder com IA',
+    desc: 'Escreva sua solicitação no painel Atenna e clique em Refinar. A IA gera versões mais claras, precisas e seguras — sem expor dados sensíveis à plataforma.',
+    tip: '💡 Acesse o histórico de prompts para reutilizar ou favoritar os melhores. Seus dados ficam locais no Chrome.',
+  },
+];
 
 function renderPostLoginOnboarding(modal: HTMLElement, close: () => void): void {
   const logoUrl = getLogoUrl();
   const logoImg = logoUrl ? `<img src="${logoUrl}" width="22" height="22" alt="" aria-hidden="true"/>` : '';
 
-  modal.innerHTML = `
-    <div class="atenna-modal__header">
-      <span class="atenna-modal__title">${logoImg}Atenna</span>
-      <button class="atenna-modal__close" aria-label="Fechar">×</button>
-    </div>
-    <div class="atenna-modal__body">
-      <div class="atenna-modal__onboarding atenna-modal__onboarding--fade-in">
-        <div class="atenna-modal__onb-hero">
-          <div class="atenna-modal__onb-wordmark">Como usar</div>
-          <div class="atenna-modal__onb-headline">Tudo pronto.</div>
-          <p class="atenna-modal__onb-sub">Veja como o Atenna funciona na prática.</p>
-        </div>
-        <ul class="atenna-modal__onb-features">
-          <li>
-            <span class="atenna-modal__onb-icon">${ONB_ICON_CLARITY}</span>
-            <div>
-              <strong>Badge verde acima do input</strong>
-              <span>Clique no ícone verde que aparece acima do campo de texto do ChatGPT, Claude ou Gemini para abrir o painel.</span>
-            </div>
-          </li>
-          <li>
-            <span class="atenna-modal__onb-icon">${ONB_ICON_FLOW}</span>
-            <div>
-              <strong>Digite e refine seu prompt</strong>
-              <span>Escreva sua solicitação no campo, clique em Refinar — o Atenna gera versões mais claras e precisas.</span>
-            </div>
-          </li>
-          <li>
-            <span class="atenna-modal__onb-icon">${ONB_ICON_SHIELD}</span>
-            <div>
-              <strong>Alerta automático de dados sensíveis</strong>
-              <span>O ponto colorido no badge muda de cor se detectar CPF, senha, chave de API ou qualquer dado pessoal antes do envio.</span>
-            </div>
-          </li>
-        </ul>
-        <button class="atenna-modal__onb-cta atenna-modal__onb-cta--start">Entendido, vamos começar</button>
-      </div>
-    </div>
-  `;
+  let currentStep = 0;
+  const total = ONB_STEPS.length;
 
-  modal.querySelector('.atenna-modal__close')!.addEventListener('click', close);
-  modal.querySelector('.atenna-modal__onb-cta--start')!.addEventListener('click', close);
+  function render() {
+    const step = ONB_STEPS[currentStep];
+    const isFirst = currentStep === 0;
+    const isLast = currentStep === total - 1;
+
+    modal.innerHTML = `
+      <div class="atenna-modal__header">
+        <span class="atenna-modal__title">${logoImg}Atenna</span>
+        <button class="atenna-modal__close" aria-label="Fechar">×</button>
+      </div>
+      <div class="atenna-modal__body">
+        <div class="atenna-onb-wizard">
+          <div class="atenna-onb-wizard__icon">${step.icon}</div>
+          <div class="atenna-onb-wizard__tag">${step.tag}</div>
+          <div class="atenna-onb-wizard__title">${step.title}</div>
+          <p class="atenna-onb-wizard__desc">${step.desc}</p>
+          <div class="atenna-onb-wizard__tip">${step.tip}</div>
+
+          <div class="atenna-onb-wizard__dots">
+            ${ONB_STEPS.map((_, i) => `<span class="atenna-onb-wizard__dot${i === currentStep ? ' atenna-onb-wizard__dot--active' : ''}"></span>`).join('')}
+          </div>
+
+          <div class="atenna-onb-wizard__nav">
+            ${!isFirst ? `<button class="atenna-onb-wizard__btn atenna-onb-wizard__btn--back">← Voltar</button>` : `<span></span>`}
+            <button class="atenna-onb-wizard__btn atenna-onb-wizard__btn--skip">Pular</button>
+            <button class="atenna-onb-wizard__btn atenna-onb-wizard__btn--next ${isLast ? 'atenna-onb-wizard__btn--finish' : ''}">
+              ${isLast ? '✓ Começar' : 'Próximo →'}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    modal.querySelector('.atenna-modal__close')!.addEventListener('click', close);
+    modal.querySelector('.atenna-onb-wizard__btn--skip')!.addEventListener('click', close);
+    modal.querySelector('.atenna-onb-wizard__btn--next')!.addEventListener('click', () => {
+      if (isLast) { close(); return; }
+      currentStep++;
+      render();
+    });
+    const backBtn = modal.querySelector('.atenna-onb-wizard__btn--back');
+    if (backBtn) backBtn.addEventListener('click', () => { currentStep--; render(); });
+  }
+
+  render();
 }
 
 function renderPreLoginOnboarding(container: HTMLElement, switchView: (view: string) => void): void {

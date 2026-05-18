@@ -2100,6 +2100,159 @@
   color: #22c55e;
 }
 
+/* ── Onboarding Wizard ───────────────────────────────────── */
+
+.atenna-onb-wizard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 24px 24px;
+  gap: 0;
+  min-height: 340px;
+  animation: atenna-modal-scale-in 200ms ease both;
+}
+
+.atenna-onb-wizard__icon {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
+.atenna-onb-wizard__icon svg {
+  width: 72px;
+  height: 72px;
+}
+
+.atenna-onb-wizard__tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: #22c55e;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.atenna-onb-wizard__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111;
+  text-align: center;
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+
+.atenna-modal--dark .atenna-onb-wizard__title { color: #f0f0f0; }
+
+.atenna-onb-wizard__desc {
+  font-size: 13px;
+  color: #555;
+  text-align: center;
+  line-height: 1.65;
+  margin-bottom: 10px;
+  max-width: 340px;
+}
+
+.atenna-modal--dark .atenna-onb-wizard__desc { color: #aaa; }
+
+.atenna-onb-wizard__tip {
+  font-size: 12px;
+  color: #888;
+  background: #f8fdf9;
+  border: 1px solid #d1fae5;
+  border-radius: 8px;
+  padding: 8px 12px;
+  width: 100%;
+  max-width: 340px;
+  line-height: 1.55;
+  margin-bottom: 18px;
+}
+
+.atenna-modal--dark .atenna-onb-wizard__tip {
+  background: rgba(34,197,94,0.06);
+  border-color: rgba(34,197,94,0.18);
+  color: #999;
+}
+
+.atenna-onb-wizard__dots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.atenna-onb-wizard__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d1d5db;
+  transition: all 200ms ease;
+}
+
+.atenna-onb-wizard__dot--active {
+  width: 22px;
+  border-radius: 4px;
+  background: #22c55e;
+}
+
+.atenna-onb-wizard__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 340px;
+  gap: 8px;
+}
+
+.atenna-onb-wizard__btn {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 9px 16px;
+  transition: all 150ms ease;
+}
+
+.atenna-onb-wizard__btn--back {
+  background: #f3f4f6;
+  color: #555;
+}
+
+.atenna-modal--dark .atenna-onb-wizard__btn--back {
+  background: rgba(255,255,255,0.08);
+  color: #aaa;
+}
+
+.atenna-onb-wizard__btn--back:hover { background: #e5e7eb; }
+
+.atenna-onb-wizard__btn--skip {
+  background: none;
+  color: #aaa;
+  font-size: 12px;
+  padding: 9px 10px;
+}
+
+.atenna-onb-wizard__btn--skip:hover { color: #666; }
+
+.atenna-onb-wizard__btn--next {
+  background: #22c55e;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(34,197,94,0.25);
+}
+
+.atenna-onb-wizard__btn--next:hover {
+  background: #16a34a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(34,197,94,0.35);
+}
+
+.atenna-onb-wizard__btn--finish {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  padding: 9px 20px;
+}
+
 /* ── DLP Advisory (LAYER 3 UX) ──────────────────────────── */
 
 .atenna-dlp-advisory {

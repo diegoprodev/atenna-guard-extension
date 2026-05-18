@@ -38,6 +38,126 @@
       flex-direction: column;
       border-radius: 12px;
     }
+
+    /* ── Popup enterprise UI ── */
+    .ap-loading {
+      display: flex; align-items: center; justify-content: center;
+      padding: 40px; min-height: 120px;
+    }
+    .ap-spinner {
+      width: 28px; height: 28px;
+      border: 3px solid #f0f0f0; border-top-color: #22c55e;
+      border-radius: 50%; animation: ap-spin 0.8s linear infinite;
+    }
+    @keyframes ap-spin { to { transform: rotate(360deg); } }
+
+    .ap-root {
+      display: flex; flex-direction: column;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #fff; border-radius: 12px; overflow: hidden;
+    }
+
+    /* Header */
+    .ap-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .ap-header__logo {
+      width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+    }
+    .ap-header__info { flex: 1; min-width: 0; }
+    .ap-header__name { font-size: 13px; font-weight: 700; color: #111; }
+    .ap-header__email { font-size: 11px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ap-badge {
+      font-size: 10px; font-weight: 700; border-radius: 20px;
+      padding: 3px 10px; letter-spacing: 0.04em; flex-shrink: 0;
+    }
+    .ap-badge--pro { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .ap-badge--free { background: #f9f9f9; color: #888; border: 1px solid #e5e5e5; }
+
+    /* Platform status */
+    .ap-platform {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 18px; font-size: 12px;
+    }
+    .ap-platform--ok { background: #f0fdf4; color: #16a34a; }
+    .ap-platform--warn { background: #fafafa; color: #888; }
+    .ap-platform__dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .ap-platform__dot--green { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.15); }
+    .ap-platform__dot--gray { background: #ccc; }
+
+    /* Buttons */
+    .ap-btn {
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      font-family: inherit; font-size: 13px; font-weight: 600;
+      border: none; border-radius: 8px; cursor: pointer;
+      transition: all 140ms ease;
+    }
+    .ap-btn--primary {
+      background: #22c55e; color: #fff;
+      box-shadow: 0 2px 8px rgba(34,197,94,0.25);
+    }
+    .ap-btn--primary:hover { background: #16a34a; transform: translateY(-1px); }
+    .ap-btn--primary:disabled {
+      background: #e5e5e5; color: #aaa; box-shadow: none; cursor: not-allowed; transform: none;
+    }
+    .ap-btn--big { padding: 11px 20px; width: calc(100% - 36px); margin: 14px 18px 0; }
+
+    /* Tips */
+    .ap-tips {
+      margin: 12px 18px 0;
+      padding: 12px 14px;
+      background: #f8faff;
+      border: 1px solid #e0e7ff;
+      border-radius: 8px;
+    }
+    .ap-tips__title { font-size: 11px; font-weight: 600; color: #4f46e5; margin-bottom: 6px; }
+    .ap-tips__list { display: flex; gap: 8px; flex-wrap: wrap; }
+    .ap-tips__list span {
+      font-size: 11px; color: #555; background: #fff;
+      border: 1px solid #e0e7ff; border-radius: 6px; padding: 3px 8px;
+    }
+
+    /* Features list */
+    .ap-features { display: flex; flex-direction: column; gap: 0; margin: 10px 0 0; }
+    .ap-feature {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 18px; font-size: 12px; color: #555;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .ap-feature:last-child { border-bottom: none; }
+    .ap-feature__icon { font-size: 15px; flex-shrink: 0; }
+
+    /* Footer */
+    .ap-footer {
+      display: flex; gap: 0;
+      border-top: 1px solid #f0f0f0;
+      margin-top: 12px;
+    }
+    .ap-footer__btn {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+      font-family: inherit; font-size: 12px; font-weight: 500; color: #555;
+      background: none; border: none; cursor: pointer;
+      padding: 12px 8px; transition: background 140ms ease;
+      border-right: 1px solid #f0f0f0;
+    }
+    .ap-footer__btn:last-child { border-right: none; }
+    .ap-footer__btn:hover { background: #f9f9f9; }
+    .ap-footer__btn--danger { color: #dc2626; }
+    .ap-footer__btn--danger:hover { background: #fff5f5; }
+
+    /* Login screen */
+    .ap-login {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 32px 24px 28px; gap: 12px; text-align: center;
+    }
+    .ap-logo { width: 64px; height: 64px; border-radius: 50%; margin-bottom: 4px; }
+    .ap-login__title { font-size: 16px; font-weight: 700; color: #111; }
+    .ap-login__sub { font-size: 12px; color: #888; line-height: 1.5; }
+    #ap-open-login { width: 100%; padding: 12px; margin-top: 4px; border-radius: 8px; }
   </style>
 </head>
 <body>
