@@ -1,6 +1,6 @@
 import { getActiveSession, clearSession } from './core/auth';
 import { getPlan } from './core/planManager';
-import { openSettingsOverlay } from './ui/modal';
+import { openSettingsOverlay, toggleModal } from './ui/modal';
 
 const SUPPORTED_HOSTS = ['chatgpt.com', 'chat.openai.com', 'claude.ai', 'gemini.google.com', 'copilot.microsoft.com'];
 
@@ -64,13 +64,7 @@ function renderLogin(container: HTMLElement): void {
     </div>
   `;
   document.getElementById('ap-open-login')!.addEventListener('click', () => {
-    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-      const tab = tabs[0];
-      if (tab?.id) {
-        chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_MODAL' }, () => void chrome.runtime.lastError);
-      }
-    });
-    window.close();
+    void toggleModal();
   });
 }
 
