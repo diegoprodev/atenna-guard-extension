@@ -555,10 +555,10 @@ export class UploadWidget {
     msg.className = 'atenna-upw__error-msg';
     msg.textContent = this.state.error ?? 'Erro desconhecido.';
 
-    // Hick: 1 ação clara no estado de erro
+    console.error('[Atenna] Document error:', this.state.error);
+
     const retry = this.makeBtn('Escolher outro arquivo', 'secondary', 'Selecionar um arquivo diferente');
     retry.addEventListener('click', () => {
-      // Reabre o file picker em vez de fechar o overlay
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = '.txt,.md,.csv,.json,.pdf,.docx,.doc,.xlsx,.xls';
@@ -572,9 +572,54 @@ export class UploadWidget {
       input.click();
     });
 
+    // Botão minimalista de report — só aparece em erros de servidor (não validação)
+    const errorText = this.state.error ?? '';
+    const isServerError = errorText.includes('servidor') || errorText.includes('OCR')
+      || errorText.includes('indisponível') || errorText.includes('demorou')
+      || errorText.includes('processamento') || errorText.includes('500')
+      || errorText.includes('502') || errorText.includes('503');
+
+    const reportBtn = document.createElement('button');
+    reportBtn.className = 'atenna-upw__report-btn';
+    reportBtn.textContent = 'Reportar problema';
+    reportBtn.title = 'Enviar este erro para a equipe Atenna';
+    let reported = false;
+    reportBtn.addEventListener('click', async () => {
+      if (reported) return;
+      reported = true;
+      reportBtn.textContent = 'Enviando…';
+      reportBtn.disabled = true;
+      try {
+        await this.sendProblemReport(errorText);
+        reportBtn.textContent = '✓ Reportado';
+      } catch {
+        reportBtn.textContent = 'Reportar problema';
+        reportBtn.disabled = false;
+        reported = false;
+      }
+    });
+
     wrap.appendChild(msg);
     wrap.appendChild(retry);
+    if (isServerError) wrap.appendChild(reportBtn);
     this.container.appendChild(wrap);
+  }
+
+  private async sendProblemReport(errorMessage: string): Promise<void> {
+    const token = await this.getAuthToken();
+    if (!token) return;
+    const resp = await fetch(`${this.backendUrl}/report-problem`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        error_code: 'document_processing_error',
+        error_message: errorMessage,
+        page_url: window.location.href,
+        extension_version: (chrome.runtime.getManifest?.() as { version?: string })?.version ?? 'unknown',
+        context: { file_name: this.state.file?.name, file_size: this.state.file?.size },
+      }),
+    });
+    if (!resp.ok) throw new Error('report failed');
   }
 
   private makeBtn(label: string, variant: 'primary' | 'secondary' | 'danger', tooltip: string, icon?: string): HTMLButtonElement {

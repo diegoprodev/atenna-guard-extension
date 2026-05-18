@@ -1031,6 +1031,50 @@ function renderSettingsPage(
         window.location.reload();
       });
       troubleshootingSection.appendChild(reactivateBtn);
+
+      // Botão "Reportar problema" — sempre visível em Configurações
+      const reportProblemBtn = document.createElement('button');
+      reportProblemBtn.style.cssText = `
+        background: none; border: none;
+        color: var(--at-text); opacity: 0.4;
+        font-size: 11px; font-family: inherit;
+        cursor: pointer; padding: 4px 8px;
+        border-radius: 4px; transition: all 150ms ease;
+        margin-left: 8px;
+      `;
+      reportProblemBtn.textContent = 'Reportar problema';
+      reportProblemBtn.title = 'Enviar feedback de problema à equipe Atenna';
+      reportProblemBtn.onmouseover = function() { (this as HTMLElement).style.opacity = '0.85'; };
+      reportProblemBtn.onmouseout  = function() { (this as HTMLElement).style.opacity = '0.4'; };
+      let settingsReported = false;
+      reportProblemBtn.addEventListener('click', async () => {
+        if (settingsReported) return;
+        settingsReported = true;
+        reportProblemBtn.textContent = 'Enviando…';
+        reportProblemBtn.style.opacity = '0.4';
+        try {
+          const resp = await fetch('https://atennaplugin.maestro-n8n.site/report-problem', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              error_code: 'user_feedback',
+              error_message: 'Usuário reportou problema via Configurações',
+              page_url: window.location.href,
+              extension_version: (chrome.runtime.getManifest?.() as { version?: string })?.version ?? 'unknown',
+            }),
+          });
+          if (resp.ok) {
+            reportProblemBtn.textContent = '✓ Enviado';
+          } else {
+            throw new Error('failed');
+          }
+        } catch {
+          reportProblemBtn.textContent = 'Reportar problema';
+          reportProblemBtn.style.opacity = '0.4';
+          settingsReported = false;
+        }
+      });
+      troubleshootingSection.appendChild(reportProblemBtn);
       body.appendChild(troubleshootingSection);
 
     } catch {

@@ -6,8 +6,12 @@ venv/
 .venv/
 dist/
 .env
+.env.*
 .env.local
 .DS_Store
 Thumbs.db
 *.log
 coverage/
+
+# Claude Code permission history — may contain command logs with secrets
+.claude/settings.json
