@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confirmando acesso…</title>
+  <title>Atenna — Confirmação</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -20,85 +20,132 @@
       padding: 40px;
       text-align: center;
       max-width: 400px;
+      width: 100%;
+      margin: 16px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     }
-    .icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-    }
-    h1 {
-      font-size: 24px;
-      color: #111;
-      margin-bottom: 8px;
-    }
-    p {
-      color: #666;
-      font-size: 14px;
-      margin-bottom: 24px;
-      line-height: 1.5;
-    }
+    .icon { font-size: 48px; margin-bottom: 16px; }
+    h1 { font-size: 24px; color: #111; margin-bottom: 8px; }
+    p { color: #666; font-size: 14px; margin-bottom: 24px; line-height: 1.5; }
     .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid #f0f0f0;
-      border-top: 3px solid #22c55e;
+      width: 40px; height: 40px;
+      border: 3px solid #f0f0f0; border-top: 3px solid #22c55e;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin: 0 auto 16px;
     }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .countdown { font-size: 12px; color: #999; margin-top: 16px; }
+    .error-box {
+      color: #ef4444; background: #fee2e2;
+      border: 1px solid #fecaca; border-radius: 8px;
+      padding: 12px; margin-bottom: 16px; font-size: 13px;
     }
-    .countdown {
-      font-size: 12px;
-      color: #999;
-      margin-top: 16px;
+
+    /* Reset password form */
+    .reset-form { text-align: left; }
+    .reset-form label {
+      display: block; font-size: 13px; color: #555;
+      margin-bottom: 4px; font-weight: 500;
     }
-    .error {
-      color: #ef4444;
-      background: #fee2e2;
-      border: 1px solid #fecaca;
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 16px;
-      font-size: 13px;
+    .reset-form input {
+      width: 100%; padding: 10px 12px;
+      border: 1.5px solid #d1d5db; border-radius: 8px;
+      font-size: 14px; color: #111;
+      outline: none; transition: border-color 0.15s;
+      margin-bottom: 14px;
     }
+    .reset-form input:focus { border-color: #22c55e; }
+    .reset-form input.error { border-color: #ef4444; }
+    .btn {
+      width: 100%; padding: 11px;
+      background: #22c55e; color: white;
+      border: none; border-radius: 8px;
+      font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .hint { font-size: 12px; color: #999; margin-top: 10px; text-align: center; }
+    .strength {
+      height: 4px; border-radius: 2px;
+      background: #f0f0f0; margin: -10px 0 14px; overflow: hidden;
+    }
+    .strength-bar { height: 100%; width: 0; transition: width 0.3s, background 0.3s; }
   </style>
 </head>
 <body>
   <div class="container">
+    <!-- Loading -->
     <div id="loading">
       <div class="spinner"></div>
       <h1>Confirmando seu acesso…</h1>
-      <p>Você será redirecionado em alguns segundos.</p>
-      <div class="countdown">Encerrando em <span id="countdown">3</span>s…</div>
+      <p>Aguarde um instante.</p>
     </div>
-    <div id="success" style="display: none;">
+
+    <!-- Reset password form (type=recovery) -->
+    <div id="reset" style="display:none;">
+      <div class="icon">🔑</div>
+      <h1>Criar nova senha</h1>
+      <p>Digite sua nova senha abaixo para redefinir o acesso à sua conta Atenna.</p>
+      <form class="reset-form" id="resetForm">
+        <label for="newPass">Nova senha</label>
+        <input type="password" id="newPass" placeholder="Mínimo 8 caracteres" autocomplete="new-password" />
+        <div class="strength"><div class="strength-bar" id="strengthBar"></div></div>
+        <label for="confirmPass">Confirmar senha</label>
+        <input type="password" id="confirmPass" placeholder="Repita a senha" autocomplete="new-password" />
+        <div class="error-box" id="formError" style="display:none;"></div>
+        <button type="submit" class="btn" id="submitBtn">Redefinir senha</button>
+        <p class="hint">Você será conectado automaticamente após redefinir.</p>
+      </form>
+    </div>
+
+    <!-- Success (login / magic link) -->
+    <div id="success" style="display:none;">
       <div class="icon">✨</div>
       <h1>Acesso confirmado!</h1>
-      <p>Você agora pode usar o Atenna. A aba será fechada em breve.</p>
+      <p>Seu login foi verificado com sucesso.</p>
+      <p>Você pode fechar esta aba e retornar à extensão.</p>
       <div class="countdown">Encerrando em <span id="countdown-success">3</span>s…</div>
     </div>
-    <div id="error" style="display: none;">
+
+    <!-- Success after password reset -->
+    <div id="reset-success" style="display:none;">
+      <div class="icon">✅</div>
+      <h1>Senha redefinida!</h1>
+      <p>Sua senha foi atualizada com sucesso. Você já está conectado.</p>
+      <p>Você pode fechar esta aba e retornar à extensão.</p>
+      <div class="countdown">Encerrando em <span id="countdown-reset">3</span>s…</div>
+    </div>
+
+    <!-- Error -->
+    <div id="error" style="display:none;">
       <div class="icon">⚠️</div>
       <h1>Erro na confirmação</h1>
-      <div class="error" id="error-msg"></div>
+      <div class="error-box" id="error-msg"></div>
       <p>Feche esta aba e tente novamente na extensão.</p>
     </div>
   </div>
 
   <script>
+    const SUPABASE_URL = 'https://kezbssjmgwtrunqeoyir.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlemJzc2ptZ3d0cnVucWVveWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MzY0NzcsImV4cCI6MjA5MzUxMjQ3N30.c2YNPrG7WcbwtFij8UJlS7BNxY_XeaKoeqPlrKHloKs';
+
+    let _accessToken = null;
+
     function getCallbackParams() {
       const hash = window.location.hash.substring(1);
-      const params = new URLSearchParams(hash);
+      const hashParams = new URLSearchParams(hash);
+      const queryParams = new URLSearchParams(window.location.search);
       return {
-        access_token: params.get('access_token'),
-        refresh_token: params.get('refresh_token'),
-        expires_in: params.get('expires_in'),
-        token_type: params.get('token_type'),
-        type: new URLSearchParams(window.location.search).get('type'),
-        error: params.get('error'),
-        error_description: params.get('error_description'),
+        access_token: hashParams.get('access_token'),
+        refresh_token: hashParams.get('refresh_token'),
+        expires_in: hashParams.get('expires_in'),
+        token_type: hashParams.get('token_type'),
+        // type can appear in hash OR query string depending on Supabase version
+        type: hashParams.get('type') || queryParams.get('type'),
+        error: hashParams.get('error') || queryParams.get('error'),
+        error_description: hashParams.get('error_description') || queryParams.get('error_description'),
       };
     }
 
@@ -113,75 +160,161 @@
       }
     }
 
+    function showPanel(id) {
+      ['loading','reset','success','reset-success','error'].forEach(p => {
+        document.getElementById(p).style.display = p === id ? 'block' : 'none';
+      });
+    }
+
+    function startCountdown(spanId, onDone) {
+      let n = 3;
+      const el = document.getElementById(spanId);
+      const t = setInterval(() => {
+        n--;
+        el.textContent = String(Math.max(0, n));
+        if (n <= 0) { clearInterval(t); onDone && onDone(); }
+      }, 1000);
+    }
+
+    function showError(msg) {
+      showPanel('error');
+      document.getElementById('error-msg').textContent = msg;
+    }
+
+    function storeSession(params, email) {
+      const expiresAt = Math.floor(Date.now() / 1000) + parseInt(params.expires_in || '3600', 10);
+      return new Promise(resolve => {
+        chrome.storage.local.set({
+          atenna_jwt: {
+            access_token: params.access_token,
+            refresh_token: params.refresh_token,
+            email,
+            expires_at: expiresAt,
+          }
+        }, resolve);
+      });
+    }
+
     async function handleCallback() {
       const params = getCallbackParams();
 
       if (params.error) {
-        showError(`${params.error}: ${params.error_description || 'Unknown error'}`);
+        showError(`${params.error}: ${params.error_description || 'Erro desconhecido'}`);
         return;
       }
 
       if (!params.access_token) {
-        showError('Token não recebido. Tente novamente.');
+        showError('Token não recebido. Tente solicitar um novo link de redefinição.');
         return;
       }
 
+      _accessToken = params.access_token;
+
+      // PASSWORD RECOVERY FLOW
+      if (params.type === 'recovery') {
+        showPanel('reset');
+        setupResetForm(params);
+        return;
+      }
+
+      // NORMAL LOGIN / MAGIC LINK FLOW
       try {
         const payload = decodeJwtPayload(params.access_token);
         if (!payload || !payload.email) {
           showError('Email não encontrado no token.');
           return;
         }
-
-        const expiresAtSeconds = Math.floor(Date.now() / 1000) + parseInt(params.expires_in || '3600', 10);
-
-        // Store in chrome storage
-        const storage = {};
-        storage['atenna_jwt'] = {
-          access_token: params.access_token,
-          refresh_token: params.refresh_token,
-          email: payload.email,
-          expires_at: expiresAtSeconds,
-        };
-
-        chrome.storage.local.set(storage, () => {
-          showSuccess();
-          setTimeout(() => window.close(), 3000);
-        });
+        await storeSession(params, payload.email);
+        showPanel('success');
+        startCountdown('countdown-success', () => window.close());
       } catch (e) {
         showError('Erro ao processar token: ' + String(e));
       }
     }
 
-    function showSuccess() {
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('success').style.display = 'block';
+    function setupResetForm(params) {
+      const newPass = document.getElementById('newPass');
+      const confirmPass = document.getElementById('confirmPass');
+      const submitBtn = document.getElementById('submitBtn');
+      const formError = document.getElementById('formError');
+      const strengthBar = document.getElementById('strengthBar');
 
-      let countdown = 3;
-      const countdownEl = document.getElementById('countdown-success');
-      const interval = setInterval(() => {
-        countdown--;
-        countdownEl.textContent = String(Math.max(0, countdown));
-        if (countdown <= 0) clearInterval(interval);
-      }, 1000);
+      // Password strength indicator
+      newPass.addEventListener('input', () => {
+        const v = newPass.value;
+        let score = 0;
+        if (v.length >= 8) score++;
+        if (v.length >= 12) score++;
+        if (/[A-Z]/.test(v)) score++;
+        if (/[0-9]/.test(v)) score++;
+        if (/[^A-Za-z0-9]/.test(v)) score++;
+        const colors = ['#ef4444','#f97316','#eab308','#22c55e','#16a34a'];
+        const widths = ['20%','40%','60%','80%','100%'];
+        strengthBar.style.width = score > 0 ? widths[score - 1] : '0';
+        strengthBar.style.background = score > 0 ? colors[score - 1] : 'transparent';
+      });
+
+      document.getElementById('resetForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        formError.style.display = 'none';
+        newPass.classList.remove('error');
+        confirmPass.classList.remove('error');
+
+        const pwd = newPass.value;
+        const cpwd = confirmPass.value;
+
+        if (pwd.length < 8) {
+          formError.textContent = 'A senha deve ter pelo menos 8 caracteres.';
+          formError.style.display = 'block';
+          newPass.classList.add('error');
+          return;
+        }
+        if (pwd !== cpwd) {
+          formError.textContent = 'As senhas não coincidem.';
+          formError.style.display = 'block';
+          confirmPass.classList.add('error');
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Atualizando…';
+
+        try {
+          // Call Supabase REST API to update password using the recovery token
+          const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${_accessToken}`,
+            },
+            body: JSON.stringify({ password: pwd }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.error_description || data.msg || 'Falha ao atualizar senha.');
+          }
+
+          // Store session so user stays logged in after reset
+          const payload = decodeJwtPayload(_accessToken);
+          if (payload?.email) {
+            await storeSession(params, payload.email);
+          }
+
+          showPanel('reset-success');
+          startCountdown('countdown-reset', () => window.close());
+
+        } catch (err) {
+          formError.textContent = String(err.message || err);
+          formError.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Redefinir senha';
+        }
+      });
     }
 
-    function showError(msg) {
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('error').style.display = 'block';
-      document.getElementById('error-msg').textContent = msg;
-    }
-
-    // Start countdown
-    let countdown = 3;
-    const countdownEl = document.getElementById('countdown');
-    const interval = setInterval(() => {
-      countdown--;
-      countdownEl.textContent = String(Math.max(0, countdown));
-      if (countdown <= 0) clearInterval(interval);
-    }, 1000);
-
-    // Process callback
     handleCallback();
   </script>
 </body>

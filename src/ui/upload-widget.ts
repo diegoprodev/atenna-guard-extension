@@ -394,18 +394,13 @@ export class UploadWidget {
         bar.appendChild(origBtn);
       }
     } else {
-      // Arquivo sem risco — APENAS Aplicar (redundância removida)
-      const applyBtn = this.makeBtn('Aplicar no texto', 'primary', 'Insere o conteúdo extraído no campo de texto ativo');
-      applyBtn.addEventListener('click', () => {
-        const content = extractedContent ?? this.state.originalContent ?? '';
-        const fName = this.state.file?.name ?? 'documento.txt';
-        this.showSuccess(() => this.config.onReady(content, content.slice(0, 300), dlpRisk ?? 'NONE', undefined, fName));
-      });
-      bar.appendChild(applyBtn);
-      // Removed: copyBtn (redundante — Aplicar já injeta no campo de texto)
+      // Arquivo sem risco — nenhum botão aqui (redundância removida)
+      // Ação única: "Aplicar" no modal (renderizado via onReady callback)
     }
 
-    this.container.appendChild(bar);
+    if (hasRisk) {
+      this.container.appendChild(bar);
+    }
   }
 
   // Peak-End: estado de sucesso explícito antes de fechar (o "end" da experiência)

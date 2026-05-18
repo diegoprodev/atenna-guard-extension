@@ -3210,11 +3210,13 @@
   border: 2.5px solid var(--at-border);
   border-top-color: var(--at-green);
   border-right-color: var(--at-green);
-  animation: atenna-spin 1s cubic-bezier(0.4,0,0.6,1) infinite;
+  animation: atenna-spin 1.5s linear infinite;
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.08);
 }
 
 @keyframes atenna-spin {
-  to { transform: rotate(360deg); }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .atenna-upw__spin-logo {
