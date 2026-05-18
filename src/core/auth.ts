@@ -26,7 +26,11 @@ export async function getStoredSession(): Promise<Session | null> {
 export async function storeSession(session: Session): Promise<void> {
   return new Promise(resolve => {
     try {
-      chrome.storage.local.set({ [JWT_KEY]: session }, () => resolve());
+      // Always clear cached plan when storing a new session (account switch or fresh login)
+      // so the next syncPlanFromSupabase reads from DB instead of inheriting a stale plan
+      chrome.storage.local.remove('atenna_plan', () => {
+        chrome.storage.local.set({ [JWT_KEY]: session }, () => resolve());
+      });
     } catch { resolve(); }
   });
 }
