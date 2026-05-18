@@ -3241,6 +3241,16 @@
   transition: opacity 180ms ease;
 }
 
+.atenna-upw__progress {
+  font-size: 10px;
+  color: var(--at-text);
+  opacity: 0.4;
+  text-align: center;
+  min-height: 14px;
+  margin-top: 4px;
+  letter-spacing: 0.02em;
+}
+
 /* Shared filename label */
 .atenna-upw__fname {
   font-size: 11px;

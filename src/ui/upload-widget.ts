@@ -96,6 +96,7 @@ export class UploadWidget {
   private state: UploadState = { phase: 'loading' };
   private container: HTMLElement;
   private phraseInterval?: ReturnType<typeof setInterval>;
+  private progressInterval?: ReturnType<typeof setInterval>;
 
   constructor(config: UploadWidgetConfig) {
     this.config = config;
@@ -234,6 +235,7 @@ export class UploadWidget {
 
   render(): void {
     if (this.phraseInterval) { clearInterval(this.phraseInterval); this.phraseInterval = undefined; }
+    if (this.progressInterval) { clearInterval(this.progressInterval); this.progressInterval = undefined; }
     this.container.innerHTML = '';
     this.container.className = 'atenna-upw';
 
@@ -273,6 +275,10 @@ export class UploadWidget {
     phrase.className = 'atenna-upw__phrase';
     phrase.textContent = LOADING_PHRASES[0];
 
+    const progress = document.createElement('div');
+    progress.className = 'atenna-upw__progress';
+    progress.textContent = 'Processando...';
+
     let i = 0;
     this.phraseInterval = setInterval(() => {
       i = (i + 1) % LOADING_PHRASES.length;
@@ -283,8 +289,16 @@ export class UploadWidget {
       }, 180);
     }, 1800);
 
+    // Animate progress feedback
+    let progressCount = 0;
+    this.progressInterval = setInterval(() => {
+      progressCount = (progressCount + 1) % 4;
+      progress.textContent = 'Processando' + '.'.repeat(progressCount + 1);
+    }, 500);
+
     wrap.appendChild(spinWrap);
     wrap.appendChild(phrase);
+    wrap.appendChild(progress);
     this.container.appendChild(wrap);
   }
 
@@ -380,23 +394,15 @@ export class UploadWidget {
         bar.appendChild(origBtn);
       }
     } else {
-      // Jakob: label familiar — "Copiar" e "Aplicar" como no resto do app
-      const applyBtn = this.makeBtn('Aplicar no texto', 'primary', 'Insere o conteúdo no campo de texto ativo');
+      // Arquivo sem risco — APENAS Aplicar (redundância removida)
+      const applyBtn = this.makeBtn('Aplicar no texto', 'primary', 'Insere o conteúdo extraído no campo de texto ativo');
       applyBtn.addEventListener('click', () => {
         const content = extractedContent ?? this.state.originalContent ?? '';
         const fName = this.state.file?.name ?? 'documento.txt';
         this.showSuccess(() => this.config.onReady(content, content.slice(0, 300), dlpRisk ?? 'NONE', undefined, fName));
       });
       bar.appendChild(applyBtn);
-
-      const copyBtn = this.makeBtn('Copiar', 'secondary', 'Copia o conteúdo para a área de transferência');
-      copyBtn.addEventListener('click', async () => {
-        const content = extractedContent ?? this.state.originalContent ?? '';
-        await navigator.clipboard.writeText(content).catch(() => null);
-        copyBtn.textContent = 'Copiado';
-        setTimeout(() => { copyBtn.textContent = 'Copiar'; }, 1800);
-      });
-      bar.appendChild(copyBtn);
+      // Removed: copyBtn (redundante — Aplicar já injeta no campo de texto)
     }
 
     this.container.appendChild(bar);
@@ -405,6 +411,7 @@ export class UploadWidget {
   // Peak-End: estado de sucesso explícito antes de fechar (o "end" da experiência)
   private showSuccess(then: () => void): void {
     if (this.phraseInterval) { clearInterval(this.phraseInterval); this.phraseInterval = undefined; }
+    if (this.progressInterval) { clearInterval(this.progressInterval); this.progressInterval = undefined; }
     this.container.innerHTML = '';
     const wrap = document.createElement('div');
     wrap.className = 'atenna-upw__success';
