@@ -43,6 +43,7 @@ async function incrementUploadUsage(): Promise<number> {
 export interface UploadWidgetConfig {
   targetElement: HTMLElement;
   maxSize: Record<string, number>;
+  userName?: string;
   onReady: (content: string, preview: string, riskLevel: string, rewritten?: string, fileName?: string) => void;
   onError: (error: string) => void;
   onCancel: () => void;
@@ -397,13 +398,53 @@ export class UploadWidget {
         bar.appendChild(origBtn);
       }
     } else {
-      // Arquivo sem risco — nenhum botão aqui (redundância removida)
-      // Ação única: "Aplicar" no modal (renderizado via onReady callback)
+      // Clean document — show celebration animation then auto-apply
+      this.showCleanAnimation(extractedContent ?? '', this.state.file?.name ?? 'documento.txt');
+      return; // Don't append bar
     }
 
     if (hasRisk) {
       this.container.appendChild(bar);
     }
+  }
+
+  private showCleanAnimation(content: string, fileName: string): void {
+    if (this.phraseInterval)  { clearInterval(this.phraseInterval);  this.phraseInterval  = undefined; }
+    if (this.progressInterval){ clearInterval(this.progressInterval); this.progressInterval = undefined; }
+    this.container.innerHTML = '';
+
+    const name = this.config.userName
+      ? this.config.userName.split(' ')[0]
+      : null;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'atenna-upw__clean';
+
+    wrap.innerHTML = `
+      <div class="atenna-upw__clean-shield">
+        <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="28" cy="28" r="27" stroke="#22c55e" stroke-width="2" class="atenna-upw__clean-ring"/>
+          <path d="M17 29l8 8 14-14" stroke="#22c55e" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round" class="atenna-upw__clean-check"/>
+        </svg>
+      </div>
+      <div class="atenna-upw__clean-title">
+        ${name ? `<strong>${name}</strong>, seu documento` : 'Documento'} passou limpo!
+      </div>
+      <div class="atenna-upw__clean-sub">
+        Nenhum dado sensível encontrado. Pode usar à vontade.
+      </div>
+    `;
+
+    const applyBtn = document.createElement('button');
+    applyBtn.className = 'atenna-doc-action-btn atenna-doc-action-btn--primary atenna-upw__btn--primary atenna-upw__clean-apply';
+    applyBtn.textContent = 'Aplicar no chat';
+    applyBtn.addEventListener('click', () => {
+      this.showSuccess(() => this.config.onReady(content, content.slice(0, 300), 'NONE', undefined, fileName));
+    });
+
+    wrap.appendChild(applyBtn);
+    this.container.appendChild(wrap);
   }
 
   // Peak-End: estado de sucesso explícito antes de fechar (o "end" da experiência)
