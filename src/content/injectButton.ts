@@ -390,7 +390,7 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
     </svg>`,
     () => {
       void trackEvent('upload_entry_clicked');
-      void openUploadFromBadge();
+      openUploadFromBadge();
     },
   );
 

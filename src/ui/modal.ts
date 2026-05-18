@@ -1124,31 +1124,32 @@ export function generateFromBadge(): Promise<void> | void {
   return openModal(true);
 }
 
-export async function openUploadFromBadge(): Promise<void> {
-  const session = await getActiveSession();
-  if (!session) return;
-
-  // Always re-sync plan so DB changes (e.g. manual upgrade) are reflected immediately
-  const { upgradedToPro } = await syncPlanFromSupabase(session);
-  if (upgradedToPro) {
-    showProWelcomeOverlay(session);
-    return;
-  }
-
-  // Capture active element before file picker steals focus
+export function openUploadFromBadge(): void {
+  // Capture active element before file picker steals focus (synchronous)
   const activeTarget = document.activeElement as HTMLTextAreaElement | HTMLElement | null;
 
-  // Open native OS file picker directly — no intermediate modal
+  // Create and click file input immediately — MUST be synchronous to keep user activation context
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = '.txt,.md,.csv,.json,.pdf,.docx,.doc,.xlsx,.xls';
   input.style.display = 'none';
   document.body.appendChild(input);
+  input.click(); // Must happen synchronously within user gesture
 
   input.addEventListener('change', async () => {
     const file = input.files?.[0];
     input.remove();
     if (!file) return;
+
+    // Session/plan checks happen AFTER file is selected (async is fine here)
+    const session = await getActiveSession();
+    if (!session) return;
+
+    const { upgradedToPro } = await syncPlanFromSupabase(session);
+    if (upgradedToPro) {
+      showProWelcomeOverlay(session);
+      return;
+    }
 
     // Show a minimal result overlay only after file is selected and processed
     const { UploadWidget } = await import('./upload-widget');
@@ -1354,8 +1355,6 @@ export async function openUploadFromBadge(): Promise<void> {
     // Trigger processing immediately with the selected file
     widget.handleFileSelect(file);
   });
-
-  input.click();
 }
 
 function showProWelcomeOverlay(session: { email: string; display_name?: string }, onDismiss?: () => void): void {
