@@ -192,6 +192,13 @@
       font-size: 12px; color: #22c55e; font-weight: 500; padding: 0;
     }
     .ap-link-btn:hover { text-decoration: underline; }
+
+    /* Skeleton loading */
+    .ap-skeleton { padding: 24px; display: flex; flex-direction: column; gap: 10px; }
+    .ap-sk-line  { height: 12px; border-radius: 6px; background: #2a2a2a; animation: ap-sk-pulse 1.4s ease infinite; }
+    .ap-sk-w60   { width: 60%; }
+    .ap-sk-w40   { width: 40%; }
+    @keyframes ap-sk-pulse { 0%,100%{opacity:.4} 50%{opacity:.8} }
   </style>
 </head>
 <body>

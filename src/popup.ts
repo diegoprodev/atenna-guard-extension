@@ -44,9 +44,26 @@ function getPlatformLabel(host: string): { name: string; svg: string } {
   return { name: host, svg: SVG_GLOBE };
 }
 
+export function renderSkeleton(container: HTMLElement): void {
+  container.innerHTML = '';
+  const sk = document.createElement('div');
+  sk.className = 'ap-skeleton';
+  for (const w of ['60', '40']) {
+    const line = document.createElement('div');
+    line.className = `ap-sk-line ap-sk-w${w}`;
+    sk.appendChild(line);
+  }
+  container.appendChild(sk);
+}
+
+export function replaceSkeleton(container: HTMLElement, content: HTMLElement): void {
+  container.innerHTML = '';
+  container.appendChild(content);
+}
+
 async function initPopup(): Promise<void> {
   const container = document.getElementById('atenna-popup')!;
-  container.innerHTML = `<div class="ap-loading"><div class="ap-spinner"></div></div>`;
+  renderSkeleton(container);
 
   const [me, tabInfo, tabId] = await Promise.all([bffMe(), getActiveTabInfo(), getActiveTabId()]);
 
@@ -60,6 +77,32 @@ async function initPopup(): Promise<void> {
 
 const EYE_OPEN  = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
 const EYE_CLOSE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+
+export function renderPasswordResetConfirmation(container: HTMLElement, email: string): void {
+  container.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'ap-root ap-root--login';
+
+  const icon = document.createElement('div');
+  icon.style.cssText = 'font-size:32px;text-align:center;margin-bottom:8px';
+  icon.textContent = '✉️';
+
+  const title = document.createElement('h2');
+  title.className = 'ap-title';
+  title.textContent = 'Email enviado';
+
+  const body = document.createElement('p');
+  body.className = 'ap-subtitle';
+  body.textContent = `Verifique sua caixa de entrada em ${email} e clique no link para redefinir a senha.`;
+
+  const backBtn = document.createElement('button');
+  backBtn.className = 'ap-link-btn';
+  backBtn.textContent = '← Voltar ao login';
+  backBtn.addEventListener('click', () => renderLogin(container, null));
+
+  wrap.append(icon, title, body, backBtn);
+  container.appendChild(wrap);
+}
 
 function renderLogin(container: HTMLElement, tabId: number | null): void {
   const logoUrl = chrome.runtime.getURL('icons/icon128.png');
@@ -122,7 +165,7 @@ function renderLogin(container: HTMLElement, tabId: number | null): void {
     errEl.style.display = 'none';
     try {
       await bffResetPassword(email);
-      errEl.style.color = '#16a34a'; errEl.style.background = '#f0fdf4'; errEl.style.borderColor = '#bbf7d0'; errEl.textContent = 'Email de recuperação enviado!'; errEl.style.display = 'block';
+      renderPasswordResetConfirmation(container, email);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao enviar email.';
       errEl.textContent = msg; errEl.style.display = 'block';
