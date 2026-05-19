@@ -14,6 +14,7 @@ from routes.documents import router as documents_router
 from routes.upload import router as upload_router
 from routes.bff_auth import router as bff_auth_router
 from middleware.auth import require_auth
+from services.quota_service import check_and_increment_quota, QuotaExceeded, FREE_DAILY_LIMIT
 from dlp.enforcement import evaluate_strict_enforcement
 from dlp import engine, telemetry
 from dlp.exception_sanitizer import SanitizationMiddleware
@@ -65,6 +66,17 @@ async def generate(
     Recebe metadata DLP do cliente para validação server-side.
     Aplica proteção rigorosa se STRICT_DLP_MODE=true e risco=HIGH.
     """
+    # ─── FASE 5.1 Task 2: Server-side daily quota ───
+    try:
+        check_and_increment_quota(_user.get("user_id") or _user.get("sub", ""), _user.get("plan", "free"))
+    except QuotaExceeded as e:
+        raise HTTPException(429, detail={
+            "error": "daily_limit_exceeded",
+            "count": e.count,
+            "limit": FREE_DAILY_LIMIT,
+            "reset": "midnight UTC",
+        })
+
     if not request.input.strip():
         raise HTTPException(status_code=422, detail="Campo 'input' não pode ser vazio.")
 
