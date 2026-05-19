@@ -143,6 +143,8 @@ function renderLogin(container: HTMLElement): void {
         btn.disabled = false; btn.textContent = 'Criar conta';
       } else {
         await signInWithPassword(email, pass);
+        // Notify content script to inject badge immediately
+        await openModalOnActiveTab();
         window.location.reload();
       }
     } catch (e: unknown) {
@@ -224,7 +226,7 @@ function renderHome(
 
   document.getElementById('ap-open-modal')?.addEventListener('click', async () => {
     await openModalOnActiveTab();
-    window.close();
+    setTimeout(() => window.close(), 150);
   });
 
   document.getElementById('ap-settings-btn')!.addEventListener('click', () => {

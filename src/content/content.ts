@@ -65,6 +65,11 @@ async function init(): Promise<void> {
 try {
   chrome.runtime.onMessage.addListener((msg: { type?: string; content?: string }) => {
     if (msg?.type === 'TOGGLE_MODAL') {
+      // Ensure badge is injected before opening modal
+      if (!_isAuthenticated) {
+        _isAuthenticated = true;
+        tryInject();
+      }
       void toggleModal();
     }
     if (msg?.type === 'OPEN_SETTINGS') {
