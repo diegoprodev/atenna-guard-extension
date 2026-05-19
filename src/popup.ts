@@ -1,5 +1,5 @@
-import { getActiveSession, clearSession, signInWithPassword, signUpWithPassword, resetPassword } from './core/auth';
-import { getPlan } from './core/planManager';
+import { signUpWithPassword } from './core/auth';
+import { bffLogin, bffLogout, bffMe, bffResetPassword } from './auth/bffClient';
 import { openSettingsOverlay } from './ui/modal';
 
 const SUPPORTED_HOSTS = ['chatgpt.com', 'chat.openai.com', 'claude.ai', 'gemini.google.com', 'copilot.microsoft.com'];
@@ -48,15 +48,14 @@ async function initPopup(): Promise<void> {
   const container = document.getElementById('atenna-popup')!;
   container.innerHTML = `<div class="ap-loading"><div class="ap-spinner"></div></div>`;
 
-  const [session, tabInfo, tabId] = await Promise.all([getActiveSession(), getActiveTabInfo(), getActiveTabId()]);
+  const [me, tabInfo, tabId] = await Promise.all([bffMe(), getActiveTabInfo(), getActiveTabId()]);
 
-  if (!session) {
+  if (!me) {
     renderLogin(container, tabId);
     return;
   }
 
-  const plan = await getPlan();
-  renderHome(container, session, plan, tabInfo, tabId);
+  renderHome(container, me, tabInfo, tabId);
 }
 
 const EYE_OPEN  = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
@@ -121,9 +120,13 @@ function renderLogin(container: HTMLElement, tabId: number | null): void {
     const email = emailEl.value.trim();
     if (!email) { errEl.textContent = 'Digite seu email primeiro.'; errEl.style.display = 'block'; return; }
     errEl.style.display = 'none';
-    const { error } = await resetPassword(email);
-    if (error) { errEl.textContent = error; errEl.style.display = 'block'; }
-    else { errEl.style.color = '#16a34a'; errEl.style.background = '#f0fdf4'; errEl.style.borderColor = '#bbf7d0'; errEl.textContent = 'Email de recuperação enviado!'; errEl.style.display = 'block'; }
+    try {
+      await bffResetPassword(email);
+      errEl.style.color = '#16a34a'; errEl.style.background = '#f0fdf4'; errEl.style.borderColor = '#bbf7d0'; errEl.textContent = 'Email de recuperação enviado!'; errEl.style.display = 'block';
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao enviar email.';
+      errEl.textContent = msg; errEl.style.display = 'block';
+    }
   });
 
   const doAction = async () => {
@@ -142,7 +145,7 @@ function renderLogin(container: HTMLElement, tabId: number | null): void {
         errEl.textContent = 'Conta criada! Verifique seu email.'; errEl.style.display = 'block';
         btn.disabled = false; btn.textContent = 'Criar conta';
       } else {
-        await signInWithPassword(email, pass);
+        await bffLogin(email, pass);
         if (tabId) relayToggleModal(tabId);
         window.location.reload();
       }
@@ -160,12 +163,11 @@ function renderLogin(container: HTMLElement, tabId: number | null): void {
 
 function renderHome(
   container: HTMLElement,
-  session: { email: string },
-  plan: { type: string },
+  me: { email: string; plan: string },
   tabInfo: { host: string; supported: boolean } | null,
   tabId: number | null,
 ): void {
-  const isPro = plan.type === 'pro';
+  const isPro = me.plan === 'pro';
   const supported = tabInfo?.supported ?? false;
   const platform = tabInfo ? getPlatformLabel(tabInfo.host) : null;
   const logoUrl = chrome.runtime.getURL('icons/icon128.png');
@@ -226,7 +228,7 @@ function renderHome(
 
   // Set user-controlled data via textContent to prevent XSS
   const emailEl = document.getElementById('ap-header-email');
-  if (emailEl) emailEl.textContent = session.email;
+  if (emailEl) emailEl.textContent = me.email;
 
   document.getElementById('ap-open-modal')?.addEventListener('click', () => {
     if (tabId) relayToggleModal(tabId);
@@ -239,7 +241,7 @@ function renderHome(
 
   document.getElementById('ap-logout-btn')!.addEventListener('click', async () => {
     if (!confirm('Deseja sair da sua conta Atenna?')) return;
-    await clearSession();
+    await bffLogout();
     await new Promise<void>(r => chrome.storage.local.remove(
       ['atenna_plan', 'atenna_app_onboarding_seen', 'atenna_onboarding_seen'],
       () => r()

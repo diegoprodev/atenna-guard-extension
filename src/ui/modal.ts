@@ -1,7 +1,8 @@
 import { getCurrentInput, getInputText, setInputText } from '../core/inputHandler';
 import { getUsage, incrementUsage, isAtLimit, isAtAnyLimit, DAILY_LIMIT, getTotalCount, incrementTotalCount, getMonthlyUsage, MONTHLY_LIMIT, incrementMonthlyUsage, syncUsageFromSupabase } from '../core/usageCounter';
-import { isPro, syncPlanFromSupabase, consumeProWelcome } from '../core/planManager';
-import { getActiveSession, signInWithPassword, signUpWithPassword, resetPassword, saveDisplayName } from '../core/auth';
+import { isPro, consumeProWelcome, getPlan, setPlan } from '../core/planManager';
+import { signUpWithPassword, saveDisplayName } from '../core/auth';
+import { bffLogin, bffMe, bffResetPassword } from '../auth/bffClient';
 import { track, trackEvent } from '../core/analytics';
 import { getHistory, addToHistory, addGroupToHistory, toggleFavorite, isGroup } from '../core/history';
 import type { HistoryGroup, PromptEntry } from '../core/history';
@@ -39,6 +40,21 @@ const COPY_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
   <rect x="9" y="9" width="13" height="13" rx="2"/>
   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
 </svg>`;
+
+// ─── BFF plan sync helper ─────────────────────────────────
+
+/**
+ * Syncs plan from BFF /auth/me response into local cache and returns
+ * whether the user just upgraded from free → pro (triggers welcome screen).
+ */
+async function syncPlanFromBff(me: { plan: string; email?: string }): Promise<{ upgradedToPro: boolean }> {
+  const previous = await getPlan();
+  const wasFreeBefore = previous.type === 'free';
+  const isPlanPro = me.plan === 'pro';
+  await setPlan({ type: isPlanPro ? 'pro' : 'free', email: me.email });
+  const upgradedToPro = wasFreeBefore && isPlanPro;
+  return { upgradedToPro };
+}
 
 // ─── Module-level state ────────────────────────────────────
 
@@ -624,7 +640,7 @@ function makeSectionTitle(text: string): HTMLElement {
 }
 
 function renderSettingsPage(
-  session: { email: string; access_token: string },
+  session: { email: string; access_token?: string; display_name?: string },
   pro: boolean,
   onBack: () => void,
 ): HTMLElement {
@@ -1290,12 +1306,12 @@ export function openUploadFromBadge(): void {
     if (!file) return;
 
     // Session/plan checks happen AFTER file is selected (async is fine here)
-    const session = await getActiveSession();
-    if (!session) return;
+    const me = await bffMe();
+    if (!me) return;
 
-    const { upgradedToPro } = await syncPlanFromSupabase(session);
+    const { upgradedToPro } = await syncPlanFromBff(me);
     if (upgradedToPro) {
-      showProWelcomeOverlay(session);
+      showProWelcomeOverlay(me);
       return;
     }
 
@@ -1557,12 +1573,12 @@ export async function openSettingsOverlay(): Promise<void> {
   const existing = document.getElementById('atenna-settings-overlay');
   if (existing) { existing.remove(); return; }
 
-  const session = await getActiveSession();
-  if (!session) return;
+  const me = await bffMe();
+  if (!me) return;
 
   const pro = await isPro();
   const settingsPage = renderSettingsPage(
-    session,
+    me,
     pro,
     () => document.getElementById('atenna-settings-overlay')?.remove(),
   );
@@ -1619,9 +1635,9 @@ async function openModal(autoGenerate = false): Promise<void> {
   });
 
   // ── Auth Gate: Check session FIRST ───────────────────
-  const session = await getActiveSession();
+  const me = await bffMe();
 
-  if (!session) {
+  if (!me) {
     const logoUrl = getLogoUrl();
     const logoImg = logoUrl
       ? `<img src="${logoUrl}" width="28" height="28" alt="" aria-hidden="true"/>`
@@ -1657,12 +1673,12 @@ async function openModal(autoGenerate = false): Promise<void> {
   }
 
   // ── Session exists: sync plan + check welcome ──────────
-  const { upgradedToPro } = await syncPlanFromSupabase(session);
+  const { upgradedToPro } = await syncPlanFromBff(me);
   const showWelcome = upgradedToPro || await consumeProWelcome();
   if (upgradedToPro) await consumeProWelcome(); // always clear flag, even when upgradedToPro triggered first
   if (showWelcome) {
     close(); // remove empty modal overlay before showing welcome
-    showProWelcomeOverlay(session, () => openModal(autoGenerate));
+    showProWelcomeOverlay(me, () => openModal(autoGenerate));
     return;
   }
 
@@ -2558,15 +2574,8 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
     btn.textContent = 'Entrando…';
     status.textContent = '';
 
-    const result = await signInWithPassword(email, pwd);
-    if (result.error) {
-      void trackEvent('login_error', { error: result.error });
-      status.textContent = result.error;
-      status.classList.remove('atenna-modal__login-status--success');
-      status.classList.add('atenna-modal__login-status--error');
-      btn.disabled = false;
-      btn.textContent = 'Entrar';
-    } else {
+    try {
+      await bffLogin(email, pwd);
       void trackEvent('login_success');
       status.textContent = 'Login realizado! Recarregando...';
       status.classList.remove('atenna-modal__login-status--error');
@@ -2575,6 +2584,16 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
       passwordInput.disabled = true;
       btn.disabled = true;
       setTimeout(() => window.location.reload(), 1000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao entrar.';
+      void trackEvent('login_error', { error: msg });
+      status.textContent = msg.includes('401') || msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('failed')
+        ? 'Email ou senha incorretos.'
+        : msg;
+      status.classList.remove('atenna-modal__login-status--success');
+      status.classList.add('atenna-modal__login-status--error');
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
     }
   };
 
@@ -2867,19 +2886,20 @@ function renderResetView(container: HTMLElement, switchView: (view: string) => v
     status.textContent = '';
     status.classList.remove('atenna-modal__login-status--error', 'atenna-modal__login-status--warning');
 
-    const result = await resetPassword(email);
-    if (result.error) {
-      void trackEvent('reset_error', { error: result.error });
-      status.textContent = result.error;
-      status.classList.add('atenna-modal__login-status--error');
-      btn.disabled = false;
-      btn.textContent = 'Enviar link';
-    } else {
+    try {
+      await bffResetPassword(email);
       void trackEvent('reset_success');
       status.innerHTML = '<strong>Link enviado!</strong><br>Verifique seu email para redefinir a senha.';
       status.classList.add('atenna-modal__login-status--success');
       input.disabled = true;
       btn.style.display = 'none';
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao enviar email.';
+      void trackEvent('reset_error', { error: msg });
+      status.textContent = msg;
+      status.classList.add('atenna-modal__login-status--error');
+      btn.disabled = false;
+      btn.textContent = 'Enviar link';
     }
   };
 
