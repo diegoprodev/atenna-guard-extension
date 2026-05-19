@@ -17,8 +17,18 @@ async function getActiveTabInfo(): Promise<{ url: string; host: string; supporte
   });
 }
 
-function relayToggleModal(): void {
-  chrome.runtime.sendMessage({ type: 'RELAY_TOGGLE_MODAL' }, () => void chrome.runtime.lastError);
+function relayToggleModal(tabId: number): void {
+  chrome.runtime.sendMessage({ type: 'RELAY_TOGGLE_MODAL', tabId }, () => void chrome.runtime.lastError);
+}
+
+async function getActiveTabId(): Promise<number | null> {
+  return new Promise(resolve => {
+    chrome.tabs.query({ active: true }, tabs => {
+      // Find the non-popup tab (popup has url chrome-extension://)
+      const tab = tabs.find(t => t.url && !t.url.startsWith('chrome-extension://')) ?? tabs[0];
+      resolve(tab?.id ?? null);
+    });
+  });
 }
 
 const SVG_SHIELD = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
@@ -38,21 +48,21 @@ async function initPopup(): Promise<void> {
   const container = document.getElementById('atenna-popup')!;
   container.innerHTML = `<div class="ap-loading"><div class="ap-spinner"></div></div>`;
 
-  const [session, tabInfo] = await Promise.all([getActiveSession(), getActiveTabInfo()]);
+  const [session, tabInfo, tabId] = await Promise.all([getActiveSession(), getActiveTabInfo(), getActiveTabId()]);
 
   if (!session) {
-    renderLogin(container);
+    renderLogin(container, tabId);
     return;
   }
 
   const plan = await getPlan();
-  renderHome(container, session, plan, tabInfo);
+  renderHome(container, session, plan, tabInfo, tabId);
 }
 
 const EYE_OPEN  = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
 const EYE_CLOSE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
 
-function renderLogin(container: HTMLElement): void {
+function renderLogin(container: HTMLElement, tabId: number | null): void {
   const logoUrl = chrome.runtime.getURL('icons/icon128.png');
   container.innerHTML = `
     <div class="ap-root ap-root--login">
@@ -133,7 +143,7 @@ function renderLogin(container: HTMLElement): void {
         btn.disabled = false; btn.textContent = 'Criar conta';
       } else {
         await signInWithPassword(email, pass);
-        relayToggleModal();
+        if (tabId) relayToggleModal(tabId);
         window.location.reload();
       }
     } catch (e: unknown) {
@@ -153,6 +163,7 @@ function renderHome(
   session: { email: string },
   plan: { type: string },
   tabInfo: { host: string; supported: boolean } | null,
+  tabId: number | null,
 ): void {
   const isPro = plan.type === 'pro';
   const supported = tabInfo?.supported ?? false;
@@ -214,7 +225,7 @@ function renderHome(
   `;
 
   document.getElementById('ap-open-modal')?.addEventListener('click', () => {
-    relayToggleModal();
+    if (tabId) relayToggleModal(tabId);
     window.close();
   });
 

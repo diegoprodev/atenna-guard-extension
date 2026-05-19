@@ -30,14 +30,12 @@ async function getStoredJWT(): Promise<string | null> {
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  // ── Relay TOGGLE_MODAL to active tab (from popup — persists after popup closes) ──
+  // ── Relay TOGGLE_MODAL to a specific tab (tabId passed from popup) ──
   if (msg.type === 'RELAY_TOGGLE_MODAL') {
-    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-      const tab = tabs[0];
-      if (tab?.id) {
-        chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_MODAL' }, () => void chrome.runtime.lastError);
-      }
-    });
+    const tabId = typeof msg.tabId === 'number' ? msg.tabId : null;
+    if (tabId) {
+      chrome.tabs.sendMessage(tabId, { type: 'TOGGLE_MODAL' }, () => void chrome.runtime.lastError);
+    }
     sendResponse({ ok: true });
     return true;
   }
