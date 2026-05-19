@@ -3,7 +3,8 @@ import { getUsage, incrementUsage, isAtLimit, isAtAnyLimit, DAILY_LIMIT, getTota
 import { isPro, syncPlanFromSupabase, consumeProWelcome } from '../core/planManager';
 import { getActiveSession, signInWithPassword, signUpWithPassword, resetPassword, saveDisplayName } from '../core/auth';
 import { track, trackEvent } from '../core/analytics';
-import { getHistory, addToHistory, toggleFavorite } from '../core/history';
+import { getHistory, addToHistory, addGroupToHistory, toggleFavorite, isGroup } from '../core/history';
+import type { HistoryGroup, PromptEntry } from '../core/history';
 import type { PromptOrigin, PromptType } from '../core/analytics';
 import { scan } from '../dlp/detector';
 import { buildAdvisory } from '../dlp/advisory';
@@ -285,6 +286,54 @@ function renderEmptyState(
   container.appendChild(wrap);
 }
 
+function makeVariantRow(
+  label: string,
+  text: string,
+  platformInput: HTMLElement | null,
+  overlay: HTMLElement,
+): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'atenna-modal__variant-row';
+
+  const lbl = document.createElement('span');
+  lbl.className = 'atenna-modal__variant-label';
+  lbl.textContent = label;
+
+  const txt = document.createElement('p');
+  txt.className = 'atenna-modal__variant-text';
+  txt.textContent = text;
+
+  const acts = document.createElement('div');
+  acts.className = 'atenna-modal__variant-actions';
+
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'atenna-modal__history-copy';
+  copyBtn.textContent = 'Copiar';
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard?.writeText(text).then(() => showToast('Copiado!'));
+  });
+
+  const useBtn = document.createElement('button');
+  useBtn.className = 'atenna-modal__history-use';
+  useBtn.textContent = 'Aplicar';
+  useBtn.addEventListener('click', () => {
+    if (platformInput) {
+      setInputText(platformInput, text);
+      overlay.remove();
+      showToast('Aplicado');
+    } else {
+      showToast('Input não encontrado');
+    }
+  });
+
+  acts.appendChild(copyBtn);
+  acts.appendChild(useBtn);
+  row.appendChild(lbl);
+  row.appendChild(txt);
+  row.appendChild(acts);
+  return row;
+}
+
 async function renderMeusPrompts(
   container: HTMLElement,
   platformInput: HTMLElement | null,
@@ -311,64 +360,119 @@ async function renderMeusPrompts(
     const card = document.createElement('div');
     card.className = 'atenna-modal__history-card';
 
-    const header = document.createElement('div');
-    header.className = 'atenna-modal__history-header';
+    if (isGroup(entry)) {
+      // HistoryGroup: show question, expand on click to reveal variants
+      const g = entry as HistoryGroup;
+      const header = document.createElement('div');
+      header.className = 'atenna-modal__history-header';
 
-    const badge = document.createElement('span');
-    badge.className = 'atenna-modal__history-badge';
-    badge.textContent = entry.type === 'direct' ? 'Direto' : entry.type === 'structured' ? 'Estruturado' : 'Técnico';
+      const questionText = document.createElement('span');
+      questionText.className = 'atenna-modal__history-question';
+      questionText.textContent = g.question;
 
-    const date = document.createElement('span');
-    date.className = 'atenna-modal__history-date';
-    const d = new Date(entry.date);
-    date.textContent = d.toLocaleDateString('pt-BR');
+      const metaRow = document.createElement('div');
+      metaRow.className = 'atenna-modal__history-meta';
 
-    const actions = document.createElement('div');
-    actions.className = 'atenna-modal__history-actions';
+      const date = document.createElement('span');
+      date.className = 'atenna-modal__history-date';
+      date.textContent = new Date(g.date).toLocaleDateString('pt-BR');
 
-    const starBtn = document.createElement('button');
-    starBtn.className = entry.favorited ? 'atenna-modal__history-star atenna-modal__history-star--active' : 'atenna-modal__history-star';
-    starBtn.textContent = entry.favorited ? '★' : '☆';
-    starBtn.title = entry.favorited ? 'Remover favorito' : 'Adicionar favorito';
-    starBtn.addEventListener('click', async () => {
-      await toggleFavorite(entry.id);
-      await renderMeusPrompts(container, platformInput, overlay);
-    });
+      const arrow = document.createElement('span');
+      arrow.className = 'atenna-modal__history-arrow';
+      arrow.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
 
-    const useBtn = document.createElement('button');
-    useBtn.className = 'atenna-modal__history-use';
-    useBtn.textContent = 'Usar';
-    useBtn.addEventListener('click', () => {
-      if (platformInput) {
-        setInputText(platformInput, entry.text);
-        overlay.remove();
-        showToast('Aplicado');
-      } else {
-        showToast('Input não encontrado');
+      const starBtn = document.createElement('button');
+      starBtn.className = g.favorited ? 'atenna-modal__history-star atenna-modal__history-star--active' : 'atenna-modal__history-star';
+      starBtn.textContent = g.favorited ? '★' : '☆';
+      starBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await toggleFavorite(g.id);
+        await renderMeusPrompts(container, platformInput, overlay);
+      });
+
+      metaRow.appendChild(date);
+      metaRow.appendChild(starBtn);
+      metaRow.appendChild(arrow);
+      header.appendChild(questionText);
+      header.appendChild(metaRow);
+
+      const variantsDiv = document.createElement('div');
+      variantsDiv.className = 'atenna-modal__variants';
+
+      const VARIANT_LABELS: Record<string, string> = {
+        direct: 'Direto',
+        structured: 'Estruturado',
+        technical: 'Técnico',
+      };
+      for (const [key, label] of Object.entries(VARIANT_LABELS)) {
+        const text = g.variants[key as keyof typeof g.variants];
+        if (text) {
+          variantsDiv.appendChild(makeVariantRow(label, text, platformInput, overlay));
+        }
       }
-    });
 
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'atenna-modal__history-copy';
-    copyBtn.textContent = 'Copiar';
-    copyBtn.addEventListener('click', () => {
-      navigator.clipboard?.writeText(entry.text).then(() => showToast('Copiado!'));
-    });
+      let expanded = false;
+      header.addEventListener('click', () => {
+        expanded = !expanded;
+        card.classList.toggle('atenna-modal__history-card--expanded', expanded);
+        variantsDiv.classList.toggle('atenna-modal__variants--open', expanded);
+      });
 
-    actions.appendChild(starBtn);
-    actions.appendChild(useBtn);
-    actions.appendChild(copyBtn);
+      card.appendChild(header);
+      card.appendChild(variantsDiv);
+    } else {
+      // Legacy PromptEntry
+      const e = entry as PromptEntry;
+      const header = document.createElement('div');
+      header.className = 'atenna-modal__history-header';
 
-    header.appendChild(badge);
-    header.appendChild(date);
-    header.appendChild(actions);
+      const badge = document.createElement('span');
+      badge.className = 'atenna-modal__history-badge';
+      badge.textContent = e.type === 'direct' ? 'Direto' : e.type === 'structured' ? 'Estruturado' : 'Técnico';
 
-    const preview = document.createElement('p');
-    preview.className = 'atenna-modal__history-preview';
-    preview.textContent = entry.text.substring(0, 100) + (entry.text.length > 100 ? '…' : '');
+      const date = document.createElement('span');
+      date.className = 'atenna-modal__history-date';
+      date.textContent = new Date(e.date).toLocaleDateString('pt-BR');
 
-    card.appendChild(header);
-    card.appendChild(preview);
+      const actions = document.createElement('div');
+      actions.className = 'atenna-modal__history-actions';
+
+      const starBtn = document.createElement('button');
+      starBtn.className = e.favorited ? 'atenna-modal__history-star atenna-modal__history-star--active' : 'atenna-modal__history-star';
+      starBtn.textContent = e.favorited ? '★' : '☆';
+      starBtn.addEventListener('click', async () => {
+        await toggleFavorite(e.id);
+        await renderMeusPrompts(container, platformInput, overlay);
+      });
+
+      const useBtn = document.createElement('button');
+      useBtn.className = 'atenna-modal__history-use';
+      useBtn.textContent = 'Usar';
+      useBtn.addEventListener('click', () => {
+        if (platformInput) { setInputText(platformInput, e.text); overlay.remove(); showToast('Aplicado'); }
+        else showToast('Input não encontrado');
+      });
+
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'atenna-modal__history-copy';
+      copyBtn.textContent = 'Copiar';
+      copyBtn.addEventListener('click', () => { navigator.clipboard?.writeText(e.text).then(() => showToast('Copiado!')); });
+
+      actions.appendChild(starBtn);
+      actions.appendChild(useBtn);
+      actions.appendChild(copyBtn);
+      header.appendChild(badge);
+      header.appendChild(date);
+      header.appendChild(actions);
+
+      const preview = document.createElement('p');
+      preview.className = 'atenna-modal__history-preview';
+      preview.textContent = e.text.substring(0, 100) + (e.text.length > 100 ? '…' : '');
+
+      card.appendChild(header);
+      card.appendChild(preview);
+    }
+
     wrap.appendChild(card);
   });
 
@@ -1247,7 +1351,9 @@ export function openUploadFromBadge(): void {
         // Always use .txt extension so platforms treat content as plain text, not binary Word doc.
         const applyAsFileAttachment = async (text: string, originalName: string): Promise<boolean> => {
           const baseName = originalName.replace(/\.[^.]+$/, '');
-          const safeFileName = `${baseName}.txt`;
+          // Timestamp suffix evita deduplicação do ChatGPT (mesmo nome = "já carregou este arquivo")
+          const ts = Date.now();
+          const safeFileName = `${baseName}_${ts}.txt`;
           const file = new File([text], safeFileName, { type: 'text/plain' });
           const dt = new DataTransfer();
           dt.items.add(file);
@@ -1551,7 +1657,9 @@ async function openModal(autoGenerate = false): Promise<void> {
 
   // ── Session exists: sync plan + check welcome ──────────
   const { upgradedToPro } = await syncPlanFromSupabase(session);
-  if (upgradedToPro || await consumeProWelcome()) {
+  const showWelcome = upgradedToPro || await consumeProWelcome();
+  if (upgradedToPro) await consumeProWelcome(); // always clear flag, even when upgradedToPro triggered first
+  if (showWelcome) {
     close(); // remove empty modal overlay before showing welcome
     showProWelcomeOverlay(session, () => openModal(autoGenerate));
     return;
@@ -1786,8 +1894,8 @@ async function openModal(autoGenerate = false): Promise<void> {
   }
 
   if (autoGenerate && userText !== '') {
-    // Magic wand path: go straight to prompts tab and run generation
-    switchTab('prompts');
+    // Magic wand path: run generation directly in the edit tab (results appear there)
+    switchTab('edit');
     renderLoading(resultsView);
     const shouldShowSuggestion = pro && (isVagueInput(userText) || shouldSuggestBuilder(userText));
     if (shouldShowSuggestion) {
@@ -1865,8 +1973,8 @@ async function runFlow(
 
     void trackEvent('prompt_generate_success', { input_length: userText.length, output_length: JSON.stringify(data).length, origin });
 
-    // Save to history (direct as primary)
-    void addToHistory(data.direct, 'direct', origin);
+    // Save all 3 variants grouped under the user's original question
+    void addGroupToHistory(userText, { direct: data.direct, structured: data.structured, technical: data.technical }, origin);
 
     // Milestone tracking
     if (newTotalCount === 1) {
@@ -2124,6 +2232,10 @@ function renderLimitReached(container: HTMLElement): void {
   renderPricingCards(wrap, 'limit_screen');
   container.appendChild(wrap);
 }
+
+const ONB_ICON_CLARITY = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>`;
+const ONB_ICON_SHIELD  = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+const ONB_ICON_FLOW    = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`;
 
 const ONB_STEPS: Array<{
   icon: string;
