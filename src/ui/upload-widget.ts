@@ -15,6 +15,14 @@ const LOADING_PHRASES = [
   'Quase pronto…',
 ];
 
+const PROGRESS_MESSAGES: Array<{ after: number; text: string }> = [
+  { after: 5,  text: 'Analisando estrutura do documento…' },
+  { after: 15, text: 'Extraindo texto e tabelas…' },
+  { after: 30, text: 'Processando com OCR avançado…' },
+  { after: 50, text: 'Documento grande — quase lá…' },
+  { after: 80, text: 'Finalizando análise de dados sensíveis…' },
+];
+
 async function getUploadUsage(): Promise<number> {
   return new Promise(resolve => {
     try {
@@ -135,16 +143,8 @@ export class UploadWidget {
   }
 
   private async checkLimitThenUpload(file: File): Promise<void> {
-    const pro = await isPro();
-    if (!pro) {
-      const used = await getUploadUsage();
-      if (used >= UPLOAD_LIMIT_FREE) {
-        this.state = { phase: 'quota', file };
-        this.render();
-        return;
-      }
-    }
-    await incrementUploadUsage();
+    // Upload não tem cota própria — segue a cota de prompts do fluxo chamador.
+    // Bloquear upload separadamente confunde o usuário que ainda tem gerações restantes.
     return this.uploadFile(file);
   }
 
@@ -165,29 +165,61 @@ export class UploadWidget {
       this.render();
       void trackEvent('document_upload_success', { file_type: ext, dlp_risk: risk, chars: payload.char_count });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const raw = err instanceof Error ? err.message : String(err);
+      const msg = this.friendlyError(raw);
       this.state = { phase: 'error', file, error: msg };
       this.render();
-      void trackEvent('document_upload_error', { error: msg });
+      void trackEvent('document_upload_error', { error: raw });
     }
   }
 
   private async protectViaBackend(file: File): Promise<ProtectPayload> {
     const token = await this.getAuthToken();
     if (!token) throw new Error('Sessão expirada. Faça login novamente.');
-    const formData = new FormData();
-    formData.append('file', file, file.name);
-    const resp = await fetch(`${this.backendUrl}/document/protect`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: formData,
+
+    // Converte para base64 antes de enviar pelo background (ArrayBuffer corrompe em
+    // mensagens grandes via structured clone; base64 string é sempre seguro)
+    const arrayBuf = await file.arrayBuffer();
+    const uint8 = new Uint8Array(arrayBuf);
+    let binary = '';
+    for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
+    const fileBase64 = btoa(binary);
+
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => reject(new Error('timeout')), 270_000);
+
+      try {
+        chrome.runtime.sendMessage(
+          {
+            type: 'ATENNA_PROTECT_FILE',
+            fileBase64,
+            fileName: file.name,
+            mimeType: file.type || 'application/octet-stream',
+            token,
+          },
+          (resp: { ok: boolean; status: number; body?: string; error?: string } | undefined) => {
+            clearTimeout(timeoutId);
+            if (chrome.runtime.lastError || !resp) {
+              reject(new Error('network'));
+              return;
+            }
+            if (!resp.ok) {
+              const detail = resp.body ? (() => { try { return (JSON.parse(resp.body!) as { detail?: string }).detail ?? ''; } catch { return resp.body!.slice(0, 120); } })() : '';
+              reject(new Error(`server:${resp.status}:${detail}`));
+              return;
+            }
+            try {
+              resolve(JSON.parse(resp.body!) as ProtectPayload);
+            } catch {
+              reject(new Error('server:parse:resposta inválida do servidor'));
+            }
+          },
+        );
+      } catch (e) {
+        clearTimeout(timeoutId);
+        reject(new Error('network'));
+      }
     });
-    if (!resp.ok) {
-      let detail = '';
-      try { detail = (await resp.json()).detail ?? ''; } catch { detail = await resp.text().catch(() => ''); }
-      throw new Error(`Falha ao processar arquivo (${resp.status}). ${String(detail).slice(0, 120)}`);
-    }
-    return resp.json() as Promise<ProtectPayload>;
   }
 
   private async readFile(file: File): Promise<string> {
@@ -235,6 +267,14 @@ export class UploadWidget {
     });
   }
 
+  private friendlyError(raw: string): string {
+    if (raw === 'timeout') return 'O processamento demorou mais que o esperado. Tente novamente — PDFs grandes com OCR podem levar até 2 minutos.';
+    if (raw === 'network') return 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.';
+    if (raw.startsWith('server:429')) return 'Limite de OCR atingido momentaneamente. Aguarde alguns instantes e tente novamente.';
+    if (raw.startsWith('server:5')) return 'Ocorreu um erro em nossos servidores. Estamos cientes e trabalhando na correção.';
+    return raw;
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   render(): void {
@@ -260,53 +300,55 @@ export class UploadWidget {
       wrap.appendChild(fname);
     }
 
-    // Spinner com logo no centro
     const spinWrap = document.createElement('div');
     spinWrap.className = 'atenna-upw__spin-wrap';
-
-    const ring = document.createElement('div');
-    ring.className = 'atenna-upw__ring';
 
     const logoImg = document.createElement('img');
     try { logoImg.src = chrome.runtime.getURL('icons/icon32.png'); } catch { logoImg.src = ''; }
     logoImg.className = 'atenna-upw__spin-logo';
     logoImg.alt = '';
 
-    spinWrap.appendChild(ring);
+    const dots = document.createElement('div');
+    dots.className = 'atenna-upw__dots';
+    for (let i = 0; i < 3; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'atenna-upw__dot';
+      dots.appendChild(dot);
+    }
+
     spinWrap.appendChild(logoImg);
+    spinWrap.appendChild(dots);
 
-    const phrase = document.createElement('div');
-    phrase.className = 'atenna-upw__phrase';
-    phrase.textContent = LOADING_PHRASES[0];
+    // Único elemento de status — alterna entre frases e mensagens de progresso
+    const status = document.createElement('div');
+    status.className = 'atenna-upw__phrase';
+    status.textContent = PROGRESS_MESSAGES[0].text;
 
-    const progress = document.createElement('div');
-    progress.className = 'atenna-upw__progress';
-    progress.textContent = 'Processando...';
+    const startTime = Date.now();
+    let msgIdx = 0;
 
-    let i = 0;
-    this.phraseInterval = setInterval(() => {
-      i = (i + 1) % LOADING_PHRASES.length;
-      phrase.style.opacity = '0';
-      setTimeout(() => {
-        phrase.textContent = LOADING_PHRASES[i];
-        phrase.style.opacity = '1';
-      }, 180);
-    }, 1800);
-
-    // Animate progress feedback
-    let progressCount = 0;
     this.progressInterval = setInterval(() => {
-      progressCount = (progressCount + 1) % 4;
-      progress.textContent = 'Processando' + '.'.repeat(progressCount + 1);
-    }, 500);
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      let nextIdx = msgIdx;
+      while (nextIdx < PROGRESS_MESSAGES.length - 1 && elapsed >= PROGRESS_MESSAGES[nextIdx + 1].after) {
+        nextIdx++;
+      }
+      if (nextIdx !== msgIdx) {
+        msgIdx = nextIdx;
+        status.style.opacity = '0';
+        setTimeout(() => {
+          status.textContent = PROGRESS_MESSAGES[msgIdx].text;
+          status.style.opacity = '1';
+        }, 180);
+      }
+    }, 1000);
 
     wrap.appendChild(spinWrap);
-    wrap.appendChild(phrase);
-    wrap.appendChild(progress);
+    wrap.appendChild(status);
     this.container.appendChild(wrap);
   }
 
-  private renderReady(): void {
+  private async renderReady(): Promise<void> {
     const { file, dlpRisk, findings = [], isBinary, extractedContent } = this.state;
     const hasRisk = dlpRisk === 'MEDIUM' || dlpRisk === 'HIGH';
 
@@ -367,15 +409,9 @@ export class UploadWidget {
     bar.className = 'atenna-upw__bar';
 
     if (hasRisk) {
-      // Primary: large, green — ação recomendada (Fitts: maior alvo)
       const LOCK_SVG = `<svg class="atenna-upw__btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
-      const protectBtn = this.makeBtn(
-        'Proteger documento',
-        'primary',
-        'Substitui dados sensíveis por marcadores antes de enviar',
-        LOCK_SVG
-      );
-      protectBtn.classList.add('atenna-upw__btn--protect');
+      const protectBtn = this.makeBtn('Proteger documento', 'primary', 'Substitui dados sensíveis por marcadores antes de enviar', LOCK_SVG);
+      protectBtn.classList.add('atenna-upw__btn--protect', 'atenna-upw__bar-half');
       protectBtn.addEventListener('click', () => {
         const content = extractedContent ?? '';
         const fileName = this.state.file?.name ?? 'documento.txt';
@@ -383,20 +419,18 @@ export class UploadWidget {
       });
       bar.appendChild(protectBtn);
 
-      // Secondary: só para arquivos texto onde temos o original — visualmente recessivo
-      if (!isBinary && this.state.originalContent) {
-        const origBtn = this.makeBtn(
-          'Usar sem alteração',
-          'danger',
-          'Envia o documento sem remover os dados sensíveis identificados'
-        );
-        origBtn.addEventListener('click', () => {
-          const orig = this.state.originalContent!;
-          const fName = this.state.file?.name ?? 'documento.txt';
-          this.showSuccess(() => this.config.onReady(orig, orig.slice(0, 300), dlpRisk ?? 'HIGH', undefined, fName));
-        });
-        bar.appendChild(origBtn);
+      const DL_SVG = `<svg class="atenna-upw__btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+      const proValue = await import('../core/planManager').then(m => m.isPro());
+      const dlLabel = proValue ? 'Baixar protegido' : 'Baixar · Pro';
+      const dlBtn = this.makeBtn(dlLabel, 'secondary', proValue ? 'Baixar arquivo com dados sensíveis removidos' : 'Disponível no plano Pro', DL_SVG);
+      dlBtn.classList.add('atenna-upw__btn--dl-action', 'atenna-upw__bar-half');
+      if (!proValue) {
+        dlBtn.disabled = true;
+        dlBtn.classList.add('atenna-upw__btn--pro-locked');
+      } else {
+        dlBtn.addEventListener('click', () => void this.downloadProtected(dlBtn));
       }
+      bar.appendChild(dlBtn);
     } else {
       // Clean document — show celebration animation then auto-apply
       this.showCleanAnimation(extractedContent ?? '', this.state.file?.name ?? 'documento.txt');
@@ -440,7 +474,8 @@ export class UploadWidget {
     applyBtn.className = 'atenna-doc-action-btn atenna-doc-action-btn--primary atenna-upw__btn--primary atenna-upw__clean-apply';
     applyBtn.textContent = 'Aplicar no chat';
     applyBtn.addEventListener('click', () => {
-      this.showSuccess(() => this.config.onReady(content, content.slice(0, 300), 'NONE', undefined, fileName));
+      // Vai direto para onReady — sem tela "Pronto." intermediária (evita duplicação)
+      this.config.onReady(content, content.slice(0, 300), 'NONE', undefined, fileName);
     });
 
     wrap.appendChild(applyBtn);
@@ -572,12 +607,14 @@ export class UploadWidget {
       input.click();
     });
 
-    // Botão minimalista de report — só aparece em erros de servidor (não validação)
+    // Botão minimalista de report — só aparece em erros de servidor ou timeout (não validação)
     const errorText = this.state.error ?? '';
     const isServerError = errorText.includes('servidor') || errorText.includes('OCR')
       || errorText.includes('indisponível') || errorText.includes('demorou')
       || errorText.includes('processamento') || errorText.includes('500')
-      || errorText.includes('502') || errorText.includes('503');
+      || errorText.includes('502') || errorText.includes('503')
+      || errorText.includes('Tente novamente') || errorText.includes('conectar')
+      || errorText.includes('esperado') || errorText.includes('correção');
 
     const reportBtn = document.createElement('button');
     reportBtn.className = 'atenna-upw__report-btn';
@@ -620,6 +657,71 @@ export class UploadWidget {
       }),
     });
     if (!resp.ok) throw new Error('report failed');
+  }
+
+  private async downloadProtected(btn: HTMLButtonElement): Promise<void> {
+    const file = this.state.file;
+    if (!file) return;
+
+    // Show spinner in button
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="atenna-upw__dl-spinner"></span><span>Preparando…</span>`;
+
+    const setProgress = (msg: string) => {
+      const span = btn.querySelector('span:last-child');
+      if (span) span.textContent = msg;
+    };
+
+    const token = await this.getAuthToken();
+    if (!token) {
+      btn.innerHTML = originalHtml;
+      btn.disabled = false;
+      return;
+    }
+
+    setProgress('Lendo arquivo…');
+    const ab = await file.arrayBuffer();
+    const u8 = new Uint8Array(ab);
+    let bin = '';
+    for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+    const b64 = btoa(bin);
+
+    setProgress('Removendo dados sensíveis…');
+
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        { type: 'ATENNA_EXPORT_PROTECTED', fileBase64: b64, fileName: file.name, mimeType: file.type || 'application/octet-stream', token },
+        (resp: { ok: boolean; resultB64?: string; contentType?: string; disposition?: string; fallback?: boolean; body?: string } | undefined) => {
+          btn.innerHTML = originalHtml;
+          btn.disabled = false;
+
+          if (chrome.runtime.lastError || !resp || !resp.ok) { resolve(); return; }
+
+          const resultBin = atob(resp.resultB64!);
+          const bytes = new Uint8Array(resultBin.length);
+          for (let i = 0; i < resultBin.length; i++) bytes[i] = resultBin.charCodeAt(i);
+          const blob = new Blob([bytes], { type: resp.contentType ?? 'application/octet-stream' });
+
+          let dlName = '';
+          const disp = resp.disposition ?? '';
+          const fnMatch = disp.match(/filename\*=UTF-8''([^;]+)/i) || disp.match(/filename="([^"]+)"/i);
+          if (fnMatch) dlName = decodeURIComponent(fnMatch[1]);
+          if (!dlName) {
+            const base = file.name.replace(/\.[^.]+$/, '');
+            const ext = file.name.split('.').pop() ?? 'txt';
+            dlName = `${base}_protegido.${ext}`;
+          }
+
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = dlName;
+          document.body.appendChild(a); a.click();
+          setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 2000);
+          resolve();
+        },
+      );
+    });
   }
 
   private makeBtn(label: string, variant: 'primary' | 'secondary' | 'danger', tooltip: string, icon?: string): HTMLButtonElement {
