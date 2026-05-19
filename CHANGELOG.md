@@ -12,6 +12,14 @@ All notable changes to **Atenna Guard Extension** are documented here.
 - `onboarding.ts` extracted from `modal.ts` — pro-welcome logic isolated and testable
 - "Esqueci senha" inline confirmation screen — shows email and back-to-login button
 
+### Security (FASE 5.1)
+- Server-side daily quota: free plan 10/day, atomic PostgreSQL RPC, fails open on DB error
+- Backend middleware rejects raw Supabase JWTs — opaque BFF tokens only
+- RLS migration prepared: `supabase/migrations/20260519_rls_audit.sql`
+  - Enables RLS on dlp_events, user_dlp_stats, user_plans, dlp_audit_log
+  - Creates daily_quota table + increment_daily_quota SECURITY DEFINER RPC
+  - **Requires manual application**: Supabase Dashboard > SQL Editor > paste migration
+
 ### Security (FASE 4.6)
 - BFF auth proxy: extension never holds Supabase JWT or ANON key — opaque UUID tokens only
 - AES-GCM token encryption in chrome.storage.local (PBKDF2, 100k iterations)
