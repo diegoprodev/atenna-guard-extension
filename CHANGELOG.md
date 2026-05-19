@@ -6,6 +6,12 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased]
 
+### Changed (FASE 4.7)
+- Token refresh serialized via `withRefreshLock` — concurrent callers share one in-flight promise
+- Popup skeleton loading — eliminates plan-label flicker on open
+- `onboarding.ts` extracted from `modal.ts` — pro-welcome logic isolated and testable
+- "Esqueci senha" inline confirmation screen — shows email and back-to-login button
+
 ### Security (FASE 4.6)
 - BFF auth proxy: extension never holds Supabase JWT or ANON key — opaque UUID tokens only
 - AES-GCM token encryption in chrome.storage.local (PBKDF2, 100k iterations)
