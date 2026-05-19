@@ -1,4 +1,5 @@
 import { getSession, setSession, clearSession, Session } from './sessionManager';
+import { withRefreshLock } from './refreshLock';
 
 const BFF_BASE = 'https://atennaplugin.maestro-n8n.site';
 
@@ -8,8 +9,6 @@ interface MeResponse {
   plan: string;
   expires_at: number;
 }
-
-let _refreshInFlight: Promise<boolean> | null = null;
 
 async function bffRefresh(token: string): Promise<boolean> {
   try {
@@ -40,10 +39,7 @@ export async function bffFetch<T>(
   };
   const r = await fetch(`${BFF_BASE}${path}`, { ...init, headers });
   if (r.status === 401 && retry && session) {
-    if (!_refreshInFlight) {
-      _refreshInFlight = bffRefresh(session.token).finally(() => { _refreshInFlight = null; });
-    }
-    const refreshed = await _refreshInFlight;
+    const refreshed = await withRefreshLock(() => bffRefresh(session.token));
     if (refreshed) return bffFetch<T>(path, init, false);
     await clearSession();
     throw new Error('SESSION_EXPIRED');
