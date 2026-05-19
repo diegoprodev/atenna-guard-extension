@@ -1,4 +1,5 @@
 
+// TODO(FASE 4.7): migrate direct Supabase REST calls to BFF endpoints
 import { setStorageUser, userScopedKeys } from './scopedStorage';
 
 const SUPABASE_URL      = 'https://kezbssjmgwtrunqeoyir.supabase.co';

@@ -1,3 +1,4 @@
+// TODO(FASE 4.7): migrate direct Supabase REST calls to BFF endpoints
 import { sk } from './scopedStorage';
 
 const STATS_KEY      = 'atenna_dlp_stats';

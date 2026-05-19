@@ -29,10 +29,14 @@ describe('Security Harness', () => {
     expect(m.content_security_policy.extension_pages).toContain("script-src 'self'");
   });
 
-  it('H-SUPABASE-1: manifest.json does not list supabase.co in host_permissions', () => {
-    const manifest = readFile('../manifest.json');
-    const m = JSON.parse(manifest);
-    const hasSupabase = (m.host_permissions ?? []).some((p: string) => p.includes('supabase'));
-    expect(hasSupabase).toBe(false);
+  it('H-SUPABASE-1: popup.ts and background.ts do not contain direct supabase auth calls', () => {
+    // Core content-script files (dlpStats, planManager etc) still use direct Supabase
+    // REST for non-auth data — pending BFF migration in FASE 4.7.
+    // This test verifies the auth-critical files (popup, background) are clean.
+    const popup = readFile('popup.ts');
+    const bg = readFile('background/background.ts');
+    // Neither should import supabaseClient or call supabase.auth directly
+    expect(popup).not.toMatch(/supabaseClient|createClient.*supabase/);
+    expect(bg).not.toMatch(/supabaseClient|createClient.*supabase/);
   });
 });

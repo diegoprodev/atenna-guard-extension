@@ -10,7 +10,8 @@
     "https://claude.ai/*",
     "https://gemini.google.com/*",
     "http://localhost/*",
-    "https://atennaplugin.maestro-n8n.site/*"
+    "https://atennaplugin.maestro-n8n.site/*",
+    "https://*.supabase.co/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'"

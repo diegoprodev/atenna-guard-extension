@@ -1,3 +1,4 @@
+// TODO(FASE 4.7): migrate direct Supabase REST calls to BFF endpoints
 /**
  * User settings — persisted in Supabase user_settings table.
  * Falls back to chrome.storage.local if offline or not authenticated.
