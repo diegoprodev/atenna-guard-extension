@@ -13,11 +13,11 @@ from fastapi.testclient import TestClient
 def make_mock_supabase(email="a@b.com", user_id="uid-123", jwt="mock.jwt.token"):
     mock = MagicMock()
     mock.auth.sign_in_with_password.return_value = MagicMock(
-        session=MagicMock(access_token=jwt),
+        session=MagicMock(access_token=jwt, refresh_token="mock-refresh-token"),
         user=MagicMock(id=user_id, email=email),
     )
     mock.auth.refresh_session.return_value = MagicMock(
-        session=MagicMock(access_token=jwt + "-refreshed"),
+        session=MagicMock(access_token=jwt + "-refreshed", refresh_token="mock-refresh-token-2"),
     )
     mock.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = MagicMock(data={"plan_type": "free"})
     return mock
@@ -79,15 +79,14 @@ def test_refresh_rotates_token(client):
         assert r.status_code == 401
 
 
-def test_admin_client_never_exposes_key():
+def test_login_response_does_not_expose_service_key(client):
+    """The /auth/login response body must never contain the service role key value."""
+    secret_key = "super-secret-service-role-key"
     with patch.dict(os.environ, {
         "SUPABASE_URL": "https://x.supabase.co",
-        "SUPABASE_SERVICE_ROLE_KEY": "super-secret-key",
+        "SUPABASE_SERVICE_ROLE_KEY": secret_key,
     }):
-        # Reset singleton
-        import services.supabase_admin as sa
-        sa._client = None
-        # Just check env is set; we don't want to actually call supabase
-        assert os.environ.get("SUPABASE_SERVICE_ROLE_KEY") == "super-secret-key"
-        # The key must not appear in any log output or returned dict
-        # This is verified by never returning get_admin_client() directly to routes
+        resp = client.post("/auth/login", json={"email": "a@b.com", "password": "pw"})
+        assert resp.status_code == 200
+        body_text = resp.text
+        assert secret_key not in body_text, "Service role key must not appear in login response"
