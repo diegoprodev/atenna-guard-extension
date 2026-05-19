@@ -1,6 +1,7 @@
 import { getCurrentInput, getInputText, setInputText } from '../core/inputHandler';
 import { getUsage, incrementUsage, isAtLimit, isAtAnyLimit, DAILY_LIMIT, getTotalCount, incrementTotalCount, getMonthlyUsage, MONTHLY_LIMIT, incrementMonthlyUsage, syncUsageFromSupabase } from '../core/usageCounter';
 import { isPro, consumeProWelcome, getPlan, setPlan } from '../core/planManager';
+import { consumeProWelcome as _consumeProWelcomeOnboarding, resolveWelcomeState, setProWelcomeFlag } from './modal/onboarding';
 import { signUpWithPassword, saveDisplayName } from '../core/auth';
 import { bffLogin, bffMe, bffResetPassword } from '../auth/bffClient';
 import { track, trackEvent } from '../core/analytics';
