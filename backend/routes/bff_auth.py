@@ -104,7 +104,14 @@ async def logout(req: LogoutRequest):
 
 @router.get("/me")
 async def me(creds: HTTPAuthorizationCredentials = Depends(_bearer)):
-    session = resolve_token(creds.credentials)
+    token = creds.credentials
+    # Reject raw JWTs — only opaque BFF tokens accepted
+    if token.count(".") == 2:
+        raise HTTPException(
+            status_code=401,
+            detail="Raw JWT not accepted — authenticate via POST /auth/login",
+        )
+    session = resolve_token(token)
     return {
         "user_id": session["user_id"],
         "email": session["email"],
