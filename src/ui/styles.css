@@ -99,7 +99,7 @@
 }
 
 .atenna-btn:hover {
-  width: 172px;
+  width: 132px;
   border-radius: 14px;
   background: var(--_bg-h, #16a34a);
   box-shadow:
@@ -155,6 +155,13 @@
   transition:
     transform 450ms cubic-bezier(0.4, 0, 1, 1),
     opacity   350ms ease;
+}
+
+/* Colapsa o espaço do ícone no hover — elimina gap vazio à direita */
+.atenna-btn:hover .atenna-btn__icon-wrap {
+  width: 0;
+  overflow: hidden;
+  transition: width 400ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Pulse ring — centered on btn, not icon-wrap, to avoid offset with borders */

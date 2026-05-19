@@ -1351,9 +1351,10 @@ export function openUploadFromBadge(): void {
         // Always use .txt extension so platforms treat content as plain text, not binary Word doc.
         const applyAsFileAttachment = async (text: string, originalName: string): Promise<boolean> => {
           const baseName = originalName.replace(/\.[^.]+$/, '');
-          // Timestamp suffix evita deduplicação do ChatGPT (mesmo nome = "já carregou este arquivo")
+          // Timestamp + random suffix evita deduplicação do ChatGPT (mesmo nome = "já carregou este arquivo")
           const ts = Date.now();
-          const safeFileName = `${baseName}_${ts}.txt`;
+          const rnd = Math.random().toString(36).slice(2, 6);
+          const safeFileName = `${baseName}_${ts}_${rnd}.txt`;
           const file = new File([text], safeFileName, { type: 'text/plain' });
           const dt = new DataTransfer();
           dt.items.add(file);
