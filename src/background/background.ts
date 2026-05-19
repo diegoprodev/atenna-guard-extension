@@ -29,7 +29,13 @@ async function getStoredJWT(): Promise<string | null> {
   });
 }
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  // Only accept messages from this extension itself
+  if (sender.id !== chrome.runtime.id) {
+    sendResponse({ ok: false, error: 'unauthorized' });
+    return false;
+  }
+
   // ── Relay TOGGLE_MODAL to a specific tab (tabId passed from popup) ──
   if (msg.type === 'RELAY_TOGGLE_MODAL') {
     const tabId = typeof msg.tabId === 'number' ? msg.tabId : null;

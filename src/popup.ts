@@ -176,7 +176,7 @@ function renderHome(
         <img src="${logoUrl}" class="ap-header__logo" alt="Atenna"/>
         <div class="ap-header__info">
           <div class="ap-header__name">Atenna Safe</div>
-          <div class="ap-header__email">${session.email}</div>
+          <div class="ap-header__email" id="ap-header-email"></div>
         </div>
         <span class="ap-badge ap-badge--${isPro ? 'pro' : 'free'}">${isPro ? 'PRO ✓' : 'FREE'}</span>
       </div>
@@ -223,6 +223,10 @@ function renderHome(
       </div>
     </div>
   `;
+
+  // Set user-controlled data via textContent to prevent XSS
+  const emailEl = document.getElementById('ap-header-email');
+  if (emailEl) emailEl.textContent = session.email;
 
   document.getElementById('ap-open-modal')?.addEventListener('click', () => {
     if (tabId) relayToggleModal(tabId);
