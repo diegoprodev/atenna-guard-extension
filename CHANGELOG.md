@@ -4,6 +4,24 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.45.0] — 2026-05-18 (Popup Login inline + UX fixes)
+
+### Extension (popup)
+
+#### Login direto no popup (sem content script)
+- Tela de login renderizada diretamente no popup — sem spinner infinito, sem depender de content script
+- Campos: email, senha com olho para mostrar/ocultar, botão Entrar
+- Links "Criar conta" (toggle para formulário de cadastro com campo nome) e "Esqueci minha senha" (envia email de recuperação)
+- Após login bem-sucedido: popup recarrega e exibe home autenticada
+- Após logout com confirmação: recarrega para tela de login
+- Correção: spinner infinito eliminado — era causado por `toggleModal()` rodar no contexto errado (popup vs content script)
+
+#### Corrigido: botão Configurações e Logout
+- "Configurações" abre overlay de configurações corretamente
+- "Sair" exige confirmação via `confirm()` antes de limpar sessão
+
+---
+
 ## [2.44.0] — 2026-05-18 (Enterprise PDF Extraction with Gemini Vision)
 
 ### Backend (VPS)

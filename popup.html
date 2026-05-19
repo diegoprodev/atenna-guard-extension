@@ -156,14 +156,42 @@
     .ap-footer__btn--danger:hover { background: #fff5f5; }
 
     /* Login screen */
-    .ap-login {
-      display: flex; flex-direction: column; align-items: center;
-      padding: 32px 24px 28px; gap: 12px; text-align: center;
+    .ap-root--login {
+      padding: 28px 24px 24px; align-items: center; gap: 14px;
     }
-    .ap-logo { width: 64px; height: 64px; border-radius: 50%; margin-bottom: 4px; }
-    .ap-login__title { font-size: 16px; font-weight: 700; color: #111; }
-    .ap-login__sub { font-size: 12px; color: #888; line-height: 1.5; }
-    #ap-open-login { width: 100%; padding: 12px; margin-top: 4px; border-radius: 8px; }
+    .ap-login-logo { display: flex; justify-content: center; }
+    .ap-login-title { font-size: 16px; font-weight: 700; color: #111; text-align: center; }
+    .ap-login-form {
+      width: 100%; display: flex; flex-direction: column; gap: 10px;
+    }
+    .ap-login-form input {
+      width: 100%; padding: 10px 12px; border: 1.5px solid #e5e5e5;
+      border-radius: 8px; font-size: 14px; font-family: inherit; outline: none;
+      transition: border-color 150ms;
+    }
+    .ap-login-form input:focus { border-color: #22c55e; }
+    .ap-login-form .ap-btn--primary { padding: 11px; width: 100%; margin: 0; font-size: 14px; }
+    .ap-login-err {
+      width: 100%; font-size: 12px; color: #dc2626; background: #fff5f5;
+      border: 1px solid #fecaca; border-radius: 6px; padding: 8px 12px; text-align: center;
+    }
+    .ap-pass-wrap { position: relative; width: 100%; }
+    .ap-pass-wrap input { width: 100%; padding-right: 38px; }
+    .ap-eye-btn {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; color: #aaa; display: flex; align-items: center;
+      padding: 0;
+    }
+    .ap-eye-btn:hover { color: #555; }
+    .ap-login-links {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px;
+    }
+    .ap-link-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 12px; color: #22c55e; font-weight: 500; padding: 0;
+    }
+    .ap-link-btn:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
