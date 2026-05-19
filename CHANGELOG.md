@@ -4,6 +4,21 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [Unreleased]
+
+### Security (FASE 4.6)
+- BFF auth proxy: extension never holds Supabase JWT or ANON key — opaque UUID tokens only
+- AES-GCM token encryption in chrome.storage.local (PBKDF2, 100k iterations)
+- Token refresh serialized — concurrent callers share one in-flight promise
+- Sender origin validation on all chrome.runtime.onMessage handlers
+- innerHTML → textContent XSS prevention on all user-controlled data
+- Content Security Policy added to manifest.json (script-src 'self')
+- Removed *.supabase.co from extension host_permissions
+- refresh_token stored separately from access_token in BFF session
+- Single-worker constraint documented for in-memory session store
+
+---
+
 ## [2.45.0] — 2026-05-18 (Popup Login inline + UX fixes)
 
 ### Extension (popup)
