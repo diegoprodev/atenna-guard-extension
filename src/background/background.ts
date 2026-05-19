@@ -30,6 +30,18 @@ async function getStoredJWT(): Promise<string | null> {
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  // ── Relay TOGGLE_MODAL to active tab (from popup — persists after popup closes) ──
+  if (msg.type === 'RELAY_TOGGLE_MODAL') {
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+      const tab = tabs[0];
+      if (tab?.id) {
+        chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_MODAL' }, () => void chrome.runtime.lastError);
+      }
+    });
+    sendResponse({ ok: true });
+    return true;
+  }
+
   // ── Prompt generation ────────────────────────────────────
   if (msg.type === 'ATENNA_FETCH') {
     const inputText = typeof msg.input === 'string' ? msg.input.trim() : '';
@@ -118,6 +130,99 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   // ── Auth token relay (for content scripts in iframes) ────
   if (msg.type === 'GET_AUTH_TOKEN') {
     getStoredJWT().then(jwt => sendResponse({ token: jwt ?? null })).catch(() => sendResponse({ token: null }));
+    return true;
+  }
+
+  // ── Document protect proxy (CORS bypass para content scripts) ──
+  if (msg.type === 'ATENNA_PROTECT_FILE') {
+    const { fileBase64, fileName, mimeType, token } = msg as {
+      fileBase64: string; fileName: string; mimeType: string; token: string;
+    };
+    getStoredJWT().then(jwt => {
+      const authToken = token || jwt;
+      if (!authToken) { sendResponse({ ok: false, error: 'auth_required' }); return; }
+
+      // Reconstrói bytes a partir do base64 (safe para qualquer tamanho)
+      const binary = atob(fileBase64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mimeType });
+      const formData = new FormData();
+      formData.append('file', blob, fileName);
+
+      return fetch('https://atennaplugin.maestro-n8n.site/document/protect', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authToken}` },
+        body: formData,
+      }).then(async res => {
+        const body = await res.text();
+        sendResponse({ ok: res.ok, status: res.status, body });
+      });
+    }).catch(err => sendResponse({ ok: false, status: 0, error: String(err) }));
+    return true;
+  }
+
+  // ── Export protected document (retorna binário como base64) ─────────────
+  if (msg.type === 'ATENNA_EXPORT_PROTECTED') {
+    const { fileBase64, fileName, mimeType, token } = msg as {
+      fileBase64: string; fileName: string; mimeType: string; token: string;
+    };
+    getStoredJWT().then(jwt => {
+      const authToken = token || jwt;
+      if (!authToken) { sendResponse({ ok: false, error: 'auth_required' }); return; }
+
+      const binary = atob(fileBase64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mimeType });
+      const formData = new FormData();
+      formData.append('file', blob, fileName);
+
+      return fetch('https://atennaplugin.maestro-n8n.site/document/export-protected', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authToken}` },
+        body: formData,
+      }).then(async res => {
+        if (!res.ok) {
+          const body = await res.text();
+          sendResponse({ ok: false, status: res.status, body });
+          return;
+        }
+        // Retorna binário como base64 + headers relevantes
+        const arrBuf = await res.arrayBuffer();
+        const outBytes = new Uint8Array(arrBuf);
+        let b64 = '';
+        for (let i = 0; i < outBytes.length; i++) b64 += String.fromCharCode(outBytes[i]);
+        const resultB64 = btoa(b64);
+        const contentType = res.headers.get('content-type') ?? 'application/octet-stream';
+        const disposition = res.headers.get('content-disposition') ?? '';
+        const fallback = res.headers.get('x-fallback-used') === '1';
+        const needsReview = res.headers.get('x-needs-review') === '1';
+        sendResponse({ ok: true, resultB64, contentType, disposition, fallback, needsReview });
+      });
+    }).catch(err => sendResponse({ ok: false, status: 0, error: String(err) }));
+    return true;
+  }
+
+  // ── Generic backend proxy (content scripts bloqueados por CSP) ──
+  if (msg.type === 'ATENNA_PROXY_FETCH') {
+    const { url, method, token, body: reqBody } = msg as {
+      url: string; method: string; token: string; body?: unknown;
+    };
+    const opts: RequestInit = {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    };
+    if (reqBody !== undefined) opts.body = JSON.stringify(reqBody);
+    fetch(url, opts)
+      .then(async res => {
+        const text = await res.text();
+        sendResponse({ ok: res.ok, status: res.status, body: text });
+      })
+      .catch(err => sendResponse({ ok: false, status: 0, error: String(err) }));
     return true;
   }
 

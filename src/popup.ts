@@ -17,18 +17,8 @@ async function getActiveTabInfo(): Promise<{ url: string; host: string; supporte
   });
 }
 
-async function openModalOnActiveTab(): Promise<void> {
-  return new Promise(resolve => {
-    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-      const tab = tabs[0];
-      if (tab?.id) {
-        chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_MODAL' }, () => {
-          void chrome.runtime.lastError;
-          resolve();
-        });
-      } else { resolve(); }
-    });
-  });
+function relayToggleModal(): void {
+  chrome.runtime.sendMessage({ type: 'RELAY_TOGGLE_MODAL' }, () => void chrome.runtime.lastError);
 }
 
 const SVG_SHIELD = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
@@ -143,8 +133,7 @@ function renderLogin(container: HTMLElement): void {
         btn.disabled = false; btn.textContent = 'Criar conta';
       } else {
         await signInWithPassword(email, pass);
-        // Notify content script to inject badge immediately
-        await openModalOnActiveTab();
+        relayToggleModal();
         window.location.reload();
       }
     } catch (e: unknown) {
@@ -224,9 +213,9 @@ function renderHome(
     </div>
   `;
 
-  document.getElementById('ap-open-modal')?.addEventListener('click', async () => {
-    await openModalOnActiveTab();
-    setTimeout(() => window.close(), 150);
+  document.getElementById('ap-open-modal')?.addEventListener('click', () => {
+    relayToggleModal();
+    window.close();
   });
 
   document.getElementById('ap-settings-btn')!.addEventListener('click', () => {
@@ -240,8 +229,7 @@ function renderHome(
       ['atenna_plan', 'atenna_app_onboarding_seen', 'atenna_onboarding_seen'],
       () => r()
     ));
-    await openModalOnActiveTab();
-    window.close();
+    window.location.reload();
   });
 }
 
