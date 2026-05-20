@@ -57,3 +57,50 @@ test('T4: badge injects into #prompt-textarea after session is set', async ({ co
   expect(badge).not.toBeNull();
   await page.close();
 });
+
+// ─── Test 5: DLP banner on CPF input ──────────────────────────
+
+test('T5: DLP protection banner appears when CPF is typed into textarea', async ({ context }) => {
+  // Replicate Supabase mocks from T4 so the JWT is treated as valid
+  await context.route('**/auth/v1/user**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: 'e2e-user-id', email: 'e2e@atenna.ai' }),
+    })
+  );
+  await context.route('**/rest/v1/profiles**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{ display_name: 'E2E User' }]),
+    })
+  );
+
+  await injectSession(context);
+  // Small delay to ensure storage write settles before page load
+  await new Promise(r => setTimeout(r, 300));
+  const page = await openFixturePage(context);
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 20_000 });
+
+  // Type a valid CPF — digit[2] != '9', not all same digit → passes validateCPF
+  await page.fill('#prompt-textarea', 'Meu CPF é 123.456.789-09');
+
+  // Trigger input event so DLP debounce starts (fires after 400ms)
+  await page.dispatchEvent('#prompt-textarea', 'input');
+
+  // Wait for debounce (400ms) + render buffer
+  await page.waitForTimeout(1000);
+
+  // DLP is async — wait up to 5s for banner
+  await page.waitForSelector('#atenna-protection-banner', { timeout: 5_000 });
+
+  const banner = await page.$('#atenna-protection-banner');
+  expect(banner).not.toBeNull();
+
+  // Banner must mention detected data
+  const text = await banner!.textContent();
+  expect(text).toContain('Dados sensíveis');
+
+  await page.close();
+});
