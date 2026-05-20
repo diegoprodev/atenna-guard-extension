@@ -11,6 +11,7 @@ export default defineConfig({
       '.git',
       '.cache',
       'tests/e2e/**/*.spec.ts', // E2E tests run with Playwright, not Vitest
+      'admin/node_modules/**',
     ],
   },
 });

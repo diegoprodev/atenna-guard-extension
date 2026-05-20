@@ -60,6 +60,10 @@ const NAME_STOPWORDS = new Set([
   'GET', 'POST', 'PUT', 'DEL', 'AWS', 'RDS', 'IAM', 'VPC', 'PDF', 'CSV',
   'XML', 'JSON', 'HTML', 'CSS', 'OAB', 'CRM', 'RG', 'CNH', 'CTF', 'STF', 'STJ',
   'CODIGO', 'CODE', 'TOKEN', 'BEARER', 'SECRET', 'SENHA', 'EMAIL', 'USER',
+  // Programming / framework terms
+  'OBSERVER', 'PATTERN', 'TYPESCRIPT', 'JAVASCRIPT', 'GENERICS', 'IMPLEMENTAR',
+  'IMPLEMENTACAO', 'INTERFACE', 'FUNCTION', 'CLASS', 'ASYNC', 'AWAIT', 'IMPORT',
+  'EXPORT', 'RETURN', 'CONST', 'REACT', 'ANGULAR', 'NODEJS', 'PYTHON', 'GOLANG',
   // Portuguese common words that must not be interpreted as name parts
   'NOME', 'MEU', 'TEU', 'SEU', 'MINHA', 'MEUS', 'SEUS', 'TEUS',
   'EU', 'ELE', 'ELA', 'OU', 'OS', 'AS', 'UM', 'UMA', 'COM',

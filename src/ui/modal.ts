@@ -1914,22 +1914,30 @@ async function openModal(autoGenerate = false): Promise<void> {
   if (autoGenerate && userText !== '') {
     // Magic wand path: run generation directly in the edit tab (results appear there)
     switchTab('edit');
-    renderLoading(resultsView);
-    const shouldShowSuggestion = pro && (isVagueInput(userText) || shouldSuggestBuilder(userText));
-    if (shouldShowSuggestion) {
-      void trackEvent('auto_suggestion_shown');
-      renderSuggestion(
-        resultsView,
-        () => {
-          void trackEvent('auto_suggestion_accepted');
-          switchTab('edit');
-          builderEl.classList.add('atenna-modal__builder--open');
-          builderToggleEl.classList.add('atenna-modal__builder-toggle--open');
-        },
-        () => runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro),
+
+    // Cache hit: same text was generated before — render instantly, skip backend
+    if (promptCache && promptCache.forText === userText) {
+      void renderSuccess(resultsView).then(() =>
+        renderPrompts(resultsView, promptCache!.data, platformInput, overlay, 'manual', 0)
       );
     } else {
-      void runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro);
+      renderLoading(resultsView);
+      const shouldShowSuggestion = pro && (isVagueInput(userText) || shouldSuggestBuilder(userText));
+      if (shouldShowSuggestion) {
+        void trackEvent('auto_suggestion_shown');
+        renderSuggestion(
+          resultsView,
+          () => {
+            void trackEvent('auto_suggestion_accepted');
+            switchTab('edit');
+            builderEl.classList.add('atenna-modal__builder--open');
+            builderToggleEl.classList.add('atenna-modal__builder-toggle--open');
+          },
+          () => runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro),
+        );
+      } else {
+        void runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro);
+      }
     }
   } else {
     // Normal badge click: always open in edit tab

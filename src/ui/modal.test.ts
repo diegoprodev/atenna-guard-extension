@@ -14,8 +14,18 @@ vi.mock('../core/auth', () => ({
   isSessionValid: vi.fn(),
 }));
 
-import { toggleModal, fetchPrompts, clearPromptCache } from './modal';
+// Mock BFF client — modal now calls bffMe() instead of getActiveSession()
+vi.mock('../auth/bffClient', () => ({
+  bffMe: vi.fn(),
+  bffLogin: vi.fn(),
+  bffLogout: vi.fn(),
+  bffResetPassword: vi.fn(),
+  bffFetch: vi.fn(),
+}));
+
+import { toggleModal, generateFromBadge, fetchPrompts, clearPromptCache } from './modal';
 import * as auth from '../core/auth';
+import * as bffClient from '../auth/bffClient';
 
 // ── Shared state ───────────────────────────────────────────
 
@@ -83,10 +93,10 @@ function addTextarea(value = 'texto de teste') {
 }
 
 // ── Helper: flush just the modal init async chain ─────────
-// openModal: 2× chrome.storage awaits + getActiveSession + syncPlanFromSupabase + Promise.all(usage)
+// openModal: 2× chrome.storage awaits + bffMe + syncPlanFromBff (getPlan + setPlan) + renderHeader
 // Each await = 1 microtask even when the mock callback fires synchronously.
 async function flushModalInit(): Promise<void> {
-  for (let i = 0; i < 16; i++) await Promise.resolve();
+  for (let i = 0; i < 40; i++) await Promise.resolve();
 }
 
 // ── Helper: flush the full async flow ─────────────────────
@@ -118,6 +128,11 @@ describe('toggleModal', () => {
       access_token: 'test-token',
       email: 'test@example.com',
       expires_at: Math.floor(Date.now() / 1000) + 3600,
+    });
+    // bffMe: modal now calls this instead of getActiveSession
+    vi.mocked(bffClient.bffMe).mockResolvedValue({
+      email: 'test@example.com',
+      plan: 'free',
     });
     vi.spyOn(planManager, 'syncPlanFromSupabase').mockResolvedValue(undefined);
     // Mock fetch for any other calls
@@ -236,14 +251,14 @@ describe('toggleModal', () => {
 
   it('shows skeleton loading when input has text', async () => {
     addTextarea('algum texto');
-    toggleModal();
+    generateFromBadge();
     await flushModalInit();
     expect(document.querySelector('.atenna-skeleton-loading')).not.toBeNull();
   });
 
   it('shows loading message when input has text', async () => {
     addTextarea('algum texto');
-    toggleModal();
+    generateFromBadge();
     await flushModalInit();
     expect(document.querySelector('.atenna-skeleton-loading__msg')).not.toBeNull();
   });
@@ -263,14 +278,14 @@ describe('toggleModal', () => {
 
   it('renders 3 cards after flow completes', async () => {
     addTextarea('algum texto');
-    await toggleModal();
+    await generateFromBadge();
     await waitForFlow();
     expect(document.querySelectorAll('.atenna-modal__card').length).toBe(3);
   });
 
   it('each card has readonly textarea', async () => {
     addTextarea('algum texto');
-    await toggleModal();
+    await generateFromBadge();
     await waitForFlow();
     const textareas = document.querySelectorAll<HTMLTextAreaElement>('.atenna-modal__card-textarea');
     expect(textareas.length).toBe(3);
@@ -279,7 +294,7 @@ describe('toggleModal', () => {
 
   it('each card has copy icon and USAR button', async () => {
     addTextarea('algum texto');
-    await toggleModal();
+    await generateFromBadge();
     await waitForFlow();
     expect(document.querySelectorAll('.atenna-modal__btn-copy').length).toBe(3);
     expect(document.querySelectorAll('.atenna-modal__btn-use').length).toBe(3);
@@ -287,7 +302,7 @@ describe('toggleModal', () => {
 
   it('cards are filled with backend-generated text', async () => {
     addTextarea('algum texto');
-    await toggleModal();
+    await generateFromBadge();
     await waitForFlow();
     const ta = document.querySelector<HTMLTextAreaElement>('.atenna-modal__card-textarea')!;
     expect(ta.value).toContain('gerado pela IA');
@@ -297,7 +312,7 @@ describe('toggleModal', () => {
 
   it('reopening with same text shows cached prompts without calling backend again', async () => {
     addTextarea('texto cacheado');
-    await toggleModal();
+    await generateFromBadge();
     await waitForFlow();
     // Count only ATENNA_FETCH calls (analytics ATENNA_TRACK calls are also present)
     const fetchCallsAfterFirst = (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls
@@ -308,9 +323,8 @@ describe('toggleModal', () => {
     stubChrome(); // re-stub so we can track calls
     document.body.innerHTML = '';
     addTextarea('texto cacheado');
-    await toggleModal();
-    // Cache hit renders after full modal init
-    for (let i = 0; i < 16; i++) await Promise.resolve();
+    await generateFromBadge();
+    await waitForFlow();
 
     const fetchCallsOnReopen = (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls
       .filter(([msg]: [{ type?: string }]) => msg.type === 'ATENNA_FETCH').length;
@@ -323,7 +337,7 @@ describe('toggleModal', () => {
 
   it('usage badge shows remaining generations after generation', async () => {
     addTextarea('algum texto');
-    toggleModal();
+    generateFromBadge();
     await waitForFlow();
     const badge = document.querySelector('.atenna-modal__usage')!;
     expect(badge.textContent).toMatch(/gerações restantes/);
@@ -331,7 +345,7 @@ describe('toggleModal', () => {
 
   it('usage badge shows 4 gerações restantes after first generation', async () => {
     addTextarea('algum texto');
-    toggleModal();
+    generateFromBadge();
     await waitForFlow();
     expect(document.querySelector('.atenna-modal__usage')!.textContent).toBe('4 gerações restantes');
   });
@@ -344,8 +358,8 @@ describe('toggleModal', () => {
       count: 5,
       resetDate: Date.now() + 24 * 60 * 60 * 1000,
     };
-    toggleModal();
-    for (let i = 0; i < 20; i++) await Promise.resolve();
+    generateFromBadge();
+    for (let i = 0; i < 50; i++) await Promise.resolve();
     expect(document.querySelector('.atenna-modal__limit-reached')).not.toBeNull();
   });
 
@@ -355,8 +369,8 @@ describe('toggleModal', () => {
       count: 15,
       resetDate: Date.now() + 30 * 24 * 60 * 60 * 1000,
     };
-    toggleModal();
-    for (let i = 0; i < 12; i++) await Promise.resolve();
+    generateFromBadge();
+    for (let i = 0; i < 50; i++) await Promise.resolve();
     const badge = document.querySelector('.atenna-modal__usage')!;
     expect(badge.classList.contains('atenna-modal__usage--danger')).toBe(true);
   });
@@ -365,7 +379,7 @@ describe('toggleModal', () => {
 
   it('USAR fills platform input and closes modal', async () => {
     const ta = addTextarea('texto original');
-    await toggleModal();
+    await generateFromBadge();
     await waitForFlow();
     document.querySelector<HTMLButtonElement>('.atenna-modal__btn-use')!.click();
     expect(document.getElementById('atenna-modal-overlay')).toBeNull();
@@ -377,7 +391,7 @@ describe('toggleModal', () => {
 
   it('Copiar calls clipboard.writeText', async () => {
     addTextarea('algum texto');
-    await toggleModal();
+    await generateFromBadge();
     await waitForFlow();
     document.querySelector<HTMLButtonElement>('.atenna-modal__btn-copy')!.click();
     await Promise.resolve();
@@ -452,6 +466,10 @@ describe('DLP protection flow', () => {
       email: 'test@example.com',
       expires_at: Math.floor(Date.now() / 1000) + 3600,
     });
+    vi.mocked(bffClient.bffMe).mockResolvedValue({
+      email: 'test@example.com',
+      plan: 'free',
+    });
     vi.spyOn(planManager, 'syncPlanFromSupabase').mockResolvedValue(undefined);
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [{ plan: 'free' }] });
     Object.defineProperty(navigator, 'clipboard', {
@@ -473,7 +491,7 @@ describe('DLP protection flow', () => {
 
   it('texto sem dados sensíveis gera 3 cards sem advisory DLP', async () => {
     addTextarea('como fazer um relatório executivo profissional');
-    await toggleModal();
+    await generateFromBadge();
     await waitForFlow();
     const cards = document.querySelectorAll('.atenna-modal__card');
     const advisory = document.querySelector('.atenna-dlp-advisory');
@@ -503,7 +521,7 @@ describe('DLP protection flow', () => {
 
   it('geração com texto normal produz 3 cards distintos', async () => {
     addTextarea('como estruturar uma apresentação de negócios');
-    await toggleModal();
+    await generateFromBadge();
     await waitForFlow();
     const textareas = document.querySelectorAll<HTMLTextAreaElement>('.atenna-modal__card-textarea');
     expect(textareas.length).toBe(3);
@@ -515,7 +533,7 @@ describe('DLP protection flow', () => {
   it('fallback de API exibe 3 prompts template sem decrementar uso', async () => {
     stubChrome({ ok: false });
     addTextarea('algum texto para testar fallback');
-    await toggleModal();
+    await generateFromBadge();
     await waitForFlow();
     const cards = document.querySelectorAll('.atenna-modal__card');
     expect(cards.length).toBe(3);
