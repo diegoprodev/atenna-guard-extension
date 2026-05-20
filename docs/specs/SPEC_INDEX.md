@@ -11,7 +11,7 @@
 | 1 | **4.6** | [FASE_4.6_SECURITY_HARDENING_PRD.md](FASE_4.6_SECURITY_HARDENING_PRD.md) | BFF Auth Proxy, AES-GCM token, sender guard, XSS fix, CSP | ✅ Completo |
 | 2 | **4.7** | [FASE_4.7_UI_ENTERPRISE_POLISH_PRD.md](FASE_4.7_UI_ENTERPRISE_POLISH_PRD.md) | Refresh race fix, popup skeleton, modal split, esqueci-senha confirmation | ✅ Completo |
 | 3 | **5.1** | [FASE_5.1_RLS_AUDIT_BFF_COMPLETE_PRD.md](FASE_5.1_RLS_AUDIT_BFF_COMPLETE_PRD.md) | RLS em todas as tabelas, quota server-side, middleware opaque-only | ✅ Completo |
-| 4 | **5.2** | *(a criar)* | PT-BR Enterprise Recognizers: RG, CNH, OAB, Placa, Endereço | 🔴 Próximo |
+| 4 | **5.2** | [FASE_5.2_PTBR_ENTERPRISE_RECOGNIZERS_PRD.md](FASE_5.2_PTBR_ENTERPRISE_RECOGNIZERS_PRD.md) | PT-BR Enterprise Recognizers: RG, CNH, OAB, Placa, CRM | ✅ Completo |
 | 5 | **5.3** | *(a criar)* | Playwright E2E Suite — extensão carregada, 6+ testes de payload real | 🔴 Roadmap |
 | 6 | **6.1** | *(a criar)* | OCR + Image DLP (EasyOCR + presidio-image-redactor) | 🔴 Roadmap |
 
@@ -56,3 +56,8 @@ Todos os invariantes de segurança devem estar GREEN antes de cada release:
 | SI-8 | Free plan → 429 após 10 calls/dia | 5.1 |
 | SI-9 | Quota em Supabase (não client-only) | 5.1 |
 | SI-10 | dlp_events isolado por user_id | 5.1 |
+| SI-11 | RG detectado em texto simples e contexto rotulado | 5.2 |
+| SI-12 | CNH detectado com label ou 11 dígitos em contexto | 5.2 |
+| SI-13 | OAB detectado com sufixo de estado (OAB/SP 123456) | 5.2 |
+| SI-14 | Placa detectada em Mercosul (ABC1D23) e formato antigo (ABC-1234) | 5.2 |
+| SI-15 | Frontend e backend retornam mesmos tipos para mesmo input | 5.2 |

@@ -6,6 +6,15 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased]
 
+### Added (FASE 5.2) — 2026-05-19
+- **PT-BR Enterprise Recognizers**: RG, CNH, OAB, Placa Veicular, CRM detectados em frontend e backend
+- Frontend: novos `PatternDef` com validadores em `src/dlp/patterns.ts`; CNH tem confidence 0.96 > CPF para ganhar no dedup quando rotulado
+- Backend: `RGRecognizer`, `CNHRecognizer`, `OABRecognizer`, `PlacaRecognizer`, `CRMRecognizer` com `supported_language="pt"` em `backend/dlp/analyzer.py`
+- Fix pré-existente: `CreditCardRecognizer` renomeado para `BRCreditCardRecognizer` para evitar conflito com classe built-in do Presidio que causava `TypeError` no carregamento do engine
+- `EntityType` estendido: `'RG' | 'CNH' | 'OAB' | 'PLACA' | 'CRM'` em `src/dlp/types.ts`
+- 12 novos testes frontend + 11 novos testes backend, todos GREEN
+- Harness: H-RG-1, H-CNH-1, H-OAB-1, H-PLACA-1, H-PARITY-1 verificados
+
 ### Security (FASE 5.1) — 2026-05-19
 - **RLS aplicado via psql direto** em produção: `dlp_events`, `user_dlp_stats`, `user_plans`, `daily_quota`
 - Tabela `daily_quota` criada com FK para `auth.users` + políticas RLS por `user_id`
