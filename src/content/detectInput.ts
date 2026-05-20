@@ -24,5 +24,10 @@ export function detectPlatform(): PlatformConfig | null {
     return { name: 'Gemini', inputSelector: 'div[contenteditable="true"]' };
   }
 
+  // Localhost fixture page for E2E tests
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return { name: 'Test', inputSelector: '#prompt-textarea' };
+  }
+
   return null;
 }

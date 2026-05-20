@@ -22,7 +22,8 @@
         "https://chat.openai.com/*",
         "https://chatgpt.com/*",
         "https://claude.ai/*",
-        "https://gemini.google.com/*"
+        "https://gemini.google.com/*",
+        "http://localhost/*"
       ],
       "js": ["content.js"],
       "css": ["styles.css", "modal.css"],
