@@ -1,4 +1,4 @@
-import { test, expect } from './helpers/extension';
+import { test, expect, injectSession, openFixturePage } from './helpers/extension';
 
 // ─── T1: Extension loads ───────────────────────────────────────
 
@@ -15,4 +15,45 @@ test('T2: service worker registers and responds to ping', async ({ context }) =>
   }
   expect(worker).not.toBeNull();
   expect(worker.url()).toContain('background.js');
+});
+
+// ─── Test 3: No badge without auth ────────────────────────────
+
+test('T3: badge does NOT inject when user is not authenticated', async ({ context }) => {
+  const page = await openFixturePage(context);
+  // No session injected — chrome.storage has no atenna_jwt
+  // Wait 3s for any delayed injection
+  await page.waitForTimeout(3000);
+  const badge = await page.$('#atenna-guard-btn');
+  expect(badge).toBeNull();
+  await page.close();
+});
+
+// ─── Test 4: Badge injects after auth ─────────────────────────
+
+test('T4: badge injects into #prompt-textarea after session is set', async ({ context }) => {
+  // Mock Supabase user-verification endpoint so the fake JWT is treated as valid
+  await context.route('**/auth/v1/user**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: 'e2e-user-id', email: 'e2e@atenna.ai' }),
+    })
+  );
+  // Mock Supabase profiles endpoint (display_name lazy-load)
+  await context.route('**/rest/v1/profiles**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{ display_name: 'E2E User' }]),
+    })
+  );
+
+  await injectSession(context);
+  const page = await openFixturePage(context);
+  // Content script is async — wait for badge
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 15_000 });
+  const badge = await page.$('#atenna-guard-btn');
+  expect(badge).not.toBeNull();
+  await page.close();
 });
