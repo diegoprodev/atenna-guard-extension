@@ -106,3 +106,65 @@ test('T5: DLP protection banner appears when CPF is typed into textarea', async 
 
   await page.close();
 });
+
+// ─── Test 6: Modal opens from badge click ─────────────────────
+
+test('T6: clicking the badge opens the Atenna modal overlay', async ({ context }) => {
+  await context.route('**/auth/v1/user**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: 'e2e-user-id', email: 'e2e@atenna.ai' }),
+    })
+  );
+  await context.route('**/rest/v1/profiles**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{ display_name: 'E2E User' }]),
+    })
+  );
+  // Mock BFF /auth/me so toggleModal() sees a valid session and renders the full modal
+  await context.route('**/maestro-n8n.site/auth/me**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ user_id: 'e2e-user-id', email: 'e2e@atenna.ai', plan: 'pro', expires_at: 9999999999 }),
+    })
+  );
+
+  await injectSession(context);
+  // Set the user-scoped onboarding flag so openModal() renders the main UI, not the onboarding screen.
+  // The content script calls sk('atenna_app_onboarding_seen') which appends __<uid> when uid is loaded.
+  // We must set it BEFORE the page opens so the content script reads it after session init.
+  const sw = context.serviceWorkers()[0];
+  if (sw) {
+    await sw.evaluate(() => new Promise<void>(resolve => {
+      chrome.storage.local.set({ 'atenna_app_onboarding_seen__e2e-user-id': true }, () => resolve());
+    }));
+  }
+  await new Promise(r => setTimeout(r, 300));
+  const page = await openFixturePage(context);
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 15_000 });
+
+  // Click the badge button
+  await page.click('#atenna-guard-btn');
+
+  // Modal overlay should appear
+  await page.waitForSelector('#atenna-modal-overlay', { timeout: 5_000 });
+
+  const overlay = await page.$('#atenna-modal-overlay');
+  expect(overlay).not.toBeNull();
+
+  // Modal must have the tab bar (Refinar / Histórico)
+  const tabs = await page.$$('.atenna-modal__tab');
+  expect(tabs.length).toBe(2);
+
+  // Close with ESC — modal must disappear
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('#atenna-modal-overlay', { state: 'detached', timeout: 3_000 });
+  const overlayAfter = await page.$('#atenna-modal-overlay');
+  expect(overlayAfter).toBeNull();
+
+  await page.close();
+});
