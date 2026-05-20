@@ -8,9 +8,12 @@
 
 | Ordem | Fase | Arquivo | Objetivo | Status |
 |-------|------|---------|----------|--------|
-| 1 | **4.6** | [FASE_4.6_SECURITY_HARDENING_PRD.md](FASE_4.6_SECURITY_HARDENING_PRD.md) | BFF Auth Proxy, AES-GCM token, sender guard, XSS fix, CSP | 🔴 Pendente |
-| 2 | **4.7** | [FASE_4.7_UI_ENTERPRISE_POLISH_PRD.md](FASE_4.7_UI_ENTERPRISE_POLISH_PRD.md) | Refresh race fix, popup skeleton, modal split, esqueci-senha confirmation | 🔴 Pendente |
-| 3 | **5.1** | [FASE_5.1_RLS_AUDIT_BFF_COMPLETE_PRD.md](FASE_5.1_RLS_AUDIT_BFF_COMPLETE_PRD.md) | RLS em todas as tabelas, quota server-side, middleware opaque-only | 🔴 Pendente |
+| 1 | **4.6** | [FASE_4.6_SECURITY_HARDENING_PRD.md](FASE_4.6_SECURITY_HARDENING_PRD.md) | BFF Auth Proxy, AES-GCM token, sender guard, XSS fix, CSP | ✅ Completo |
+| 2 | **4.7** | [FASE_4.7_UI_ENTERPRISE_POLISH_PRD.md](FASE_4.7_UI_ENTERPRISE_POLISH_PRD.md) | Refresh race fix, popup skeleton, modal split, esqueci-senha confirmation | ✅ Completo |
+| 3 | **5.1** | [FASE_5.1_RLS_AUDIT_BFF_COMPLETE_PRD.md](FASE_5.1_RLS_AUDIT_BFF_COMPLETE_PRD.md) | RLS em todas as tabelas, quota server-side, middleware opaque-only | ✅ Completo |
+| 4 | **5.2** | *(a criar)* | PT-BR Enterprise Recognizers: RG, CNH, OAB, Placa, Endereço | 🔴 Próximo |
+| 5 | **5.3** | *(a criar)* | Playwright E2E Suite — extensão carregada, 6+ testes de payload real | 🔴 Roadmap |
+| 6 | **6.1** | *(a criar)* | OCR + Image DLP (EasyOCR + presidio-image-redactor) | 🔴 Roadmap |
 
 ---
 
