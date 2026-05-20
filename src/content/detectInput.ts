@@ -7,11 +7,17 @@ export interface PlatformConfig {
 // The contenteditable selector would otherwise match the search bar on /chats.
 const CLAUDE_NON_CHAT = /^\/(chats|recents|settings|projects|files|artifacts|teams|upgrade)/;
 
+// Pages that exist on chatgpt.com but have no active chat input.
+// /gpts, /auth, /admin, /c (conversation list), /settings are non-chat pages.
+// Active conversations live at /c/<uuid> — allow those.
+const CHATGPT_NON_CHAT = /^\/(gpts|auth|admin|settings|library)(\/?$|\/)/;
+
 export function detectPlatform(): PlatformConfig | null {
   const host = window.location.hostname;
   const path = window.location.pathname;
 
   if (host.includes('chatgpt.com') || host.includes('chat.openai.com')) {
+    if (CHATGPT_NON_CHAT.test(path)) return null;
     return { name: 'ChatGPT', inputSelector: '#prompt-textarea' };
   }
 

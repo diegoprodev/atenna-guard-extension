@@ -16,15 +16,35 @@ async function checkAuth(): Promise<boolean> {
   return _isAuthenticated;
 }
 
+function isElementVisible(el: Element): boolean {
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return false;
+  const style = getComputedStyle(el as HTMLElement);
+  return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+}
+
 function tryInject(): void {
   // Only inject badge if user is authenticated — DLP must not run without login
   if (!_isAuthenticated) return;
 
   const config = detectPlatform();
-  if (!config) return;
+  if (!config) {
+    // SPA navigated to a non-chat page — remove badge if present
+    document.getElementById('atenna-guard-btn')?.remove();
+    document.querySelector('[data-atenna-injected]')?.removeAttribute('data-atenna-injected');
+    return;
+  }
 
   const input = document.querySelector(config.inputSelector);
-  if (!input) return;
+  if (!input) {
+    // Input gone — remove stale badge
+    document.getElementById('atenna-guard-btn')?.remove();
+    document.querySelector('[data-atenna-injected]')?.removeAttribute('data-atenna-injected');
+    return;
+  }
+
+  // Don't inject badge when the input is not visible (hidden pages, collapsed UI)
+  if (!isElementVisible(input)) return;
 
   injectButton(config, () => toggleModal());
 }
@@ -112,4 +132,14 @@ if (window === window.top) {
   } else {
     void init();
   }
+
+  // SPA navigation: history.pushState does not fire popstate, so we patch it.
+  // This covers ChatGPT navigating between /c/<id> and /gpts, /settings, etc.
+  const _origPushState = history.pushState.bind(history);
+  history.pushState = function (...args) {
+    _origPushState(...args);
+    // Give the SPA a tick to update the DOM before re-evaluating
+    setTimeout(tryInject, 0);
+  };
+  window.addEventListener('popstate', () => setTimeout(tryInject, 0));
 }
