@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Atenna E2E Fixture — ChatGPT-like</title>
+  <style>
+    body { margin: 0; background: #212121; color: #ececec; font-family: sans-serif; }
+    .main { display: flex; flex-direction: column; align-items: center; padding-top: 40vh; }
+    #prompt-textarea {
+      width: 600px; height: 52px; padding: 12px 16px;
+      background: #2f2f2f; border: 1px solid #444; border-radius: 12px;
+      color: #ececec; font-size: 16px; resize: none; outline: none;
+    }
+    /* Ensures badge has a positioned parent to anchor to */
+    .input-wrap { position: relative; width: 600px; }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <div class="input-wrap">
+      <textarea id="prompt-textarea" placeholder="Message ChatGPT"></textarea>
+    </div>
+  </div>
+  <!-- Simulate a logged-in session so content.ts proceeds past auth check -->
+  <script>
+    // The extension reads chrome.storage, not window — this is purely cosmetic context.
+    // Real session injection happens via page.evaluate in the test helper.
+  </script>
+</body>
+</html>
