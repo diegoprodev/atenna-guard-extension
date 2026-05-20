@@ -6,30 +6,31 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased]
 
-### Changed (FASE 4.7)
-- Token refresh serialized via `withRefreshLock` — concurrent callers share one in-flight promise
-- Popup skeleton loading — eliminates plan-label flicker on open
-- `onboarding.ts` extracted from `modal.ts` — pro-welcome logic isolated and testable
-- "Esqueci senha" inline confirmation screen — shows email and back-to-login button
+### Security (FASE 5.1) — 2026-05-19
+- **RLS aplicado via psql direto** em produção: `dlp_events`, `user_dlp_stats`, `user_plans`, `daily_quota`
+- Tabela `daily_quota` criada com FK para `auth.users` + políticas RLS por `user_id`
+- Função `increment_daily_quota(uuid, int)` — SECURITY DEFINER, atomic upsert, retorna `{new_count, allowed}`
+- Quota server-side: plano free = 10 calls/dia; RPC chamado em `/generate-prompts`; falha aberta se Supabase indisponível
+- Backend middleware rejeita raw Supabase JWT (`token.count('.') == 2` → 401 "Raw JWT not accepted")
+- Migration SQL em `supabase/migrations/20260519_rls_audit.sql`
 
-### Security (FASE 5.1)
-- Server-side daily quota: free plan 10/day, atomic PostgreSQL RPC, fails open on DB error
-- Backend middleware rejects raw Supabase JWTs — opaque BFF tokens only
-- RLS migration prepared: `supabase/migrations/20260519_rls_audit.sql`
-  - Enables RLS on dlp_events, user_dlp_stats, user_plans, dlp_audit_log
-  - Creates daily_quota table + increment_daily_quota SECURITY DEFINER RPC
-  - **Requires manual application**: Supabase Dashboard > SQL Editor > paste migration
+### Security (FASE 4.6) — 2026-05-19
+- BFF auth proxy: extensão nunca armazena JWT Supabase ou ANON key — só tokens opacos UUID
+- AES-GCM no `chrome.storage.local` (PBKDF2, 100k iterações, salt por instalação)
+- Token refresh serializado — chamadas concorrentes compartilham uma única promise in-flight
+- `sender.id !== chrome.runtime.id` guard em todos os handlers `chrome.runtime.onMessage`
+- `innerHTML → textContent` em todos os pontos onde dados de usuário são exibidos (XSS fix)
+- Content Security Policy adicionado ao `manifest.json` (`script-src 'self'`)
+- `*.supabase.co` removido de `host_permissions` para popup/background
+- `refresh_token` armazenado separadamente do `access_token` na sessão BFF
+- Restrição single-worker documentada para o dict de sessões em memória
+- Rotas `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/me`, `/auth/reset-password` no backend
 
-### Security (FASE 4.6)
-- BFF auth proxy: extension never holds Supabase JWT or ANON key — opaque UUID tokens only
-- AES-GCM token encryption in chrome.storage.local (PBKDF2, 100k iterations)
-- Token refresh serialized — concurrent callers share one in-flight promise
-- Sender origin validation on all chrome.runtime.onMessage handlers
-- innerHTML → textContent XSS prevention on all user-controlled data
-- Content Security Policy added to manifest.json (script-src 'self')
-- Removed *.supabase.co from extension host_permissions
-- refresh_token stored separately from access_token in BFF session
-- Single-worker constraint documented for in-memory session store
+### Changed (FASE 4.7) — 2026-05-19
+- `withRefreshLock` em `bffClient.ts` — refresh serializado, zero chamadas duplicadas a `/auth/refresh`
+- Popup com skeleton loading — elimina flicker de plano ao abrir
+- `src/ui/modal/onboarding.ts` extraído de `modal.ts` — lógica de pro-welcome isolada e testável
+- Tela de confirmação inline "Esqueci minha senha" — exibe email e botão voltar ao login
 
 ---
 
