@@ -50,6 +50,8 @@ test('T4: badge injects into #prompt-textarea after session is set', async ({ co
   );
 
   await injectSession(context);
+  // Small delay to ensure storage write settles before content script reads it
+  await new Promise(r => setTimeout(r, 300));
   const page = await openFixturePage(context);
   // Content script is async — wait for badge
   await page.waitForSelector('#atenna-guard-btn', { timeout: 15_000 });
