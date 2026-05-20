@@ -24,7 +24,7 @@ export const test = base.extend<ExtensionFixtures>({
   // eslint-disable-next-line no-empty-pattern
   context: async ({}, use) => {
     const ctx = await chromium.launchPersistentContext('', {
-      headless: true,
+      headless: false,
       args: [
         `--disable-extensions-except=${DIST_PATH}`,
         `--load-extension=${DIST_PATH}`,
