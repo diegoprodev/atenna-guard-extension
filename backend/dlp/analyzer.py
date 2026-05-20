@@ -18,6 +18,7 @@ class CPFRecognizer(PatternRecognizer):
     def __init__(self) -> None:
         super().__init__(
             supported_entity="BR_CPF",
+            supported_language="pt",
             patterns=[Pattern("CPF", r"\b\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2}\b", 0.85)],
             context=["cpf", "cadastro de pessoa", "cadastro", "documento"],
         )
@@ -39,6 +40,7 @@ class CNPJRecognizer(PatternRecognizer):
     def __init__(self) -> None:
         super().__init__(
             supported_entity="BR_CNPJ",
+            supported_language="pt",
             patterns=[Pattern("CNPJ", r"\b\d{2}[.\s]?\d{3}[.\s]?\d{3}[/\s]?\d{4}[-\s]?\d{2}\b", 0.85)],
             context=["cnpj", "empresa", "razão social", "inscrição"],
         )
@@ -62,6 +64,7 @@ class BRPhoneRecognizer(PatternRecognizer):
     def __init__(self) -> None:
         super().__init__(
             supported_entity="BR_PHONE",
+            supported_language="pt",
             patterns=[
                 Pattern("BR_MOBILE",  r"(?:\+55\s?)?(?:\(?\d{2}\)?\s?)9\s?\d{4}[-\s]?\d{4}\b", 0.80),
                 Pattern("BR_LANDLINE", r"(?:\+55\s?)?(?:\(?\d{2}\)?\s?)[2-8]\d{3}[-\s]?\d{4}\b", 0.72),
@@ -76,6 +79,7 @@ class APIKeyRecognizer(PatternRecognizer):
     def __init__(self) -> None:
         super().__init__(
             supported_entity="API_KEY",
+            supported_language="pt",
             patterns=[
                 Pattern("OPENAI_PROJ",  r"\bsk-proj-[A-Za-z0-9_\-]{20,}",       0.99),
                 Pattern("OPENAI_SK",    r"\bsk-[A-Za-z0-9]{32,}",               0.97),
@@ -97,6 +101,7 @@ class JWTRecognizer(PatternRecognizer):
     def __init__(self) -> None:
         super().__init__(
             supported_entity="TOKEN",
+            supported_language="pt",
             patterns=[Pattern(
                 "JWT",
                 r"\beyJ[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{20,}\b",
@@ -108,10 +113,11 @@ class JWTRecognizer(PatternRecognizer):
 
 # ── Credit Card (Luhn) ────────────────────────────────────────
 
-class CreditCardRecognizer(PatternRecognizer):
+class BRCreditCardRecognizer(PatternRecognizer):
     def __init__(self) -> None:
         super().__init__(
             supported_entity="CREDIT_CARD",
+            supported_language="pt",
             patterns=[Pattern("CC_16", r"\b(?:\d{4}[\s\-]?){3}\d{4}\b", 0.75)],
             context=["cartão", "card", "visa", "mastercard", "crédito", "débito"],
         )
@@ -131,6 +137,92 @@ class CreditCardRecognizer(PatternRecognizer):
             total += n
             alt = not alt
         return total % 10 == 0
+
+
+# ── RG ───────────────────────────────────────────────────────
+
+class RGRecognizer(PatternRecognizer):
+    def __init__(self) -> None:
+        super().__init__(
+            supported_entity="RG",
+            supported_language="pt",
+            patterns=[
+                Pattern("RG_LABELED",   r"\b(?:RG|R\.G\.)[:\s.]*\d{1,2}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d?\b", 0.88),
+                Pattern("RG_FORMATTED", r"\b\d{2}\.\d{3}\.\d{3}-\d\b", 0.85),
+            ],
+            context=["rg", "identidade", "registro geral", "documento"],
+        )
+
+    def validate_result(self, pattern_text: str) -> Optional[bool]:
+        d = re.sub(r"\D", "", pattern_text)
+        return 7 <= len(d) <= 9 and not re.match(r"^(\d)\1+$", d)
+
+
+# ── CNH ──────────────────────────────────────────────────────
+
+class CNHRecognizer(PatternRecognizer):
+    def __init__(self) -> None:
+        super().__init__(
+            supported_entity="CNH",
+            supported_language="pt",
+            patterns=[
+                Pattern("CNH_LABELED", r"\b(?:CNH|C\.N\.H\.|habilitação|habilitacao)[:\s.]*\d[\d\s]{9,12}\d\b", 0.96),
+            ],
+            context=["cnh", "habilitação", "carteira", "motorista", "detran"],
+        )
+
+    def validate_result(self, pattern_text: str) -> Optional[bool]:
+        d = re.sub(r"\D", "", pattern_text)
+        return len(d) == 11 and not re.match(r"^(\d)\1{10}$", d)
+
+
+# ── OAB ──────────────────────────────────────────────────────
+
+class OABRecognizer(PatternRecognizer):
+    def __init__(self) -> None:
+        super().__init__(
+            supported_entity="OAB",
+            supported_language="pt",
+            patterns=[
+                Pattern("OAB_STATE", r"\bOAB[/\-][A-Z]{2}\s*\d{4,6}\b", 0.95),
+            ],
+            context=["oab", "advogado", "advogada", "ordem", "advocacia"],
+        )
+
+
+# ── Placa Veicular ───────────────────────────────────────────
+
+class PlacaRecognizer(PatternRecognizer):
+    def __init__(self) -> None:
+        super().__init__(
+            supported_entity="PLACA",
+            supported_language="pt",
+            patterns=[
+                Pattern("PLACA_MERCOSUL", r"\b[A-Z]{3}\d[A-Z]\d{2}\b", 0.85),
+                Pattern("PLACA_OLD",      r"\b[A-Z]{3}-\d{4}\b",        0.82),
+            ],
+            context=["placa", "veículo", "veiculo", "carro", "moto", "automóvel"],
+        )
+
+    def validate_result(self, pattern_text: str) -> Optional[bool]:
+        s = re.sub(r"[^A-Z0-9]", "", pattern_text.upper())
+        if len(s) == 7:
+            return bool(re.match(r"^[A-Z]{3}\d[A-Z]\d{2}$", s) or re.match(r"^[A-Z]{3}\d{4}$", s))
+        return False
+
+
+# ── CRM ──────────────────────────────────────────────────────
+
+class CRMRecognizer(PatternRecognizer):
+    def __init__(self) -> None:
+        super().__init__(
+            supported_entity="CRM",
+            supported_language="pt",
+            patterns=[
+                Pattern("CRM_STATE", r"\bCRM[/\-][A-Z]{2}\s*\d{4,6}\b", 0.95),
+            ],
+            context=["crm", "médico", "medico", "doutor", "dr", "dra", "medicina"],
+        )
 
 
 # ── Engine singleton ─────────────────────────────────────────
@@ -154,7 +246,12 @@ def get_analyzer() -> AnalyzerEngine:
         BRPhoneRecognizer(),
         APIKeyRecognizer(),
         JWTRecognizer(),
-        CreditCardRecognizer(),
+        BRCreditCardRecognizer(),
+        RGRecognizer(),
+        CNHRecognizer(),
+        OABRecognizer(),
+        PlacaRecognizer(),
+        CRMRecognizer(),
     ]:
         engine.registry.add_recognizer(rec)
 
