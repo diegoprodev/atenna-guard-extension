@@ -4,7 +4,8 @@ export type EntityType =
   | 'CPF' | 'CNPJ' | 'EMAIL' | 'PHONE'
   | 'API_KEY' | 'TOKEN' | 'PASSWORD' | 'CREDIT_CARD'
   | 'ADDRESS' | 'MEDICAL' | 'LEGAL' | 'GENERIC_PII'
-  | 'PROCESS_NUM' | 'NAME';
+  | 'PROCESS_NUM' | 'NAME'
+  | 'RG' | 'CNH' | 'OAB' | 'PLACA' | 'CRM';
 
 export interface DetectedEntity {
   type:       EntityType;
