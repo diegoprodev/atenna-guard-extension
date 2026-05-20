@@ -313,3 +313,80 @@ describe('DLP — edge cases', () => {
   });
 
 });
+
+// ─────────────────────────────────────────────────────────────
+// BLOCK 5 — FASE 5.2: PT-BR Enterprise Recognizers
+// ─────────────────────────────────────────────────────────────
+
+import { scanPatterns } from './patterns';
+
+describe('FASE 5.2 — PT-BR Enterprise Recognizers', () => {
+
+  describe('RG', () => {
+    it('detecta RG com label e formato pontuado', () => {
+      const r = scanPatterns('RG: 12.345.678-9');
+      expect(r.some(e => e.type === 'RG')).toBe(true);
+    });
+    it('detecta RG no formato XX.XXX.XXX-X sem label', () => {
+      const r = scanPatterns('documento 12.345.678-9 apresentado');
+      expect(r.some(e => e.type === 'RG')).toBe(true);
+    });
+    it('não detecta número de 6 dígitos como RG', () => {
+      const r = scanPatterns('código: 123456');
+      expect(r.some(e => e.type === 'RG')).toBe(false);
+    });
+  });
+
+  describe('CNH', () => {
+    it('detecta CNH com label', () => {
+      const r = scanPatterns('CNH: 01234567890');
+      expect(r.some(e => e.type === 'CNH')).toBe(true);
+    });
+    it('detecta CNH com palavra habilitação', () => {
+      const r = scanPatterns('habilitação 01234567890');
+      expect(r.some(e => e.type === 'CNH')).toBe(true);
+    });
+  });
+
+  describe('OAB', () => {
+    it('detecta OAB/SP com número', () => {
+      const r = scanPatterns('advogado inscrito na OAB/SP 123456');
+      expect(r.some(e => e.type === 'OAB')).toBe(true);
+    });
+    it('detecta OAB-RJ com número', () => {
+      const r = scanPatterns('OAB-RJ 98765');
+      expect(r.some(e => e.type === 'OAB')).toBe(true);
+    });
+    it('não detecta OAB sem estado/número', () => {
+      const r = scanPatterns('OAB é uma autarquia');
+      expect(r.some(e => e.type === 'OAB')).toBe(false);
+    });
+  });
+
+  describe('Placa Veicular', () => {
+    it('detecta placa Mercosul ABC1D23', () => {
+      const r = scanPatterns('placa do veículo: ABC1D23');
+      expect(r.some(e => e.type === 'PLACA')).toBe(true);
+    });
+    it('detecta placa antiga ABC-1234', () => {
+      const r = scanPatterns('veículo ABC-1234 envolvido');
+      expect(r.some(e => e.type === 'PLACA')).toBe(true);
+    });
+    it('não detecta string aleatória de 7 letras como placa', () => {
+      const r = scanPatterns('código ABCDEFG');
+      expect(r.some(e => e.type === 'PLACA')).toBe(false);
+    });
+  });
+
+  describe('CRM', () => {
+    it('detecta CRM/SP com número', () => {
+      const r = scanPatterns('Dr. Oliveira, CRM/SP 123456');
+      expect(r.some(e => e.type === 'CRM')).toBe(true);
+    });
+    it('detecta CRM-RS com número', () => {
+      const r = scanPatterns('médica com CRM-RS 98765');
+      expect(r.some(e => e.type === 'CRM')).toBe(true);
+    });
+  });
+
+});

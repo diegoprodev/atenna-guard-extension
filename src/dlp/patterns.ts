@@ -78,6 +78,20 @@ function validateName(raw: string): boolean {
   return true;
 }
 
+// ── RG validator ──────────────────────────────────────────────
+// RG: 7-9 digits. Must not be all-same digit.
+function validateRG(raw: string): boolean {
+  const d = raw.replace(/\D/g, '');
+  return d.length >= 7 && d.length <= 9 && !/^(\d)\1+$/.test(d);
+}
+
+// ── CNH validator ─────────────────────────────────────────────
+// CNH: exactly 11 digits, not all-same
+function validateCNH(raw: string): boolean {
+  const d = raw.replace(/\D/g, '');
+  return d.length === 11 && !/^(\d)\1{10}$/.test(d);
+}
+
 // ── Pattern definitions ───────────────────────────────────────
 
 const PATTERNS: PatternDef[] = [
@@ -174,6 +188,43 @@ const PATTERNS: PatternDef[] = [
     pattern: /\b(?:\d{4}[\s\-]?){3}\d{4}\b/g,
     confidence: 0.82,
     validate: luhn,
+  },
+  // RG — requires label "RG:" OR dotted format XX.XXX.XXX-X
+  {
+    type: 'RG',
+    pattern: /\b(?:RG|R\.G\.)[:\s.]*\d{1,2}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d?\b|\b\d{2}\.\d{3}\.\d{3}-\d\b/gi,
+    confidence: 0.88,
+    validate: validateRG,
+  },
+  // CNH — requires label "CNH" or "habilitação"; confidence > CPF (0.92) so label wins dedup
+  {
+    type: 'CNH',
+    pattern: /\b(?:CNH|C\.N\.H\.|habilitação|habilitacao)[:\s.]*\d[\d\s]{9,12}\d\b/gi,
+    confidence: 0.96,
+    validate: validateCNH,
+  },
+  // OAB — must include state code: OAB/SP 123456 or OAB-RJ 98765
+  {
+    type: 'OAB',
+    pattern: /\bOAB[/\-][A-Z]{2}\s*\d{4,6}\b/gi,
+    confidence: 0.95,
+  },
+  // Placa Veicular — Mercosul (ABC1D23) or old format (ABC-1234)
+  {
+    type: 'PLACA',
+    pattern: /\b[A-Z]{3}\d[A-Z]\d{2}\b|\b[A-Z]{3}-\d{4}\b/g,
+    confidence: 0.85,
+    validate: (raw: string) => {
+      const s = raw.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+      if (s.length === 7) return /^[A-Z]{3}\d[A-Z]\d{2}$/.test(s) || /^[A-Z]{3}\d{4}$/.test(s);
+      return false;
+    },
+  },
+  // CRM — must include state code: CRM/SP 123456 or CRM-RS 98765
+  {
+    type: 'CRM',
+    pattern: /\bCRM[/\-][A-Z]{2}\s*\d{4,6}\b/gi,
+    confidence: 0.95,
   },
   // Brazilian CEP
   {
