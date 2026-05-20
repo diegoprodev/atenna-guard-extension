@@ -80,10 +80,10 @@ test('T5: DLP protection banner appears when CPF is typed into textarea', async 
   );
 
   await injectSession(context);
-  // Small delay to ensure storage write settles before page load
-  await new Promise(r => setTimeout(r, 300));
+  // Delay to ensure storage write settles AND previous test's page has closed
+  await new Promise(r => setTimeout(r, 500));
   const page = await openFixturePage(context);
-  await page.waitForSelector('#atenna-guard-btn', { timeout: 20_000 });
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 25_000 });
 
   // Type a valid CPF — digit[2] != '9', not all same digit → passes validateCPF
   await page.fill('#prompt-textarea', 'Meu CPF é 123.456.789-09');

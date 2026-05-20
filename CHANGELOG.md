@@ -6,6 +6,17 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased]
 
+### Added (FASE 5.3) — 2026-05-20
+- **Playwright E2E Suite**: 6 testes reais (T1–T6) carregando a extensão compilada no Chromium
+- `tests/e2e/extension.spec.ts` — suite completa: carga, service worker, auth-gating, badge, DLP, modal
+- `tests/e2e/helpers/extension.ts` — fixture de contexto persistente, injeção de sessão, mocks de rede
+- `tests/e2e/fixtures/chatgpt.html` — página fixture ChatGPT-like com `#prompt-textarea`
+- `playwright.config.ts` — projeto `extension` com contexto persistente + `http-server` webServer na porta 4200
+- `manifest.json` — adicionado `http://localhost/*` em `content_scripts.matches`
+- `src/content/detectInput.ts` — detecção de localhost para ambiente de testes
+- Testes: T1 (extensão carrega), T2 (SW registra), T3 (badge ausente sem auth — SI-17), T4 (badge injeta após sessão — SI-18), T5 (DLP banner no CPF — SI-19), T6 (modal abre/fecha com ESC — SI-20)
+- Invariantes de segurança SI-16 a SI-20 adicionados ao harness master checklist
+
 ### Added (FASE 5.2) — 2026-05-19
 - **PT-BR Enterprise Recognizers**: RG, CNH, OAB, Placa Veicular, CRM detectados em frontend e backend
 - Frontend: novos `PatternDef` com validadores em `src/dlp/patterns.ts`; CNH tem confidence 0.96 > CPF para ganhar no dedup quando rotulado
