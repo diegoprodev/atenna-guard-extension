@@ -6,6 +6,26 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased]
 
+### Fixed (Admin Panel + Cost Tracking) — 2026-05-21
+- **Admin 502 ao criar usuário**: `admin_auth.py` retornava `{'user_id': uid}` mas todas as rotas admin usavam `admin['id']` → KeyError capturado como 502; adicionado `'id': uid` ao dict de sessão
+- **Admin 401 no painel**: login admin agora usa endpoint dedicado `POST /auth/admin-login` com token opaco BFF em vez de JWT Supabase bruto — mesma segurança que o login normal
+- **Custo idêntico para todos os usuários**: `usage.py` distribuía custo total do CF Gateway igualmente entre todos os usuários (todos mostravam `$0.002488`); corrigido para mostrar `$0.000000` para quem não gerou nenhum request
+- **CF Gateway sem rastreamento por usuário**: serviços `openai_service.py` e `gemini_service.py` não enviavam header `cf-aig-metadata`; todas as chamadas ficavam em `__shared__` sem dono; adicionado `cf-aig-metadata: {"user_id": "..."}` em toda chamada ao CF Gateway
+- **`prompt_service.py` e `main.py`**: `user_id` agora propagado pelo pipeline completo `generate-prompts → prompt_service → openai/gemini_service → CF Gateway`
+- **Verificado E2E**: teste via `/internal/test-generate` confirmou que logs do CF Gateway registram `user_id` corretamente; custo por usuário agora individualizado
+
+### Fixed (UI/UX — Dark Theme + Injection) — 2026-05-21
+- **Dark theme Perplexity**: `isDark()` agora detecta `html.classList.contains('dark')` e `data-theme="dark"` antes da análise luminância — corrige modal com interior branco em plataformas Tailwind dark mode
+- **Toggle Refinar/Histórico centralizado**: header do modal migrado para CSS Grid `1fr auto 1fr` com `justify-self: start/end`; toggle sempre centrado matematicamente
+- **Botão "Aplicar no chat" redundante removido**: rota `riskLevel === 'NONE'` agora chama `applyToTarget()` diretamente; nunca exibe dois botões "Aplicar no chat" na mesma tela
+- **Corrupção UTF-8 ao injetar doc**: blob de arquivo criado com `new TextEncoder().encode(text)` em vez de string raw; elimina `POLÃCIA` → `POLÍCIA`
+- **Tooltip de erro no Perplexity ao aplicar**: `overlay.remove()` movido para APÓS a injeção — preserva user activation do browser necessária para `document.execCommand('insertText')`
+- **Nada injetado no Perplexity**: `querySelector('textarea')` selecionava elementos ocultos/de busca; substituído por `findChatInput()` que filtra por `offsetParent !== null && offsetWidth > 50`
+- **Perplexity abre modal de upload ao aplicar**: `applyAsFileAttachment` (drag events) era interceptado pelo Perplexity como upload de arquivo; plataforma Perplexity agora usa injeção de texto direta
+- **Nada injetado no Claude após upload**: Claude usa Lexical editor — `textContent = text` não atualiza estado interno; restaurado `execCommand('insertText')` com `selectAll` + fallback `InputEvent('beforeinput', { inputType: 'insertFromPaste', dataTransfer })`
+- **Proteção DLP em tempo real no Perplexity**: mesmo pipeline de `findChatInput()` aplicado; banner DLP aparece corretamente ao digitar CPF
+- **Loading screen reformulada**: animação orbital com logo Atenna respirando, anel giratório, barra de progresso com status em PT-BR; botão "Aplicar no chat" centralizado
+
 ### Added (FASE 6.1) — 2026-05-21
 - **Image DLP**: `attachImageInterceptor()` intercepts paste/drop on chat inputs, sends to `/dlp/image`, shows animated warning banner if PII detected
 - **EasyOCR backend**: `backend/dlp/image_ocr.py` — singleton `Reader(["pt","en"])`, PIL→numpy conversion, base64 decode with validation

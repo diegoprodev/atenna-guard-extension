@@ -32,11 +32,9 @@
 
 | Fase | Objetivo |
 |------|----------|
-| 5.2 | PT-BR Enterprise Recognizers (RG, CNH, OAB, Placa, Endereço) |
-| 5.3 | Playwright E2E Suite (6+ tests, extensão carregada) |
-| 6.1 | OCR + Image DLP (EasyOCR + presidio-image-redactor) |
-| 6.2 | Compliance Dashboard + Audit Trail |
-| 6.3 | Governance Layer (policies por departamento) |
+| **6.2** | **Compliance Dashboard + Audit Trail** — página admin com eventos DLP por usuário, filtros por período/tipo, exportação CSV, gráficos de tendência |
+| 6.3 | Governance Layer (policies por departamento, regras customizáveis por empresa) |
+| 6.4 | Multi-tenant (organizações, seats, convites, billing) |
 
 ---
 
@@ -66,3 +64,8 @@ Todos os invariantes de segurança devem estar GREEN antes de cada release:
 | SI-18 | Badge aparece após sessão injetada | 5.3 |
 | SI-19 | DLP banner aparece ao digitar CPF | 5.3 |
 | SI-20 | Modal abre ao clicar no badge, fecha com ESC | 5.3 |
+| SI-21 | Imagem colada com CPF em texto → banner DLP aparece | 6.1 |
+| SI-22 | `/dlp/image` retorna `risk_level: HIGH` para screenshot com CPF | 6.1 |
+| SI-23 | CF Gateway registra `user_id` em metadata em toda chamada `/generate-prompts` | 6.1 |
+| SI-24 | Admin panel usa token BFF opaco — nenhum JWT Supabase bruto aceito | 6.1 |
+| SI-25 | Custo na tabela admin reflete apenas requests identificados por `user_id` (zero distribuição igualitária) | 6.1 |
