@@ -190,8 +190,12 @@ function renderLogin(container: HTMLElement, tabId: number | null): void {
         btn.disabled = false; btn.textContent = 'Criar conta';
       } else {
         await bffLogin(email, pass);
-        if (tabId) relayToggleModal(tabId);
-        window.location.reload();
+        if (tabId) {
+          relayToggleModal(tabId);
+          window.close();
+        } else {
+          window.location.reload();
+        }
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erro.';

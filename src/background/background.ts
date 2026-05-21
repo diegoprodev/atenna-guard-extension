@@ -1,7 +1,8 @@
+import { getSession } from '../auth/sessionManager';
+
 const BACKEND_URL    = 'https://atennaplugin.maestro-n8n.site/generate-prompts';
 const CHECKOUT_URL   = 'https://atennaplugin.maestro-n8n.site/checkout/create';
 const ANALYTICS_URL  = 'https://atennaplugin.maestro-n8n.site/track';
-const JWT_KEY       = 'atenna_jwt';
 
 function decodeJwtPayload(token: string): Record<string, unknown> {
   try {
@@ -18,15 +19,12 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log('[Atenna Guard] Extension installed.');
 });
 
-async function getStoredJWT(): Promise<string | null> {
-  return new Promise(resolve => {
-    try {
-      chrome.storage.local.get(JWT_KEY, r => {
-        const session = r[JWT_KEY] as { access_token?: string } | undefined;
-        resolve(session?.access_token ?? null);
-      });
-    } catch { resolve(null); }
-  });
+// Returns the BFF opaque token (accepted by all backend routes).
+async function getBffToken(): Promise<string | null> {
+  try {
+    const session = await getSession();
+    return session?.token ?? null;
+  } catch { return null; }
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -65,7 +63,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       dlp_client_score: 0,
     };
 
-    getStoredJWT().then(jwt => {
+    getBffToken().then(jwt => {
       // JWT is mandatory — reject silently if not present
       if (!jwt) {
         sendResponse({ ok: false, error: 'auth_required', status: 401 });
@@ -116,7 +114,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // ── Checkout session creation ─────────────────────────────
   if (msg.type === 'ATENNA_CHECKOUT') {
     const plan = (msg.plan === 'monthly') ? 'monthly' : 'yearly';
-    getStoredJWT().then(jwt => {
+    getBffToken().then(jwt => {
       if (!jwt) { sendResponse({ ok: false, error: 'auth_required' }); return; }
       return fetch(CHECKOUT_URL, {
         method: 'POST',
@@ -131,9 +129,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  // ── Auth token relay (for content scripts in iframes) ────
-  if (msg.type === 'GET_AUTH_TOKEN') {
-    getStoredJWT().then(jwt => sendResponse({ token: jwt ?? null })).catch(() => sendResponse({ token: null }));
+  // ── BFF token relay (for upload-widget / content scripts in iframes) ────
+  if (msg.type === 'GET_BFF_TOKEN' || msg.type === 'GET_AUTH_TOKEN') {
+    getBffToken().then(token => sendResponse({ token: token ?? null })).catch(() => sendResponse({ token: null }));
     return true;
   }
 
@@ -142,7 +140,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     const { fileBase64, fileName, mimeType, token } = msg as {
       fileBase64: string; fileName: string; mimeType: string; token: string;
     };
-    getStoredJWT().then(jwt => {
+    getBffToken().then(jwt => {
       const authToken = token || jwt;
       if (!authToken) { sendResponse({ ok: false, error: 'auth_required' }); return; }
 
@@ -171,7 +169,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     const { fileBase64, fileName, mimeType, token } = msg as {
       fileBase64: string; fileName: string; mimeType: string; token: string;
     };
-    getStoredJWT().then(jwt => {
+    getBffToken().then(jwt => {
       const authToken = token || jwt;
       if (!authToken) { sendResponse({ ok: false, error: 'auth_required' }); return; }
 

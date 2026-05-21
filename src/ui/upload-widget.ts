@@ -1,5 +1,6 @@
 import { trackEvent } from '../core/analytics';
 import { isPro } from '../core/planManager';
+import { getSession } from '../auth/sessionManager';
 
 import { sk } from '../core/scopedStorage';
 
@@ -249,17 +250,16 @@ export class UploadWidget {
   private get backendUrl(): string { return 'https://atennaplugin.maestro-n8n.site'; }
 
   private async getAuthToken(): Promise<string | null> {
-    // Try direct storage first (works in top-level content scripts)
+    // BFF session (new auth system) — returns opaque token accepted by all backend routes
     try {
-      const r = await chrome.storage.local.get('atenna_jwt');
-      const session = r['atenna_jwt'] as { access_token?: string } | undefined;
-      if (session?.access_token) return session.access_token;
-    } catch { /* storage not available in this context (iframe) — fall through */ }
+      const session = await getSession();
+      if (session?.token) return session.token;
+    } catch { /* fall through */ }
 
-    // Fallback: ask background service worker (always has storage access)
+    // Fallback: ask background service worker (handles cross-context access)
     return new Promise(resolve => {
       try {
-        chrome.runtime.sendMessage({ type: 'GET_AUTH_TOKEN' }, (resp) => {
+        chrome.runtime.sendMessage({ type: 'GET_BFF_TOKEN' }, (resp) => {
           if (chrome.runtime.lastError) { resolve(null); return; }
           resolve((resp as { token?: string })?.token ?? null);
         });

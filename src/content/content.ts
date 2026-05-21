@@ -1,6 +1,7 @@
 import { detectPlatform } from './detectInput';
 import { injectButton, removeButton } from './injectButton';
 import { toggleModal, openSettingsOverlay } from '../ui/modal';
+import { getSession } from '../auth/sessionManager';
 import { getActiveSession } from '../core/auth';
 
 // Cached session state — avoids re-checking on every MutationObserver tick
@@ -8,6 +9,13 @@ let _isAuthenticated = false;
 
 async function checkAuth(): Promise<boolean> {
   try {
+    // BFF session (new auth system) takes priority
+    const bffSession = await getSession();
+    if (bffSession) {
+      _isAuthenticated = true;
+      return true;
+    }
+    // Fallback: legacy Supabase JWT
     const session = await getActiveSession();
     _isAuthenticated = !!session;
   } catch {
@@ -86,9 +94,9 @@ async function init(): Promise<void> {
   // React to login / logout in another tab or popup
   try {
     chrome.storage.onChanged.addListener((changes, area) => {
-      if (area !== 'local' || !('atenna_jwt' in changes)) return;
+      if (area !== 'local' || (!('atenna_session' in changes) && !('atenna_jwt' in changes))) return;
 
-      const newSession = changes['atenna_jwt']?.newValue;
+      const newSession = changes['atenna_session']?.newValue ?? changes['atenna_jwt']?.newValue;
       if (newSession && !_isAuthenticated) {
         // Storage has a token — validate it before showing badge
         void checkAuth().then(authed => { if (authed) tryInject(); });
