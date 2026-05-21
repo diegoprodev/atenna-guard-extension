@@ -142,16 +142,14 @@ function injectContentIntoChat(content: string): void {
     chatgptInput.focus();
     return;
   }
-  // Claude / Gemini: contenteditable div
+  // Claude / Gemini / Perplexity: contenteditable div
   const ceInput = document.querySelector(
     'div[contenteditable="true"][data-placeholder], .ql-editor, div[contenteditable="true"]'
   ) as HTMLElement | null;
   if (ceInput) {
     ceInput.focus();
-    // Use execCommand so React/ProseMirror state stays in sync
-    document.execCommand('selectAll', false);
-    document.execCommand('insertText', false, content);
-    ceInput.dispatchEvent(new Event('input', { bubbles: true }));
+    ceInput.textContent = content;
+    ceInput.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: content }));
   }
 }
 

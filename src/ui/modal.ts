@@ -1267,10 +1267,21 @@ function getLogoUrl(): string {
 }
 
 function isDark(): boolean {
-  const bg = getComputedStyle(document.body).backgroundColor;
-  const m = bg.match(/\d+/g);
-  if (m && m.length >= 3) return 0.299 * +m[0] + 0.587 * +m[1] + 0.114 * +m[2] < 128;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  // Check html/body dark class (Perplexity, Tailwind-based platforms)
+  const root = document.documentElement;
+  if (root.classList.contains('dark') || root.getAttribute('data-theme') === 'dark') return true;
+  if (document.body.classList.contains('dark')) return true;
+  // Check computed background luminance
+  for (const el of [document.body, root]) {
+    const bg = getComputedStyle(el).backgroundColor;
+    const m = bg.match(/\d+/g);
+    if (m && m.length >= 3 && !(+m[0] === 0 && +m[1] === 0 && +m[2] === 0 && (m[3] === '0' || m[3] === undefined))) {
+      const lum = 0.299 * +m[0] + 0.587 * +m[1] + 0.114 * +m[2];
+      const alpha = m[3] !== undefined ? parseFloat(m[3]) : 1;
+      if (alpha > 0.1) return lum < 128;
+    }
+  }
+  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
 // ─── Public ───────────────────────────────────────────────
@@ -1372,7 +1383,7 @@ export function openUploadFromBadge(): void {
           const ts = Date.now();
           const rnd = Math.random().toString(36).slice(2, 6);
           const safeFileName = `${baseName}_${ts}_${rnd}.txt`;
-          const file = new File([text], safeFileName, { type: 'text/plain' });
+          const file = new File([new TextEncoder().encode(text)], safeFileName, { type: 'text/plain;charset=utf-8' });
           const dt = new DataTransfer();
           dt.items.add(file);
 
@@ -1449,9 +1460,8 @@ export function openUploadFromBadge(): void {
             }
             if (prior.isContentEditable) {
               prior.focus();
-              document.execCommand('selectAll', false);
-              document.execCommand('insertText', false, text);
-              prior.dispatchEvent(new Event('input', { bubbles: true }));
+              prior.textContent = text;
+              prior.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
               return true;
             }
           }
@@ -1475,9 +1485,8 @@ export function openUploadFromBadge(): void {
             }
             if (el.isContentEditable) {
               el.focus();
-              document.execCommand('selectAll', false);
-              document.execCommand('insertText', false, text);
-              el.dispatchEvent(new Event('input', { bubbles: true }));
+              el.textContent = text;
+              el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
               return true;
             }
           }
@@ -1494,12 +1503,12 @@ export function openUploadFromBadge(): void {
           });
         };
 
-        // Document with PII: inject directly as file attachment (badge above input)
-        if (rewritten !== undefined) {
-          applyToTarget(rewritten, fileName);
+        // Document with PII: inject as file attachment; clean doc from widget: apply directly
+        if (rewritten !== undefined || riskLevel === 'NONE') {
+          applyToTarget(rewritten ?? content, fileName);
           return;
         }
-        // Clean document (no PII found): show Copiar/Aplicar bar
+        // Show Copiar/Aplicar bar for other flows
         const barContainer = document.createElement('div');
         panel.appendChild(barContainer);
         renderDocumentActionBar(barContainer, content);

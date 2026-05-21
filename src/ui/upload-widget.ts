@@ -474,6 +474,9 @@ export class UploadWidget {
       <div class="atenna-upw__clean-sub">
         Nenhum dado sensível encontrado. Pode usar à vontade.
       </div>
+      <div class="atenna-upw__clean-direct-tip">
+        💡 Seu documento é seguro para envio direto — arraste no ChatGPT, Gemini, Claude ou Perplexity.
+      </div>
     `;
 
     const applyBtn = document.createElement('button');

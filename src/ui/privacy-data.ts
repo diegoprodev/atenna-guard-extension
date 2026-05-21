@@ -26,17 +26,36 @@ async function backendFetch(
       'Authorization': `Bearer ${token}`,
     },
   };
+  if (body) options.body = JSON.stringify(body);
 
-  if (body) {
-    options.body = JSON.stringify(body);
-  }
-
+  // Tenta fetch direto primeiro
   try {
     return await fetch(url, options);
-  } catch (e) {
-    console.error(`[privacy-data] fetch error: ${path}`, e);
-    throw e;
+  } catch {
+    // CSP/ServiceWorker da plataforma bloqueou — roteia pelo background
   }
+
+  return new Promise((resolve, reject) => {
+    try {
+      chrome.runtime.sendMessage(
+        { type: 'ATENNA_PROXY_FETCH', url, method, token, body },
+        (resp: { ok: boolean; status: number; body?: string; error?: string } | undefined) => {
+          if (chrome.runtime.lastError || !resp) {
+            reject(new Error(chrome.runtime.lastError?.message ?? 'proxy unavailable'));
+            return;
+          }
+          // Reconstrói um objeto Response a partir da resposta do background
+          const responseBody = resp.body ?? '';
+          resolve(new Response(responseBody, {
+            status: resp.status,
+            headers: { 'Content-Type': 'application/json' },
+          }));
+        },
+      );
+    } catch (e) {
+      reject(e);
+    }
+  });
 }
 
 function formatTimeRemaining(expiresAt: string | number): string {
