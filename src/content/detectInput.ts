@@ -34,8 +34,9 @@ export function detectPlatform(): PlatformConfig | null {
 
   if (host.includes('perplexity.ai')) {
     if (PERPLEXITY_NON_CHAT.test(path)) return null;
-    // Perplexity uses a textarea for the main prompt input.
-    return { name: 'Perplexity', inputSelector: 'textarea[placeholder], textarea[class*="grow"]' };
+    // Perplexity: textarea is the main prompt input; fall back to contenteditable for future redesigns.
+    // Multiple selectors tried in order by querySelectorAll — injectButton uses the first visible match.
+    return { name: 'Perplexity', inputSelector: 'textarea, div[contenteditable="true"]' };
   }
 
   // Localhost fixture page for E2E tests

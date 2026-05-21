@@ -112,10 +112,14 @@ async def me(creds: HTTPAuthorizationCredentials = Depends(_bearer)):
             detail="Raw JWT not accepted — authenticate via POST /auth/login",
         )
     session = resolve_token(token)
+    # Always re-fetch plan so upgrades/downgrades are reflected immediately.
+    # _get_plan() is cheap (single SELECT) and prevents stale FREE display for PRO users.
+    current_plan = _get_plan(session["user_id"])
+    session["plan"] = current_plan
     return {
         "user_id": session["user_id"],
         "email": session["email"],
-        "plan": session["plan"],
+        "plan": current_plan,
         "expires_at": session["expires_at"],
     }
 

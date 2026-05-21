@@ -90,9 +90,8 @@ async function init(): Promise<void> {
 
       const newSession = changes['atenna_jwt']?.newValue;
       if (newSession && !_isAuthenticated) {
-        // User just logged in — inject
-        _isAuthenticated = true;
-        tryInject();
+        // Storage has a token — validate it before showing badge
+        void checkAuth().then(authed => { if (authed) tryInject(); });
       } else if (!newSession && _isAuthenticated) {
         // User logged out — remove badge
         _isAuthenticated = false;
