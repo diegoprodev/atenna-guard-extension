@@ -3,6 +3,7 @@ import { injectButton, removeButton } from './injectButton';
 import { toggleModal, openSettingsOverlay } from '../ui/modal';
 import { getSession } from '../auth/sessionManager';
 import { getActiveSession } from '../core/auth';
+import { attachImageInterceptor } from '../dlp/imageInterceptor';
 
 // Cached session state — avoids re-checking on every MutationObserver tick
 let _isAuthenticated = false;
@@ -77,6 +78,7 @@ function tryInject(): void {
   if (isInsideDialog(input)) return;
 
   injectButton(config, () => toggleModal());
+  attachImageInterceptor(config.inputSelector);
 }
 
 async function init(): Promise<void> {
