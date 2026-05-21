@@ -1456,8 +1456,19 @@ export function openUploadFromBadge(): void {
 
         const setContentEditableValue = (el: HTMLElement, text: string): void => {
           el.focus();
-          el.textContent = text;
-          el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertReplacementText', data: text }));
+          // Prefer execCommand: updates Lexical/ProseMirror internal state on Claude/Gemini
+          const sel = window.getSelection();
+          if (sel) {
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+          const inserted = document.execCommand('insertText', false, text);
+          if (!inserted) {
+            el.textContent = text;
+            el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertReplacementText', data: text }));
+          }
           el.dispatchEvent(new Event('change', { bubbles: true }));
         };
 
@@ -1499,6 +1510,14 @@ export function openUploadFromBadge(): void {
 
         const applyToTarget = (text: string, fileName?: string) => {
           overlay.remove();
+          // Skip file-attachment strategy on Perplexity — it triggers their native upload modal.
+          // ChatGPT is the only platform where synthetic drop reliably shows a file badge.
+          const isPerplexity = location.hostname.includes('perplexity.ai');
+          if (isPerplexity) {
+            const ok = injectTextFallback(text);
+            if (!ok) showToast('Campo de texto não encontrado — use Copiar.');
+            return;
+          }
           void applyAsFileAttachment(text, fileName ?? 'documento.txt').then(ok => {
             if (!ok) {
               const textOk = injectTextFallback(text);

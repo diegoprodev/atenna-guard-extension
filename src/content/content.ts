@@ -142,8 +142,18 @@ function injectContentIntoChat(content: string): void {
   };
   const setCE = (el: HTMLElement): void => {
     el.focus();
-    el.textContent = content;
-    el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertReplacementText', data: content }));
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    const inserted = document.execCommand('insertText', false, content);
+    if (!inserted) {
+      el.textContent = content;
+      el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertReplacementText', data: content }));
+    }
     el.dispatchEvent(new Event('change', { bubbles: true }));
   };
 

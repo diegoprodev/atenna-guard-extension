@@ -299,6 +299,28 @@ export class UploadWidget {
     const wrap = document.createElement('div');
     wrap.className = 'atenna-upw__loading';
 
+    // ── Orbit animation ──────────────────────────────────────
+    const orbit = document.createElement('div');
+    orbit.className = 'atenna-upw__orbit';
+
+    const logoWrap = document.createElement('div');
+    logoWrap.className = 'atenna-upw__orbit-logo';
+    const logoImg = document.createElement('img');
+    try { logoImg.src = chrome.runtime.getURL('icons/icon32.png'); } catch { logoImg.src = ''; }
+    logoImg.alt = '';
+    logoWrap.appendChild(logoImg);
+
+    const ring = document.createElement('div');
+    ring.className = 'atenna-upw__orbit-ring';
+    const orbitDot = document.createElement('span');
+    orbitDot.className = 'atenna-upw__orbit-dot';
+    ring.appendChild(orbitDot);
+
+    orbit.appendChild(logoWrap);
+    orbit.appendChild(ring);
+    wrap.appendChild(orbit);
+
+    // ── File name ─────────────────────────────────────────────
     if (this.state.file) {
       const fname = document.createElement('div');
       fname.className = 'atenna-upw__fname';
@@ -306,35 +328,29 @@ export class UploadWidget {
       wrap.appendChild(fname);
     }
 
-    const spinWrap = document.createElement('div');
-    spinWrap.className = 'atenna-upw__spin-wrap';
+    // ── Progress bar ─────────────────────────────────────────
+    const barOuter = document.createElement('div');
+    barOuter.className = 'atenna-upw__bar-outer';
+    const barInner = document.createElement('div');
+    barInner.className = 'atenna-upw__bar-inner';
+    barOuter.appendChild(barInner);
+    wrap.appendChild(barOuter);
 
-    const logoImg = document.createElement('img');
-    try { logoImg.src = chrome.runtime.getURL('icons/icon32.png'); } catch { logoImg.src = ''; }
-    logoImg.className = 'atenna-upw__spin-logo';
-    logoImg.alt = '';
-
-    const dots = document.createElement('div');
-    dots.className = 'atenna-upw__dots';
-    for (let i = 0; i < 3; i++) {
-      const dot = document.createElement('span');
-      dot.className = 'atenna-upw__dot';
-      dots.appendChild(dot);
-    }
-
-    spinWrap.appendChild(logoImg);
-    spinWrap.appendChild(dots);
-
-    // Único elemento de status — alterna entre frases e mensagens de progresso
+    // ── Status text ───────────────────────────────────────────
     const status = document.createElement('div');
     status.className = 'atenna-upw__phrase';
     status.textContent = PROGRESS_MESSAGES[0].text;
+    wrap.appendChild(status);
 
     const startTime = Date.now();
     let msgIdx = 0;
 
     this.progressInterval = setInterval(() => {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      // Animate bar: cap at 90% until done
+      const pct = Math.min(90, (elapsed / 120) * 100);
+      barInner.style.width = `${pct}%`;
+
       let nextIdx = msgIdx;
       while (nextIdx < PROGRESS_MESSAGES.length - 1 && elapsed >= PROGRESS_MESSAGES[nextIdx + 1].after) {
         nextIdx++;
@@ -349,8 +365,6 @@ export class UploadWidget {
       }
     }, 1000);
 
-    wrap.appendChild(spinWrap);
-    wrap.appendChild(status);
     this.container.appendChild(wrap);
   }
 
