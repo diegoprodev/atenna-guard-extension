@@ -24,20 +24,20 @@ class ThreatLevel(str, Enum):
 MAX_INPUT_CHARS = 20_000
 
 # OWASP LLM01 + common jailbreak vocabulary (case-insensitive, word-boundary matched).
-_INJECTION_PATTERNS: list[re.Pattern[str]] = [p for p in [
-    re.compile(r"\bignore\s+(previous|prior|all|your)\s+(instructions?|rules?|guidelines?|context)\b", re.I),
-    re.compile(r"\bdisregard\s+(all|previous|prior|your|the)\b", re.I),
-    re.compile(r"\b(forget|override|bypass|circumvent)\s+(your\s+)?(instructions?|rules?|guidelines?|constraints?|restrictions?)\b", re.I),
-    re.compile(r"\b(reveal|print|output|show|repeat|echo)\s+(your\s+)?(system\s+prompt|instructions?|initial\s+prompt|configuration)\b", re.I),
-    re.compile(r"\byou\s+are\s+now\s+(an?\s+)?(unrestricted|free|uncensored|jailbroken|DAN)\b", re.I),
-    re.compile(r"\benable\s+(developer|jailbreak|god|DAN|unrestricted)\s+mode\b", re.I),
-    re.compile(r"\b(act\s+as|pretend\s+(to\s+be|you\s+are)|roleplay\s+as)\s+(an?\s+)?(unrestricted|evil|uncensored|DAN)\b", re.I),
-    re.compile(r"\bdo\s+(anything\s+now|whatever\s+i\s+say)\b", re.I),
-    re.compile(r"\bjailbreak\b", re.I),
-    re.compile(r"\b(new|updated?|different)\s+(instructions?|system\s+prompt|directives?)\s*:", re.I),
-    re.compile(r"</?(system|instructions?|prompt)\s*>", re.I),
-    re.compile(r"\[\s*(SYSTEM|INST|INSTRUCTIONS?)\s*\]", re.I),
-] if p]
+_INJECTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
+    ("IGNORE_INSTRUCTIONS",   re.compile(r"\bignore\s+(previous|prior|all|your)\s+(instructions?|rules?|guidelines?|context)\b", re.I)),
+    ("DISREGARD_CONTEXT",     re.compile(r"\bdisregard\s+(all|previous|prior|your|the)\b", re.I)),
+    ("OVERRIDE_INSTRUCTIONS", re.compile(r"\b(forget|override|bypass|circumvent)\s+(your\s+)?(instructions?|rules?|guidelines?|constraints?|restrictions?)\b", re.I)),
+    ("REVEAL_PROMPT",         re.compile(r"\b(reveal|print|output|show|repeat|echo)\s+(your\s+)?(system\s+prompt|instructions?|initial\s+prompt|configuration)\b", re.I)),
+    ("ROLE_OVERRIDE_DAN",     re.compile(r"\byou\s+are\s+now\s+(an?\s+)?(unrestricted|free|uncensored|jailbroken|DAN)\b", re.I)),
+    ("ENABLE_JAILBREAK_MODE", re.compile(r"\benable\s+(developer|jailbreak|god|DAN|unrestricted)\s+mode\b", re.I)),
+    ("ROLEPLAY_UNCENSORED",   re.compile(r"\b(act\s+as|pretend\s+(to\s+be|you\s+are)|roleplay\s+as)\s+(an?\s+)?(unrestricted|evil|uncensored|DAN)\b", re.I)),
+    ("DO_ANYTHING_NOW",       re.compile(r"\bdo\s+(anything\s+now|whatever\s+i\s+say)\b", re.I)),
+    ("JAILBREAK_COMMAND",     re.compile(r"\benable\s+jailbreak\b|\bjailbreak\s+(this|the\s+(model|ai|assistant|bot))\b", re.I)),
+    ("NEW_INSTRUCTIONS",      re.compile(r"\b(new|updated?|different)\s+(instructions?|system\s+prompt|directives?)\s*:", re.I)),
+    ("XML_TAG_INJECTION",     re.compile(r"</?(system|instructions?|prompt)\s*>", re.I)),
+    ("BRACKET_INJECTION",     re.compile(r"\[\s*(SYSTEM|INST|INSTRUCTIONS?)\s*\]", re.I)),
+]
 
 
 # Cyrillic homoglyphs → Latin equivalents (visual lookalikes).
@@ -87,17 +87,25 @@ def sanitize_input(text: str) -> SanitizationResult:
     normalized = _normalize_unicode(text)
 
     if len(normalized) > MAX_INPUT_CHARS:
+        # Scan the first MAX_INPUT_CHARS so oversized payloads can't bypass injection detection
+        sample = normalized[:MAX_INPUT_CHARS]
+        inj_flags: list[str] = []
+        for label, pattern in _INJECTION_PATTERNS:
+            if pattern.search(sample):
+                inj_flags.append(label)
+                break
+        threat = ThreatLevel.INJECTION if inj_flags else ThreatLevel.OVERSIZED
         return SanitizationResult(
             normalized_text=normalized,
-            threat_level=ThreatLevel.OVERSIZED,
-            flags=["OVERSIZED"],
+            threat_level=threat,
+            flags=inj_flags if inj_flags else ["OVERSIZED"],
         )
 
     flags: list[str] = []
-    for pattern in _INJECTION_PATTERNS:
+    for label, pattern in _INJECTION_PATTERNS:
         if pattern.search(normalized):
-            flags.append("INJECTION")
+            flags.append(label)
             break
 
-    threat = ThreatLevel.INJECTION if "INJECTION" in flags else ThreatLevel.NONE
+    threat = ThreatLevel.INJECTION if flags else ThreatLevel.NONE
     return SanitizationResult(normalized_text=normalized, threat_level=threat, flags=flags)
