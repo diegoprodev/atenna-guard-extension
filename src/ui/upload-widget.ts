@@ -70,6 +70,7 @@ interface ProtectPayload {
 
 interface UploadState {
   phase: 'loading' | 'ready' | 'error' | 'quota';
+  _rawError?: string;
   file?: File;
   dlpRisk?: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH';
   findings?: Array<{ entity_type: string; count: number; value?: string | null }>;
@@ -168,7 +169,7 @@ export class UploadWidget {
     } catch (err) {
       const raw = err instanceof Error ? err.message : String(err);
       const msg = this.friendlyError(raw);
-      this.state = { phase: 'error', file, error: msg };
+      this.state = { phase: 'error', file, error: msg, _rawError: raw };
       this.render();
       void trackEvent('document_upload_error', { error: raw });
     }
@@ -271,8 +272,13 @@ export class UploadWidget {
     if (raw === 'timeout') return 'O processamento demorou mais que o esperado. Tente novamente — PDFs grandes com OCR podem levar até 2 minutos.';
     if (raw === 'network') return 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.';
     if (raw.startsWith('server:429')) return 'Limite de OCR atingido momentaneamente. Aguarde alguns instantes e tente novamente.';
-    if (raw.startsWith('server:5')) return 'Ocorreu um erro em nossos servidores. Estamos cientes e trabalhando na correção.';
-    return raw;
+    if (raw.startsWith('server:401') || raw === 'Sessão expirada. Faça login novamente.') return 'Sessão expirada. Saia e entre novamente para continuar.';
+    if (raw.startsWith('server:403')) return 'Você não tem permissão para esta ação. Verifique seu plano.';
+    if (raw.startsWith('server:400')) return 'Arquivo não reconhecido ou corrompido. Tente com outro arquivo.';
+    if (raw.startsWith('server:413')) return 'Arquivo muito grande. O limite é 100 MB.';
+    if (raw.startsWith('server:5') || raw.startsWith('server:502') || raw.startsWith('server:503')) return 'Ocorreu um erro em nossos servidores. Estamos cientes e trabalhando na correção.';
+    if (raw.startsWith('server:')) return 'Erro inesperado ao processar o arquivo. Tente novamente.';
+    return 'Não foi possível processar o arquivo. Tente novamente.';
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -586,11 +592,23 @@ export class UploadWidget {
     const wrap = document.createElement('div');
     wrap.className = 'atenna-upw__error';
 
+    // Animated ✗ icon
+    const icon = document.createElement('div');
+    icon.className = 'atenna-upw__error-icon';
+    icon.innerHTML = `<svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="atenna-upw__error-svg">
+      <circle cx="26" cy="26" r="25" stroke="#ef4444" stroke-width="2" class="atenna-upw__err-circle"/>
+      <line x1="16" y1="16" x2="36" y2="36" stroke="#ef4444" stroke-width="3" stroke-linecap="round" class="atenna-upw__err-cross1"/>
+      <line x1="36" y1="16" x2="16" y2="36" stroke="#ef4444" stroke-width="3" stroke-linecap="round" class="atenna-upw__err-cross2"/>
+    </svg>`;
+
     const msg = document.createElement('div');
     msg.className = 'atenna-upw__error-msg';
-    msg.textContent = this.state.error ?? 'Erro desconhecido.';
+    msg.textContent = this.state.error ?? 'Erro inesperado. Tente novamente.';
 
-    console.error('[Atenna] Document error:', this.state.error);
+    // Log raw error to console for debugging, never expose to UI
+    console.error('[Atenna] Document error (raw):', this.state._rawError ?? this.state.error);
+    // Track to admin analytics
+    void trackEvent('document_upload_error_displayed', { friendly_msg: this.state.error, raw_error: this.state._rawError });
 
     const retry = this.makeBtn('Escolher outro arquivo', 'secondary', 'Selecionar um arquivo diferente');
     retry.addEventListener('click', () => {
@@ -636,6 +654,7 @@ export class UploadWidget {
       }
     });
 
+    wrap.appendChild(icon);
     wrap.appendChild(msg);
     wrap.appendChild(retry);
     if (isServerError) wrap.appendChild(reportBtn);

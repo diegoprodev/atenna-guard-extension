@@ -3696,14 +3696,49 @@
 .atenna-upw__error {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 10px;
+}
+
+.atenna-upw__error-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 4px;
+}
+
+.atenna-upw__error-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.atenna-upw__err-circle {
+  stroke-dasharray: 157;
+  stroke-dashoffset: 157;
+  animation: atenna-err-draw 0.4s ease-out forwards;
+}
+
+.atenna-upw__err-cross1 {
+  stroke-dasharray: 28;
+  stroke-dashoffset: 28;
+  animation: atenna-err-draw 0.25s 0.35s ease-out forwards;
+}
+
+.atenna-upw__err-cross2 {
+  stroke-dasharray: 28;
+  stroke-dashoffset: 28;
+  animation: atenna-err-draw 0.25s 0.45s ease-out forwards;
+}
+
+@keyframes atenna-err-draw {
+  to { stroke-dashoffset: 0; }
 }
 
 .atenna-upw__error-msg {
   font-size: 11px;
   color: var(--at-text);
-  opacity: 0.7;
+  opacity: 0.85;
   line-height: 1.45;
+  text-align: center;
 }
 
 .atenna-upw__report-btn {
