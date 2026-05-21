@@ -36,3 +36,10 @@ class ScanResponse(BaseModel):
     advisory:    str
     show_warning: bool
     duration_ms: float
+
+
+class ImageScanRequest(BaseModel):
+    image_b64:   str
+    user_id:     Optional[str] = None
+    session_id:  Optional[str] = None
+    platform:    Optional[str] = None
