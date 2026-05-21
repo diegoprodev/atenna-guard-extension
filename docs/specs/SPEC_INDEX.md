@@ -13,7 +13,7 @@
 | 3 | **5.1** | [FASE_5.1_RLS_AUDIT_BFF_COMPLETE_PRD.md](FASE_5.1_RLS_AUDIT_BFF_COMPLETE_PRD.md) | RLS em todas as tabelas, quota server-side, middleware opaque-only | ✅ Completo |
 | 4 | **5.2** | [FASE_5.2_PTBR_ENTERPRISE_RECOGNIZERS_PRD.md](FASE_5.2_PTBR_ENTERPRISE_RECOGNIZERS_PRD.md) | PT-BR Enterprise Recognizers: RG, CNH, OAB, Placa, CRM | ✅ Completo |
 | 5 | **5.3** | [FASE_5.3_PLAYWRIGHT_E2E_PRD.md](FASE_5.3_PLAYWRIGHT_E2E_PRD.md) | Playwright E2E Suite — extensão carregada, 6 testes reais (T1–T6) | ✅ Completo |
-| 6 | **6.1** | *(a criar)* | OCR + Image DLP (EasyOCR + presidio-image-redactor) | 🔴 Roadmap |
+| 6 | **6.1** | [2026-05-20-fase-6.1-ocr-image-dlp.md](../superpowers/plans/2026-05-20-fase-6.1-ocr-image-dlp.md) | OCR + Image DLP + Enterprise Guardrails (EasyOCR, Presidio, prompt injection defense) | ✅ Completo |
 
 ---
 

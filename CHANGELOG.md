@@ -6,6 +6,24 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased]
 
+### Added (FASE 6.1) — 2026-05-21
+- **Image DLP**: `attachImageInterceptor()` intercepts paste/drop on chat inputs, sends to `/dlp/image`, shows animated warning banner if PII detected
+- **EasyOCR backend**: `backend/dlp/image_ocr.py` — singleton `Reader(["pt","en"])`, PIL→numpy conversion, base64 decode with validation
+- **`POST /dlp/image`**: new endpoint — OCR → Presidio PT-BR pipeline, returns same `ScanResponse` shape as `/dlp/scan`
+- **Enterprise Input Sanitizer**: `backend/security/input_sanitizer.py` — 12 OWASP LLM01 injection patterns, unicode homoglyph normalization, 20k char limit
+- **Output Validator**: `backend/security/output_validator.py` — canary token per-request, system prompt fingerprint detection, 50k char limit
+- **LLM Guardrails**: OpenAI + Gemini services hardened with delimiter isolation (`<user_input>` wrapping) and canary tokens
+- **Perplexity AI support**: badge, modal, DLP active on perplexity.ai
+- **Animated error ✗**: upload errors now show SVG ✗ with draw animation; all messages are user-friendly PT-BR
+
+### Fixed (FASE 6.1) — 2026-05-21
+- **Auth migration BFF**: `background.ts`, `upload-widget.ts`, `content.ts` all now use `atenna_session` (BFF opaque token) instead of legacy `atenna_jwt`; raw JWTs were already rejected by the backend
+- **Badge persists after logout**: `onChanged` listener now watches `atenna_session` key
+- **Plan shows FREE for PRO user**: `user_plans` table was empty; plan now re-fetched from Supabase on every `/auth/me` call
+- **Popup overlaps onboarding**: popup now calls `window.close()` after login + modal open
+- **"Sessão expirada" on upload**: `getAuthToken()` now reads BFF session (not `atenna_jwt`)
+- **Claude settings modal badge**: `isInsideDialog()` guard prevents badge inside `role="dialog"` overlays
+
 ### Added (FASE 5.3) — 2026-05-20
 - **Playwright E2E Suite**: 6 testes reais (T1–T6) carregando a extensão compilada no Chromium
 - `tests/e2e/extension.spec.ts` — suite completa: carga, service worker, auth-gating, badge, DLP, modal
