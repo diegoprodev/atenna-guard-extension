@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
-const SUPABASE_URL = 'https://kezbssjmgwtrunqeoyir.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlemJzc2ptZ3d0cnVucWVveWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MzY0NzcsImV4cCI6MjA5MzUxMjQ3N30.c2YNPrG7WcbwtFij8UJlS7BNxY_XeaKoeqPlrKHloKs';
+const BASE = 'https://atennaplugin.maestro-n8n.site';
 
 interface Props {
   onLogin: (token: string) => void;
@@ -18,29 +17,18 @@ export function Login({ onLogin }: Props) {
     setError('');
     setLoading(true);
     try {
-      const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      const r = await fetch(`${BASE}/auth/admin-login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: SUPABASE_ANON,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.error_description ?? d.message ?? 'Credenciais inválidas.');
-
-      // Verify super_admin role before proceeding
-      const userR = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${d.access_token}` },
-      });
-      const user = await userR.json();
-      const role = user?.app_metadata?.role ?? user?.user_metadata?.role ?? '';
-      if (role !== 'super_admin') {
+      if (r.status === 403) {
         setError('Acesso restrito. Sua conta não possui permissão de administrador.');
         return;
       }
-
-      onLogin(d.access_token);
+      if (!r.ok) throw new Error(d.detail ?? 'Credenciais inválidas.');
+      onLogin(d.token);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido.');
     } finally {
