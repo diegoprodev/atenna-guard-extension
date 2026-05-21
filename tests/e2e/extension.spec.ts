@@ -1,4 +1,4 @@
-import { test, expect, injectSession, openFixturePage } from './helpers/extension';
+import { test, expect, injectSession, openFixturePage, openPerplexityFixture } from './helpers/extension';
 
 // ─── T1: Extension loads ───────────────────────────────────────
 
@@ -165,6 +165,98 @@ test('T6: clicking the badge opens the Atenna modal overlay', async ({ context }
   await page.waitForSelector('#atenna-modal-overlay', { state: 'detached', timeout: 3_000 });
   const overlayAfter = await page.$('#atenna-modal-overlay');
   expect(overlayAfter).toBeNull();
+
+  await page.close();
+});
+
+// ─── Test 7: Perplexity DLP — banner aparece ──────────────────
+
+test('T7: DLP banner appears when CPF is typed into Perplexity-like textarea', async ({ context }) => {
+  await context.route('**/auth/v1/user**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ id: 'e2e-user-id', email: 'e2e@atenna.ai' }) })
+  );
+  await context.route('**/rest/v1/profiles**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify([{ display_name: 'E2E User' }]) })
+  );
+
+  await injectSession(context);
+  await new Promise(r => setTimeout(r, 400));
+  const page = await openPerplexityFixture(context);
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 20_000 });
+
+  // Type CPF into Perplexity textarea
+  await page.click('#prompt-textarea');
+  await page.type('#prompt-textarea', 'Meu CPF é 123.456.789-09', { delay: 30 });
+  await page.dispatchEvent('#prompt-textarea', 'input');
+
+  // Wait for DLP debounce (400ms) + render
+  await page.waitForTimeout(1200);
+  await page.waitForSelector('#atenna-protection-banner', { timeout: 6_000 });
+
+  const banner = await page.$('#atenna-protection-banner');
+  expect(banner).not.toBeNull();
+
+  const text = await banner!.textContent();
+  expect(text).toContain('Dados sensíveis');
+
+  await page.close();
+});
+
+// ─── Test 8: Perplexity DLP — "Proteger dados" mascara CPF ────
+
+test('T8: clicking "Proteger dados" masks CPF in Perplexity React-controlled textarea', async ({ context }) => {
+  await context.route('**/auth/v1/user**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ id: 'e2e-user-id', email: 'e2e@atenna.ai' }) })
+  );
+  await context.route('**/rest/v1/profiles**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify([{ display_name: 'E2E User' }]) })
+  );
+
+  await injectSession(context);
+  await new Promise(r => setTimeout(r, 400));
+  const page = await openPerplexityFixture(context);
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 20_000 });
+
+  // Type CPF
+  await page.click('#prompt-textarea');
+  await page.type('#prompt-textarea', 'Meu CPF é 123.456.789-09', { delay: 30 });
+  await page.dispatchEvent('#prompt-textarea', 'input');
+  await page.waitForTimeout(1200);
+  await page.waitForSelector('#atenna-protection-banner', { timeout: 6_000 });
+
+  // Capture value before protect
+  const valueBefore = await page.$eval('#prompt-textarea', (el: HTMLTextAreaElement) => el.value);
+  expect(valueBefore).toContain('123.456.789-09');
+
+  // Click "Proteger dados"
+  await page.click('.atenna-protection-banner__btn--primary');
+
+  // Wait for the setTimeout(0) + setInputText to complete
+  await page.waitForTimeout(300);
+
+  // Verify DOM value changed
+  const valueDomAfter = await page.$eval('#prompt-textarea', (el: HTMLTextAreaElement) => el.value);
+
+  // Verify React internal value changed (via window.__atenna_test)
+  const valueReactAfter = await page.evaluate(() => {
+    const w = window as typeof window & { __atenna_test?: { getReactValue(): string } };
+    return w.__atenna_test?.getReactValue() ?? '';
+  });
+
+  // Both DOM and React state must contain [CPF], not the raw number
+  expect(valueDomAfter).toContain('[CPF]');
+  expect(valueDomAfter).not.toContain('123.456.789-09');
+
+  expect(valueReactAfter).toContain('[CPF]');
+  expect(valueReactAfter).not.toContain('123.456.789-09');
+
+  // Banner must be dismissed
+  const banner = await page.$('#atenna-protection-banner');
+  expect(banner).toBeNull();
 
   await page.close();
 });

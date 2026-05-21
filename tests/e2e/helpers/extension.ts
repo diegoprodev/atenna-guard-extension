@@ -3,6 +3,7 @@ import path from 'path';
 
 const DIST_PATH = path.resolve(process.cwd(), 'dist');
 const FIXTURE_URL = 'http://localhost:4200/chatgpt.html';
+const PERPLEXITY_FIXTURE_URL = 'http://localhost:4200/perplexity.html';
 
 // Fake JWT that looks valid (has a base64 sub claim)
 const FAKE_JWT_PAYLOAD = btoa(JSON.stringify({ sub: 'e2e-user-id', email: 'e2e@atenna.ai' }));
@@ -102,4 +103,31 @@ export async function openFixturePage(
 /** Wait for the Atenna badge button to appear in the DOM. */
 export async function waitForBadge(page: import('@playwright/test').Page): Promise<void> {
   await page.waitForSelector('#atenna-guard-btn', { timeout: 10_000 });
+}
+
+/**
+ * Navigate to the Perplexity fixture page (React-controlled textarea simulation).
+ */
+export async function openPerplexityFixture(
+  context: BrowserContext,
+): Promise<import('@playwright/test').Page> {
+  const page = await context.newPage();
+  await page.route('**/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ email: 'e2e@atenna.ai', plan: 'free' }),
+    })
+  );
+  await page.route('**/generate-prompts', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        direct: 'Mock', technical: 'Mock', structured: 'Mock',
+      }),
+    })
+  );
+  await page.goto(PERPLEXITY_FIXTURE_URL);
+  return page;
 }

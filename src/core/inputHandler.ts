@@ -14,12 +14,17 @@ export function getInputText(input: HTMLElement): string {
 
 export function setInputText(input: HTMLElement, text: string): void {
   if (input instanceof HTMLTextAreaElement || input instanceof HTMLInputElement) {
+    // Focus first so React sees the element as active before the value change
+    input.focus();
     const proto = input instanceof HTMLTextAreaElement
       ? window.HTMLTextAreaElement.prototype
       : window.HTMLInputElement.prototype;
     const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
     if (setter) setter.call(input, text); else (input as HTMLTextAreaElement).value = text;
-    ['input', 'change', 'keyup'].forEach(t => input.dispatchEvent(new Event(t, { bubbles: true })));
+    // React 16+ requires InputEvent (not generic Event) with inputType to reconcile internal state
+    input.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertReplacementText', data: text }));
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertReplacementText', data: text }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
   } else {
     // contenteditable — execCommand while user activation is live (banner click handler)
     input.focus();

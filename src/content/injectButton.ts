@@ -129,13 +129,21 @@ function showProtectionBanner(
   protectBtn.className   = 'atenna-protection-banner__btn atenna-protection-banner__btn--primary';
   protectBtn.textContent = 'Proteger dados';
   protectBtn.addEventListener('click', () => {
-    const text      = getInputText(lastScanInput!);
-    const rewritten = rewritePII(text, lastEntities);
+    const inputEl   = lastScanInput!;
+    const entities  = lastEntities.slice();
+    const text      = getInputText(inputEl);
+    const rewritten = rewritePII(text, entities);
     const charsSaved = Math.max(0, text.length - rewritten.length);
-    setInputText(lastScanInput!, rewritten);
     dismissProtectionBanner();
-    updateBadgeDotRisk('NONE', 0);
-    void incrementProtected(charsSaved);
+    // Restore focus to the input before modifying — required so React/framework
+    // state reconciliation picks up the programmatic value change correctly.
+    inputEl.focus();
+    // One microtask gap lets the browser process the focus event before we write
+    setTimeout(() => {
+      setInputText(inputEl, rewritten);
+      updateBadgeDotRisk('NONE', 0);
+      void incrementProtected(charsSaved);
+    }, 0);
   });
 
   const ignoreBtn = document.createElement('button');
