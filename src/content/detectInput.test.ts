@@ -56,6 +56,33 @@ describe('detectPlatform', () => {
     expect(config!.inputSelector).toContain('contenteditable');
   });
 
+  it('returns null on gemini.google.com/settings', () => {
+    setLocation('gemini.google.com', '/settings');
+    expect(detectPlatform()).toBeNull();
+  });
+
+  it('returns Perplexity config for perplexity.ai', () => {
+    setLocation('www.perplexity.ai', '/');
+    const config = detectPlatform();
+    expect(config!.name).toBe('Perplexity');
+    expect(config!.inputSelector).toContain('textarea');
+  });
+
+  it('returns Perplexity config on search page', () => {
+    setLocation('www.perplexity.ai', '/search/abc123');
+    expect(detectPlatform()?.name).toBe('Perplexity');
+  });
+
+  it('returns null on perplexity.ai/settings', () => {
+    setLocation('www.perplexity.ai', '/settings');
+    expect(detectPlatform()).toBeNull();
+  });
+
+  it('returns null on perplexity.ai/collections', () => {
+    setLocation('www.perplexity.ai', '/collections');
+    expect(detectPlatform()).toBeNull();
+  });
+
   it('returns null for unknown hostname', () => {
     setLocation('example.com');
     expect(detectPlatform()).toBeNull();

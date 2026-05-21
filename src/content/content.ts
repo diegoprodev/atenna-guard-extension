@@ -23,6 +23,26 @@ function isElementVisible(el: Element): boolean {
   return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
 }
 
+// Returns true if el lives inside a modal/dialog overlay.
+// Catches: Claude settings modal, any ARIA dialog, common modal class patterns.
+function isInsideDialog(el: Element): boolean {
+  return !!(
+    el.closest('[role="dialog"]') ||
+    el.closest('[aria-modal="true"]') ||
+    el.closest('[data-radix-dialog-content]') ||
+    el.closest('.modal') ||
+    el.closest('[class*="modal"]') ||
+    el.closest('[class*="dialog"]') ||
+    el.closest('[class*="overlay"]') ||
+    el.closest('aside[class*="settings"]')
+  );
+}
+
+function removeBadge(): void {
+  document.getElementById('atenna-guard-btn')?.remove();
+  document.querySelector('[data-atenna-injected]')?.removeAttribute('data-atenna-injected');
+}
+
 function tryInject(): void {
   // Only inject badge if user is authenticated — DLP must not run without login
   if (!_isAuthenticated) return;
@@ -30,21 +50,23 @@ function tryInject(): void {
   const config = detectPlatform();
   if (!config) {
     // SPA navigated to a non-chat page — remove badge if present
-    document.getElementById('atenna-guard-btn')?.remove();
-    document.querySelector('[data-atenna-injected]')?.removeAttribute('data-atenna-injected');
+    removeBadge();
     return;
   }
 
   const input = document.querySelector(config.inputSelector);
   if (!input) {
     // Input gone — remove stale badge
-    document.getElementById('atenna-guard-btn')?.remove();
-    document.querySelector('[data-atenna-injected]')?.removeAttribute('data-atenna-injected');
+    removeBadge();
     return;
   }
 
   // Don't inject badge when the input is not visible (hidden pages, collapsed UI)
   if (!isElementVisible(input)) return;
+
+  // Don't inject inside modal overlays — e.g. Claude settings modal has a
+  // contenteditable "Instruções para o Claude" that matches our broad selector.
+  if (isInsideDialog(input)) return;
 
   injectButton(config, () => toggleModal());
 }

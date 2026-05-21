@@ -9,6 +9,7 @@
     "https://chatgpt.com/*",
     "https://claude.ai/*",
     "https://gemini.google.com/*",
+    "https://www.perplexity.ai/*",
     "http://localhost/*",
     "https://atennaplugin.maestro-n8n.site/*",
     "https://*.supabase.co/*"
@@ -23,6 +24,7 @@
         "https://chatgpt.com/*",
         "https://claude.ai/*",
         "https://gemini.google.com/*",
+        "https://www.perplexity.ai/*",
         "http://localhost/*"
       ],
       "js": ["content.js"],
@@ -64,6 +66,7 @@
         "https://chatgpt.com/*",
         "https://claude.ai/*",
         "https://gemini.google.com/*",
+        "https://www.perplexity.ai/*",
         "http://localhost/*",
         "https://*.supabase.co/*"
       ]
