@@ -136,8 +136,7 @@ function injectContentIntoChat(content: string): void {
   const setTA = (ta: HTMLTextAreaElement): void => {
     const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
     if (setter) setter.call(ta, content); else ta.value = content;
-    ta.dispatchEvent(new Event('input', { bubbles: true }));
-    ta.dispatchEvent(new Event('change', { bubbles: true }));
+    ['input', 'change', 'keyup'].forEach(t => ta.dispatchEvent(new Event(t, { bubbles: true })));
     ta.focus();
   };
   const setCE = (el: HTMLElement): void => {
@@ -149,8 +148,11 @@ function injectContentIntoChat(content: string): void {
       sel.removeAllRanges();
       sel.addRange(range);
     }
-    const inserted = document.execCommand('insertText', false, content);
-    if (!inserted) {
+    const ok = document.execCommand('insertText', false, content);
+    if (!ok) {
+      const dt = new DataTransfer();
+      dt.setData('text/plain', content);
+      el.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertFromPaste', dataTransfer: dt }));
       el.textContent = content;
       el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertReplacementText', data: content }));
     }

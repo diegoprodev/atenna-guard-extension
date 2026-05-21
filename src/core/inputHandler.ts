@@ -18,15 +18,10 @@ export function setInputText(input: HTMLElement, text: string): void {
       ? window.HTMLTextAreaElement.prototype
       : window.HTMLInputElement.prototype;
     const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
-    if (setter) {
-      setter.call(input, text);
-    } else {
-      (input as HTMLTextAreaElement).value = text;
-    }
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
+    if (setter) setter.call(input, text); else (input as HTMLTextAreaElement).value = text;
+    ['input', 'change', 'keyup'].forEach(t => input.dispatchEvent(new Event(t, { bubbles: true })));
   } else {
-    // contenteditable — execCommand updates Lexical/ProseMirror state (Claude, Gemini)
+    // contenteditable — execCommand while user activation is live (banner click handler)
     input.focus();
     const sel = window.getSelection();
     if (sel) {
@@ -35,8 +30,11 @@ export function setInputText(input: HTMLElement, text: string): void {
       sel.removeAllRanges();
       sel.addRange(range);
     }
-    const inserted = document.execCommand('insertText', false, text);
-    if (!inserted) {
+    const ok = document.execCommand('insertText', false, text);
+    if (!ok) {
+      const dt = new DataTransfer();
+      dt.setData('text/plain', text);
+      input.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertFromPaste', dataTransfer: dt }));
       input.textContent = text;
       input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertReplacementText', data: text }));
     }

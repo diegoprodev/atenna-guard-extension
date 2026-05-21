@@ -1446,17 +1446,15 @@ export function openUploadFromBadge(): void {
           return false;
         };
 
-        const setTextareaValue = (ta: HTMLTextAreaElement, text: string): void => {
+        const setTA = (ta: HTMLTextAreaElement, text: string): void => {
           const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
           if (setter) setter.call(ta, text); else ta.value = text;
-          ta.dispatchEvent(new Event('input', { bubbles: true }));
-          ta.dispatchEvent(new Event('change', { bubbles: true }));
+          ['input', 'change', 'keyup'].forEach(t => ta.dispatchEvent(new Event(t, { bubbles: true })));
           ta.focus();
         };
 
-        const setContentEditableValue = (el: HTMLElement, text: string): void => {
+        const setCE = (el: HTMLElement, text: string): void => {
           el.focus();
-          // Prefer execCommand: updates Lexical/ProseMirror internal state on Claude/Gemini
           const sel = window.getSelection();
           if (sel) {
             const range = document.createRange();
@@ -1464,66 +1462,69 @@ export function openUploadFromBadge(): void {
             sel.removeAllRanges();
             sel.addRange(range);
           }
-          const inserted = document.execCommand('insertText', false, text);
-          if (!inserted) {
+          // execCommand works while user activation is alive (call before overlay.remove())
+          const ok = document.execCommand('insertText', false, text);
+          if (!ok) {
+            // Fallback: beforeinput event (Lexical/ProseMirror respond to this)
+            const dt = new DataTransfer();
+            dt.setData('text/plain', text);
+            el.dispatchEvent(new InputEvent('beforeinput', {
+              bubbles: true, cancelable: true,
+              inputType: 'insertFromPaste', dataTransfer: dt,
+            }));
             el.textContent = text;
             el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertReplacementText', data: text }));
           }
           el.dispatchEvent(new Event('change', { bubbles: true }));
         };
 
-        const injectTextFallback = (text: string): boolean => {
-          // Priority 1: element focused when badge was clicked (still in DOM and visible)
-          const prior = activeTarget as HTMLElement | null;
-          if (prior && document.body.contains(prior)) {
-            if ((prior as HTMLTextAreaElement).tagName === 'TEXTAREA') {
-              setTextareaValue(prior as HTMLTextAreaElement, text);
-              return true;
-            }
-            if (prior.isContentEditable) {
-              setContentEditableValue(prior, text);
-              return true;
-            }
+        // Find the most-likely visible chat input on the page
+        const findChatInput = (): HTMLElement | null => {
+          // Named inputs first (most reliable)
+          const chatgpt = document.querySelector<HTMLElement>('#prompt-textarea');
+          if (chatgpt) return chatgpt;
+          // Visible textareas (Perplexity) — skip hidden/disabled ones
+          const textareas = Array.from(document.querySelectorAll<HTMLTextAreaElement>('textarea'));
+          const visibleTA = textareas.find(t => !t.disabled && !t.readOnly && t.offsetParent !== null && t.offsetWidth > 50);
+          if (visibleTA) return visibleTA;
+          // Contenteditable (Claude, Gemini)
+          for (const sel of ['div[contenteditable="true"][data-placeholder]', '.ql-editor', 'div[contenteditable="true"]']) {
+            const el = document.querySelector<HTMLElement>(sel);
+            if (el && el.offsetParent !== null) return el;
           }
-          // Priority 2: well-known platform selectors
-          const platformSelectors = [
-            '#prompt-textarea',
-            'textarea',
-            'div[contenteditable="true"][data-placeholder]',
-            '.ql-editor',
-            'div[contenteditable="true"]',
-          ];
-          for (const sel of platformSelectors) {
-            const el = document.querySelector(sel) as HTMLElement | null;
-            if (!el) continue;
-            if ((el as HTMLTextAreaElement).tagName === 'TEXTAREA') {
-              setTextareaValue(el as HTMLTextAreaElement, text);
-              return true;
-            }
-            if (el.isContentEditable) {
-              setContentEditableValue(el, text);
-              return true;
-            }
+          return null;
+        };
+
+        const injectText = (text: string): boolean => {
+          const el = findChatInput();
+          if (!el) return false;
+          if ((el as HTMLTextAreaElement).tagName === 'TEXTAREA') {
+            setTA(el as HTMLTextAreaElement, text);
+          } else {
+            setCE(el, text);
           }
-          return false;
+          return true;
         };
 
         const applyToTarget = (text: string, fileName?: string) => {
-          overlay.remove();
-          // Skip file-attachment strategy on Perplexity — it triggers their native upload modal.
-          // ChatGPT is the only platform where synthetic drop reliably shows a file badge.
-          const isPerplexity = location.hostname.includes('perplexity.ai');
-          if (isPerplexity) {
-            const ok = injectTextFallback(text);
+          const host = location.hostname;
+          const isChatGPT = host.includes('chatgpt.com') || host.includes('chat.openai.com');
+
+          if (isChatGPT) {
+            // ChatGPT: file attachment first (shows badge above input), fallback to text
+            overlay.remove();
+            void applyAsFileAttachment(text, fileName ?? 'documento.txt').then(ok => {
+              if (!ok) {
+                if (!injectText(text)) showToast('Campo de texto não encontrado — use Copiar.');
+              }
+            });
+          } else {
+            // All other platforms: inject text BEFORE removing overlay so user activation
+            // is still valid for execCommand (Claude Lexical) and focus is predictable
+            const ok = injectText(text);
+            overlay.remove();
             if (!ok) showToast('Campo de texto não encontrado — use Copiar.');
-            return;
           }
-          void applyAsFileAttachment(text, fileName ?? 'documento.txt').then(ok => {
-            if (!ok) {
-              const textOk = injectTextFallback(text);
-              if (!textOk) showToast('Campo de texto não encontrado — use Copiar.');
-            }
-          });
         };
 
         // Document with PII: inject as file attachment; clean doc from widget: apply directly
