@@ -2,7 +2,7 @@ import { signUpWithPassword } from './core/auth';
 import { bffLogin, bffLogout, bffMe, bffResetPassword } from './auth/bffClient';
 import { openSettingsOverlay } from './ui/modal';
 
-const SUPPORTED_HOSTS = ['chatgpt.com', 'chat.openai.com', 'claude.ai', 'gemini.google.com', 'copilot.microsoft.com'];
+const SUPPORTED_HOSTS = ['chatgpt.com', 'chat.openai.com', 'claude.ai', 'gemini.google.com', 'perplexity.ai', 'copilot.microsoft.com'];
 
 async function getActiveTabInfo(): Promise<{ url: string; host: string; supported: boolean } | null> {
   return new Promise(resolve => {
@@ -40,6 +40,7 @@ function getPlatformLabel(host: string): { name: string; svg: string } {
   if (host.includes('chatgpt') || host.includes('openai')) return { name: 'ChatGPT', svg: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>` };
   if (host.includes('claude')) return { name: 'Claude.ai', svg: SVG_SPARKLE };
   if (host.includes('gemini')) return { name: 'Gemini', svg: SVG_SPARKLE };
+  if (host.includes('perplexity')) return { name: 'Perplexity', svg: SVG_GLOBE };
   if (host.includes('copilot')) return { name: 'Copilot', svg: SVG_GLOBE };
   return { name: host, svg: SVG_GLOBE };
 }
@@ -232,7 +233,7 @@ function renderHome(
              <span class="ap-platform__icon">${platform!.svg}</span>
              <span>${platform!.name} — protegido e ativo</span>`
           : `<span class="ap-platform__dot ap-platform__dot--gray"></span>
-             <span>Abra o ChatGPT, Claude.ai ou Gemini para ativar</span>`
+             <span>Abra o ChatGPT, Claude.ai, Gemini ou Perplexity para ativar</span>`
         }
       </div>
 
@@ -245,7 +246,7 @@ function renderHome(
         <div class="ap-tips">
           <div class="ap-tips__title">Plataformas suportadas</div>
           <div class="ap-tips__list">
-            <span>chatgpt.com</span><span>claude.ai</span><span>gemini.google.com</span>
+            <span>chatgpt.com</span><span>claude.ai</span><span>gemini.google.com</span><span>perplexity.ai</span>
           </div>
         </div>
       ` : `
