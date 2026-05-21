@@ -133,24 +133,31 @@ try {
 } catch { /* non-extension env */ }
 
 function injectContentIntoChat(content: string): void {
+  const setTA = (ta: HTMLTextAreaElement): void => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+    if (setter) setter.call(ta, content); else ta.value = content;
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    ta.dispatchEvent(new Event('change', { bubbles: true }));
+    ta.focus();
+  };
+  const setCE = (el: HTMLElement): void => {
+    el.focus();
+    el.textContent = content;
+    el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertReplacementText', data: content }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
   // ChatGPT: native textarea
-  const chatgptInput = document.querySelector('#prompt-textarea') as HTMLTextAreaElement | null;
-  if (chatgptInput) {
-    const nativeSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
-    nativeSetter?.call(chatgptInput, content);
-    chatgptInput.dispatchEvent(new Event('input', { bubbles: true }));
-    chatgptInput.focus();
-    return;
-  }
-  // Claude / Gemini / Perplexity: contenteditable div
+  const chatgptTA = document.querySelector('#prompt-textarea') as HTMLTextAreaElement | null;
+  if (chatgptTA) { setTA(chatgptTA); return; }
+  // Perplexity / any platform using textarea
+  const anyTA = document.querySelector('textarea') as HTMLTextAreaElement | null;
+  if (anyTA) { setTA(anyTA); return; }
+  // Claude / Gemini: contenteditable
   const ceInput = document.querySelector(
     'div[contenteditable="true"][data-placeholder], .ql-editor, div[contenteditable="true"]'
   ) as HTMLElement | null;
-  if (ceInput) {
-    ceInput.focus();
-    ceInput.textContent = content;
-    ceInput.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: content }));
-  }
+  if (ceInput) { setCE(ceInput); return; }
 }
 
 // Only run in the top-level frame — iframes don't have storage access

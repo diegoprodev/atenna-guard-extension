@@ -1446,47 +1446,51 @@ export function openUploadFromBadge(): void {
           return false;
         };
 
+        const setTextareaValue = (ta: HTMLTextAreaElement, text: string): void => {
+          const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+          if (setter) setter.call(ta, text); else ta.value = text;
+          ta.dispatchEvent(new Event('input', { bubbles: true }));
+          ta.dispatchEvent(new Event('change', { bubbles: true }));
+          ta.focus();
+        };
+
+        const setContentEditableValue = (el: HTMLElement, text: string): void => {
+          el.focus();
+          el.textContent = text;
+          el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertReplacementText', data: text }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+
         const injectTextFallback = (text: string): boolean => {
           // Priority 1: element focused when badge was clicked (still in DOM and visible)
           const prior = activeTarget as HTMLElement | null;
           if (prior && document.body.contains(prior)) {
             if ((prior as HTMLTextAreaElement).tagName === 'TEXTAREA') {
-              const ta = prior as HTMLTextAreaElement;
-              const start = ta.selectionStart ?? ta.value.length;
-              ta.value = ta.value.slice(0, start) + text + ta.value.slice(start);
-              ta.dispatchEvent(new Event('input', { bubbles: true }));
-              ta.focus();
+              setTextareaValue(prior as HTMLTextAreaElement, text);
               return true;
             }
             if (prior.isContentEditable) {
-              prior.focus();
-              prior.textContent = text;
-              prior.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+              setContentEditableValue(prior, text);
               return true;
             }
           }
           // Priority 2: well-known platform selectors
           const platformSelectors = [
             '#prompt-textarea',
+            'textarea',
             'div[contenteditable="true"][data-placeholder]',
             '.ql-editor',
             'div[contenteditable="true"]',
-            'textarea',
           ];
           for (const sel of platformSelectors) {
             const el = document.querySelector(sel) as HTMLElement | null;
             if (!el) continue;
             if ((el as HTMLTextAreaElement).tagName === 'TEXTAREA') {
-              const ta = el as HTMLTextAreaElement;
-              ta.value = text;
-              ta.dispatchEvent(new Event('input', { bubbles: true }));
-              ta.focus();
+              setTextareaValue(el as HTMLTextAreaElement, text);
               return true;
             }
             if (el.isContentEditable) {
-              el.focus();
-              el.textContent = text;
-              el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+              setContentEditableValue(el, text);
               return true;
             }
           }

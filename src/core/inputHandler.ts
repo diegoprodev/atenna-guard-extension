@@ -26,20 +26,11 @@ export function setInputText(input: HTMLElement, text: string): void {
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
   } else {
-    // contenteditable — execCommand triggers React synthetic events
+    // contenteditable — set textContent + InputEvent (execCommand deprecated, causes platform tooltip errors)
     input.focus();
-    const sel = window.getSelection();
-    if (sel) {
-      const range = document.createRange();
-      range.selectNodeContents(input);
-      sel.removeAllRanges();
-      sel.addRange(range);
-    }
-    const inserted = document.execCommand('insertText', false, text);
-    if (!inserted) {
-      input.textContent = text;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    }
+    input.textContent = text;
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertReplacementText', data: text }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
   }
   input.focus();
 }
