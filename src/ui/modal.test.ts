@@ -21,6 +21,7 @@ vi.mock('../auth/bffClient', () => ({
   bffLogout: vi.fn(),
   bffResetPassword: vi.fn(),
   bffFetch: vi.fn(),
+  bffGoogleLogin: vi.fn(),
 }));
 
 import { toggleModal, generateFromBadge, fetchPrompts, clearPromptCache } from './modal';

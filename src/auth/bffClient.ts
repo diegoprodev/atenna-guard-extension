@@ -103,3 +103,46 @@ export async function bffResetPassword(email: string): Promise<void> {
     body: JSON.stringify({ email }),
   }).catch(() => {});
 }
+
+const SUPABASE_PROJECT_REF = 'kezbssjmgwtrunqeoyir';
+
+export async function bffGoogleLogin(): Promise<Session> {
+  const redirectUri = `https://${chrome.runtime.id}.chromiumapp.org/`;
+  const authUrl =
+    `https://${SUPABASE_PROJECT_REF}.supabase.co/auth/v1/authorize` +
+    `?provider=google&redirect_to=${encodeURIComponent(redirectUri)}`;
+
+  const redirectUrl = await new Promise<string | undefined>(resolve => {
+    chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, resolve);
+  });
+
+  if (!redirectUrl) throw new AppError(E.NETWORK);
+
+  let code: string | null = null;
+  try {
+    code = new URL(redirectUrl).searchParams.get('code');
+  } catch {
+    throw new AppError(E.NETWORK);
+  }
+  if (!code) throw new AppError(E.NETWORK);
+
+  let r: Response;
+  try {
+    r = await fetch(`${BFF_BASE}/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, redirect_uri: redirectUri }),
+    });
+  } catch {
+    throw new AppError(E.NETWORK);
+  }
+
+  if (r.status === 401 || r.status === 400) throw new AppError(E.INVALID_CREDENTIALS);
+  if (r.status === 429)                     throw new AppError(E.RATE_LIMIT);
+  if (r.status >= 500)                      throw new AppError(E.SERVER);
+  if (!r.ok)                                throw new AppError(E.SERVER);
+
+  const s = await r.json() as Session;
+  await setSession(s);
+  return s;
+}
