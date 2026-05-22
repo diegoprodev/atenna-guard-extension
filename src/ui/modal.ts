@@ -3,7 +3,7 @@ import { getUsage, incrementUsage, isAtLimit, isAtAnyLimit, DAILY_LIMIT, getTota
 import { isPro, consumeProWelcome, getPlan, setPlan } from '../core/planManager';
 import { consumeProWelcome as _consumeProWelcomeOnboarding, resolveWelcomeState, setProWelcomeFlag } from './modal/onboarding';
 import { signUpWithPassword, saveDisplayName } from '../core/auth';
-import { bffLogin, bffMe, bffResetPassword } from '../auth/bffClient';
+import { bffLogin, bffMe, bffResetPassword, bffGoogleLogin } from '../auth/bffClient';
 import { friendlyError } from '../core/errors';
 import { track, trackEvent } from '../core/analytics';
 import { getHistory, addToHistory, addGroupToHistory, toggleFavorite, isGroup } from '../core/history';
@@ -2665,10 +2665,49 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
   inputGroup.appendChild(passwordWrapper);
   inputGroup.appendChild(btn);
 
+  // ── Google OAuth ────────────────────────────────────────────────────────────
+  const GOOGLE_G = `<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.17 2.86l6.1-6.1C34.46 3.01 29.5 1 24 1 14.85 1 7.08 6.48 3.69 14.24l7.1 5.52C12.53 13.1 17.83 9.5 24 9.5z"/><path fill="#4285F4" d="M46.52 24.5c0-1.64-.15-3.22-.43-4.75H24v9h12.7c-.55 2.99-2.2 5.53-4.68 7.24l7.18 5.58C43.44 37.44 46.52 31.42 46.52 24.5z"/><path fill="#FBBC05" d="M10.8 28.5A14.52 14.52 0 0 1 9.5 24c0-1.57.27-3.09.76-4.5l-7.1-5.52A23.94 23.94 0 0 0 0 24c0 3.87.93 7.53 2.57 10.76l8.23-6.26z"/><path fill="#34A853" d="M24 47c5.5 0 10.12-1.83 13.49-4.96l-7.18-5.58C28.54 37.77 26.38 38.5 24 38.5c-6.17 0-11.47-3.6-13.2-8.76l-8.23 6.26C6.08 43.52 14.45 47 24 47z"/></svg>`;
+
+  const divider = document.createElement('div');
+  divider.className = 'atenna-modal__login-divider';
+  divider.innerHTML = '<span>ou</span>';
+
+  const googleBtn = document.createElement('button');
+  googleBtn.type = 'button';
+  googleBtn.className = 'atenna-modal__login-btn--google';
+  googleBtn.innerHTML = `${GOOGLE_G}Entrar com Google`;
+
+  const googleStatus = document.createElement('div');
+  googleStatus.className = 'atenna-modal__login-status';
+
+  googleBtn.addEventListener('click', async () => {
+    googleBtn.disabled = true;
+    googleBtn.textContent = 'Aguardando Google…';
+    googleStatus.textContent = '';
+    googleStatus.className = 'atenna-modal__login-status';
+    try {
+      await bffGoogleLogin();
+      void trackEvent('login_google_success');
+      googleStatus.textContent = 'Login realizado!';
+      googleStatus.classList.add('atenna-modal__login-status--success');
+      setTimeout(() => window.location.reload(), 800);
+    } catch (err: unknown) {
+      void trackEvent('login_google_error', { error: err instanceof Error ? err.message : String(err) });
+      googleStatus.textContent = friendlyError(err);
+      googleStatus.classList.add('atenna-modal__login-status--error');
+      googleBtn.disabled = false;
+      googleBtn.innerHTML = `${GOOGLE_G}Entrar com Google`;
+    }
+  });
+  // ────────────────────────────────────────────────────────────────────────────
+
   wrap.appendChild(title);
   wrap.appendChild(subtitle);
   wrap.appendChild(inputGroup);
   wrap.appendChild(status);
+  wrap.appendChild(divider);
+  wrap.appendChild(googleBtn);
+  wrap.appendChild(googleStatus);
   wrap.appendChild(linksDiv);
   container.appendChild(wrap);
 
