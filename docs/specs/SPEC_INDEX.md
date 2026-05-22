@@ -14,7 +14,7 @@
 | 4 | **5.2** | [FASE_5.2_PTBR_ENTERPRISE_RECOGNIZERS_PRD.md](FASE_5.2_PTBR_ENTERPRISE_RECOGNIZERS_PRD.md) | PT-BR Enterprise Recognizers: RG, CNH, OAB, Placa, CRM | ✅ Completo |
 | 5 | **5.3** | [FASE_5.3_PLAYWRIGHT_E2E_PRD.md](FASE_5.3_PLAYWRIGHT_E2E_PRD.md) | Playwright E2E Suite — extensão carregada, 6 testes reais (T1–T6) | ✅ Completo |
 | 6 | **6.1** | [2026-05-20-fase-6.1-ocr-image-dlp.md](../superpowers/plans/2026-05-20-fase-6.1-ocr-image-dlp.md) | OCR + Image DLP + Enterprise Guardrails (EasyOCR, Presidio, prompt injection defense) | ✅ Completo |
-| 7 | **6.2** | [2026-05-22-fase-6.2-compliance-dashboard.md](../superpowers/plans/2026-05-22-fase-6.2-compliance-dashboard.md) | Compliance Dashboard + Audit Trail — eventos DLP, filtros, trend chart, CSV export LGPD | 📋 Planejado |
+| 7 | **6.2** | [2026-05-22-fase-6.2-compliance-dashboard.md](../superpowers/plans/2026-05-22-fase-6.2-compliance-dashboard.md) | Compliance Dashboard + Audit Trail — eventos DLP, filtros, trend chart, CSV export LGPD | ✅ Completo |
 
 ---
 

@@ -83,6 +83,13 @@ export const api = {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
       body: JSON.stringify({ status, notes, confirmed: true }),
     }).then(r => r.json()),
+  compliance: (t: string, days = 30) =>
+    get<ComplianceSummaryResponse>(`/admin/compliance/summary?days=${days}`, t),
+  complianceEvents: (t: string, days = 30, page = 1, riskLevel = '') =>
+    get<ComplianceEventsResponse>(
+      `/admin/compliance/events?days=${days}&page=${page}&limit=50${riskLevel ? `&risk_level=${riskLevel}` : ''}`,
+      t,
+    ),
 };
 
 export interface AdminOverview {
@@ -246,4 +253,48 @@ export interface CostSummary {
   cost_breakdown: { gemini_usd: number; openai_usd: number };
   cloudflare: CfMetrics | null;
   note: string;
+}
+
+export interface ComplianceSummaryData {
+  total_events: number;
+  high_risk_events: number;
+  protected_count: number;
+  protection_rate: number;
+  top_entity_types: Array<{ type: string; count: number }>;
+  unique_users: number;
+}
+
+export interface ComplianceTrendPoint {
+  date: string;
+  total: number;
+  high_risk: number;
+}
+
+export interface ComplianceSummaryResponse {
+  summary: ComplianceSummaryData;
+  trend: ComplianceTrendPoint[];
+  retention_days: number;
+  period_days: number;
+  error?: string;
+}
+
+export interface ComplianceEventRow {
+  id: string;
+  user_id: string | null;
+  risk_level: string;
+  entity_types: string[];
+  entity_count: number;
+  was_rewritten: boolean;
+  platform: string | null;
+  created_at: string;
+  event_type: string;
+  score: number | null;
+}
+
+export interface ComplianceEventsResponse {
+  data: ComplianceEventRow[];
+  total: number;
+  page: number;
+  limit: number;
+  error?: string;
 }

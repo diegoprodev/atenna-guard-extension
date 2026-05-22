@@ -56,6 +56,11 @@ const IconLog = () => (
     <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
   </svg>
 );
+const IconCompliance = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+  </svg>
+);
 
 const SECTIONS: Array<{ title: string; items: NavItem[] }> = [
   {
@@ -85,7 +90,8 @@ const SECTIONS: Array<{ title: string; items: NavItem[] }> = [
     items: [
       { id: 'flags',  label: 'Feature Flags', icon: <IconFlag /> },
       { id: 'errors', label: 'Erros',         icon: <IconAlert /> },
-      { id: 'audit',  label: 'Auditoria',     icon: <IconLog /> },
+      { id: 'audit',      label: 'Auditoria',  icon: <IconLog /> },
+      { id: 'compliance', label: 'Compliance', icon: <IconCompliance /> },
     ],
   },
 ];
