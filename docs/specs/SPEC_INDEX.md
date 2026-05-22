@@ -15,6 +15,7 @@
 | 5 | **5.3** | [FASE_5.3_PLAYWRIGHT_E2E_PRD.md](FASE_5.3_PLAYWRIGHT_E2E_PRD.md) | Playwright E2E Suite — extensão carregada, 6 testes reais (T1–T6) | ✅ Completo |
 | 6 | **6.1** | [2026-05-20-fase-6.1-ocr-image-dlp.md](../superpowers/plans/2026-05-20-fase-6.1-ocr-image-dlp.md) | OCR + Image DLP + Enterprise Guardrails (EasyOCR, Presidio, prompt injection defense) | ✅ Completo |
 | 7 | **6.2** | [2026-05-22-fase-6.2-compliance-dashboard.md](../superpowers/plans/2026-05-22-fase-6.2-compliance-dashboard.md) | Compliance Dashboard + Audit Trail — eventos DLP, filtros, trend chart, CSV export LGPD | ✅ Completo |
+| 8 | **6.3** | [2026-05-22-fase-6.3-google-login.md](../superpowers/plans/2026-05-22-fase-6.3-google-login.md) | Google OAuth Login — chrome.identity + BFF /auth/google + SI-31 a SI-36 | 📋 Planejado |
 
 ---
 
@@ -74,3 +75,9 @@ Todos os invariantes de segurança devem estar GREEN antes de cada release:
 | SI-28 | `/admin/compliance/export.csv` retorna CSV com header correto | 6.2 |
 | SI-29 | Raw JWT Supabase rejeitado em todos os endpoints `/admin/compliance/*` (SI-24 herdado) | 6.2 |
 | SI-30 | `payload_hash` e `hashed_payload_id` nunca aparecem na resposta da API compliance | 6.2 |
+| SI-31 | Google button presente no login view da extensão | 6.3 |
+| SI-32 | `launchWebAuthFlow` com URL Supabase Google OAuth (`provider=google`) | 6.3 |
+| SI-33 | Extensão NÃO chama Supabase diretamente — só BFF `/auth/google` | 6.3 |
+| SI-34 | `setSession()` chamado após Google login (token opaco criptografado) | 6.3 |
+| SI-35 | `access_token` Supabase nunca armazenado na extensão | 6.3 |
+| SI-36 | `sessionManager.setSession` encripta antes de `chrome.storage.local.set` | 6.3 |
