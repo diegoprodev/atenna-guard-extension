@@ -14,6 +14,7 @@
 | 4 | **5.2** | [FASE_5.2_PTBR_ENTERPRISE_RECOGNIZERS_PRD.md](FASE_5.2_PTBR_ENTERPRISE_RECOGNIZERS_PRD.md) | PT-BR Enterprise Recognizers: RG, CNH, OAB, Placa, CRM | ✅ Completo |
 | 5 | **5.3** | [FASE_5.3_PLAYWRIGHT_E2E_PRD.md](FASE_5.3_PLAYWRIGHT_E2E_PRD.md) | Playwright E2E Suite — extensão carregada, 6 testes reais (T1–T6) | ✅ Completo |
 | 6 | **6.1** | [2026-05-20-fase-6.1-ocr-image-dlp.md](../superpowers/plans/2026-05-20-fase-6.1-ocr-image-dlp.md) | OCR + Image DLP + Enterprise Guardrails (EasyOCR, Presidio, prompt injection defense) | ✅ Completo |
+| 7 | **6.2** | [2026-05-22-fase-6.2-compliance-dashboard.md](../superpowers/plans/2026-05-22-fase-6.2-compliance-dashboard.md) | Compliance Dashboard + Audit Trail — eventos DLP, filtros, trend chart, CSV export LGPD | 📋 Planejado |
 
 ---
 
@@ -32,7 +33,6 @@
 
 | Fase | Objetivo |
 |------|----------|
-| **6.2** | **Compliance Dashboard + Audit Trail** — página admin com eventos DLP por usuário, filtros por período/tipo, exportação CSV, gráficos de tendência |
 | 6.3 | Governance Layer (policies por departamento, regras customizáveis por empresa) |
 | 6.4 | Multi-tenant (organizações, seats, convites, billing) |
 
@@ -69,3 +69,8 @@ Todos os invariantes de segurança devem estar GREEN antes de cada release:
 | SI-23 | CF Gateway registra `user_id` em metadata em toda chamada `/generate-prompts` | 6.1 |
 | SI-24 | Admin panel usa token BFF opaco — nenhum JWT Supabase bruto aceito | 6.1 |
 | SI-25 | Custo na tabela admin reflete apenas requests identificados por `user_id` (zero distribuição igualitária) | 6.1 |
+| SI-26 | `/admin/compliance/summary` retorna `protection_rate` e `top_entity_types` | 6.2 |
+| SI-27 | `/admin/compliance/events` filtra por `risk_level`, `was_rewritten` e `days` | 6.2 |
+| SI-28 | `/admin/compliance/export.csv` retorna CSV com header correto | 6.2 |
+| SI-29 | Raw JWT Supabase rejeitado em todos os endpoints `/admin/compliance/*` (SI-24 herdado) | 6.2 |
+| SI-30 | `payload_hash` e `hashed_payload_id` nunca aparecem na resposta da API compliance | 6.2 |

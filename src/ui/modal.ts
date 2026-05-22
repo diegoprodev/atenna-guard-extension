@@ -4,6 +4,7 @@ import { isPro, consumeProWelcome, getPlan, setPlan } from '../core/planManager'
 import { consumeProWelcome as _consumeProWelcomeOnboarding, resolveWelcomeState, setProWelcomeFlag } from './modal/onboarding';
 import { signUpWithPassword, saveDisplayName } from '../core/auth';
 import { bffLogin, bffMe, bffResetPassword } from '../auth/bffClient';
+import { friendlyError } from '../core/errors';
 import { track, trackEvent } from '../core/analytics';
 import { getHistory, addToHistory, addGroupToHistory, toggleFavorite, isGroup } from '../core/history';
 import type { HistoryGroup, PromptEntry } from '../core/history';
@@ -327,7 +328,7 @@ function makeVariantRow(
   copyBtn.className = 'atenna-modal__history-copy';
   copyBtn.textContent = 'Copiar';
   copyBtn.addEventListener('click', () => {
-    navigator.clipboard?.writeText(text).then(() => showToast('Copiado!'));
+    navigator.clipboard?.writeText(text).then(() => showToast('Copiado!', 'success'));
   });
 
   const useBtn = document.createElement('button');
@@ -337,9 +338,9 @@ function makeVariantRow(
     if (platformInput) {
       setInputText(platformInput, text);
       overlay.remove();
-      showToast('Aplicado');
+      showToast('Prompt aplicado com sucesso!', 'success');
     } else {
-      showToast('Input não encontrado');
+      showToast('Abra o ChatGPT, Claude ou Gemini para aplicar o prompt.', 'warning');
     }
   });
 
@@ -466,14 +467,14 @@ async function renderMeusPrompts(
       useBtn.className = 'atenna-modal__history-use';
       useBtn.textContent = 'Usar';
       useBtn.addEventListener('click', () => {
-        if (platformInput) { setInputText(platformInput, e.text); overlay.remove(); showToast('Aplicado'); }
-        else showToast('Input não encontrado');
+        if (platformInput) { setInputText(platformInput, e.text); overlay.remove(); showToast('Prompt aplicado com sucesso!', 'success'); }
+        else showToast('Abra o ChatGPT, Claude ou Gemini para aplicar o prompt.', 'warning');
       });
 
       const copyBtn = document.createElement('button');
       copyBtn.className = 'atenna-modal__history-copy';
       copyBtn.textContent = 'Copiar';
-      copyBtn.addEventListener('click', () => { navigator.clipboard?.writeText(e.text).then(() => showToast('Copiado!')); });
+      copyBtn.addEventListener('click', () => { navigator.clipboard?.writeText(e.text).then(() => showToast('Copiado!', 'success')); });
 
       actions.appendChild(starBtn);
       actions.appendChild(useBtn);
@@ -1515,7 +1516,7 @@ export function openUploadFromBadge(): void {
             overlay.remove();
             void applyAsFileAttachment(text, fileName ?? 'documento.txt').then(ok => {
               if (!ok) {
-                if (!injectText(text)) showToast('Campo de texto não encontrado — use Copiar.');
+                if (!injectText(text)) showToast('Não foi possível aplicar o texto. Use o botão Copiar.', 'warning');
               }
             });
           } else {
@@ -1523,7 +1524,7 @@ export function openUploadFromBadge(): void {
             // is still valid for execCommand (Claude Lexical) and focus is predictable
             const ok = injectText(text);
             overlay.remove();
-            if (!ok) showToast('Campo de texto não encontrado — use Copiar.');
+            if (!ok) showToast('Não foi possível aplicar o texto. Use o botão Copiar.', 'warning');
           }
         };
 
@@ -2038,7 +2039,7 @@ async function runFlow(
     // Milestone tracking
     if (newTotalCount === 1) {
       void trackEvent('first_prompt_generated');
-      showToast('🎉 Primeiro prompt criado!');
+      showToast('🎉 Primeiro prompt criado!', 'success');
     } else if (newTotalCount === 3) {
       void trackEvent('third_prompt_generated');
     } else if (newTotalCount === 5) {
@@ -2627,11 +2628,9 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
       btn.disabled = true;
       setTimeout(() => window.location.reload(), 1000);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao entrar.';
-      void trackEvent('login_error', { error: msg });
-      status.textContent = msg.includes('401') || msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('failed')
-        ? 'Email ou senha incorretos.'
-        : msg;
+      const msg = friendlyError(err);
+      void trackEvent('login_error', { error: err instanceof Error ? err.message : String(err) });
+      status.textContent = msg;
       status.classList.remove('atenna-modal__login-status--success');
       status.classList.add('atenna-modal__login-status--error');
       btn.disabled = false;
@@ -2936,9 +2935,8 @@ function renderResetView(container: HTMLElement, switchView: (view: string) => v
       input.disabled = true;
       btn.style.display = 'none';
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao enviar email.';
-      void trackEvent('reset_error', { error: msg });
-      status.textContent = msg;
+      void trackEvent('reset_error', { error: err instanceof Error ? err.message : String(err) });
+      status.textContent = friendlyError(err);
       status.classList.add('atenna-modal__login-status--error');
       btn.disabled = false;
       btn.textContent = 'Enviar link';
@@ -3094,11 +3092,11 @@ function buildCard(
     void trackEvent('prompt_copied', { prompt_type: v.prompt_type, card_variant: v.variant, origin, output_length: text.length });
     try {
       Promise.resolve(navigator.clipboard?.writeText(text))
-        .then(() => showToast('Copiado!'))
-        .catch(() => { fallbackCopy(text); showToast('Copiado!'); });
+        .then(() => showToast('Copiado!', 'success'))
+        .catch(() => { fallbackCopy(text); showToast('Copiado!', 'success'); });
     } catch {
       fallbackCopy(text);
-      showToast('Copiado!');
+      showToast('Copiado!', 'success');
     }
   });
 
@@ -3108,9 +3106,9 @@ function buildCard(
       setInputText(platformInput, ta.value);
       clearMsgInterval();
       overlay.remove();
-      showToast('Aplicado');
+      showToast('Prompt aplicado com sucesso!', 'success');
     } else {
-      showToast('Input não encontrado — use Copiar');
+      showToast('Abra o ChatGPT, Claude ou Gemini para aplicar o prompt.', 'warning');
     }
   });
 
@@ -3233,22 +3231,23 @@ async function openCheckout(source: string, btn?: HTMLButtonElement, plan: 'year
       window.open(url, '_blank', 'noopener');
       void trackEvent('checkout_url_opened', { source, plan } as Parameters<typeof trackEvent>[1]);
     } else {
-      showToast('Erro ao abrir checkout. Tente novamente.');
+      showToast('Não foi possível abrir o checkout. Tente novamente.', 'error');
     }
   } catch {
-    showToast('Erro inesperado. Tente novamente.');
+    showToast('Algo deu errado. Tente novamente em alguns instantes.', 'error');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label ?? 'Quero ser Pro'; }
   }
 }
 
-function showToast(message: string): void {
+function showToast(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info'): void {
   document.querySelector('.atenna-modal-toast')?.remove();
   const toast = document.createElement('div');
-  toast.className = 'atenna-modal-toast';
+  toast.className = `atenna-modal-toast atenna-modal-toast--${type}`;
   toast.textContent = message;
   document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 1900);
+  const duration = type === 'error' ? 3500 : 2200;
+  setTimeout(() => toast.remove(), duration);
 }
 
 function renderDocumentActionBar(container: HTMLElement, content: string): void {
@@ -3320,10 +3319,10 @@ function renderDocumentActionBar(container: HTMLElement, content: string): void 
     try {
       chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
         const tabId = tabs[0]?.id;
-        if (!tabId) { showToast('Nenhuma aba ativa encontrada.'); return; }
+        if (!tabId) { showToast('Nenhuma aba ativa encontrada.', 'warning'); return; }
         chrome.tabs.sendMessage(tabId, { type: 'INJECT_CONTENT_TO_CHAT', content }, () => {
           if (chrome.runtime.lastError) {
-            showToast('Abra o ChatGPT, Claude ou Gemini antes de aplicar.');
+            showToast('Abra o ChatGPT, Claude ou Gemini antes de aplicar.', 'warning');
             return;
           }
           applyBtn.innerHTML = `
@@ -3345,7 +3344,7 @@ function renderDocumentActionBar(container: HTMLElement, content: string): void 
           }, 2500);
         });
       });
-    } catch { showToast('Erro ao injetar conteúdo.'); }
+    } catch { showToast('Não foi possível aplicar o conteúdo. Tente novamente.', 'error'); }
     void trackEvent('document_applied_to_chat', { char_count: content.length });
   });
 

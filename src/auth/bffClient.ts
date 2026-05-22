@@ -1,5 +1,6 @@
 import { getSession, setSession, clearSession, Session } from './sessionManager';
 import { withRefreshLock } from './refreshLock';
+import { AppError, E } from '../core/errors';
 
 const BFF_BASE = 'https://atennaplugin.maestro-n8n.site';
 
@@ -37,24 +38,39 @@ export async function bffFetch<T>(
     ...(init.headers as Record<string, string> ?? {}),
     ...(session ? { Authorization: `Bearer ${session.token}` } : {}),
   };
-  const r = await fetch(`${BFF_BASE}${path}`, { ...init, headers });
+  let r: Response;
+  try {
+    r = await fetch(`${BFF_BASE}${path}`, { ...init, headers });
+  } catch {
+    throw new AppError(E.NETWORK);
+  }
   if (r.status === 401 && retry && session) {
     const refreshed = await withRefreshLock(() => bffRefresh(session.token));
     if (refreshed) return bffFetch<T>(path, init, false);
     await clearSession();
-    throw new Error('SESSION_EXPIRED');
+    throw new AppError(E.SESSION_EXPIRED);
   }
-  if (!r.ok) throw new Error(`BFF ${path} → ${r.status}`);
+  if (r.status === 429) throw new AppError(E.RATE_LIMIT);
+  if (r.status >= 500)  throw new AppError(E.SERVER);
+  if (!r.ok)            throw new AppError(E.SERVER);
   return r.json() as Promise<T>;
 }
 
 export async function bffLogin(email: string, password: string): Promise<Session> {
-  const r = await fetch(`${BFF_BASE}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!r.ok) throw new Error(`Login failed: ${r.status}`);
+  let r: Response;
+  try {
+    r = await fetch(`${BFF_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch {
+    throw new AppError(E.NETWORK);
+  }
+  if (r.status === 401 || r.status === 400) throw new AppError(E.INVALID_CREDENTIALS);
+  if (r.status === 429)                     throw new AppError(E.RATE_LIMIT);
+  if (r.status >= 500)                      throw new AppError(E.SERVER);
+  if (!r.ok)                                throw new AppError(E.SERVER);
   const s = await r.json() as Session;
   await setSession(s);
   return s;

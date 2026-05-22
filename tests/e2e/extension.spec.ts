@@ -260,3 +260,99 @@ test('T8: clicking "Proteger dados" masks CPF in Perplexity React-controlled tex
 
   await page.close();
 });
+
+// ─── DIAG: Perplexity.ai real DOM diagnostic ──────────────────
+// Run with: npx playwright test --project=extension --grep "DIAG"
+
+test('DIAG: perplexity.ai protect button diagnostic', async ({ context }) => {
+  await context.route('**/auth/v1/user**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ id: 'e2e-diag-id', email: 'diag@atenna.ai' }) })
+  );
+  await context.route('**/rest/v1/profiles**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify([{ display_name: 'Diag' }]) })
+  );
+
+  await injectSession(context);
+  await new Promise(r => setTimeout(r, 500));
+
+  const page = await context.newPage();
+  const logs: string[] = [];
+  page.on('console', msg => {
+    const txt = msg.text();
+    if (txt.includes('[Atenna')) { logs.push(txt); console.log('ATENNA:', txt); }
+  });
+
+  await page.goto('https://www.perplexity.ai', { waitUntil: 'domcontentloaded', timeout: 30_000 });
+
+  // Inspect DOM before badge
+  const domSnapshot = await page.evaluate(() => {
+    const tas = Array.from(document.querySelectorAll('textarea')).map(t => ({
+      id: t.id, ph: t.placeholder?.slice(0,30), visible: t.offsetParent !== null, w: t.offsetWidth,
+    }));
+    const ces = Array.from(document.querySelectorAll('[contenteditable="true"]')).map(c => ({
+      ph: (c as HTMLElement).dataset['placeholder']?.slice(0,30) || c.getAttribute('placeholder')?.slice(0,30),
+      visible: (c as HTMLElement).offsetParent !== null,
+    }));
+    return { textareas: tas, contenteditables: ces };
+  });
+  console.log('DOM:', JSON.stringify(domSnapshot));
+
+  try {
+    await page.waitForSelector('#atenna-guard-btn', { timeout: 12_000 });
+  } catch {
+    console.log('BADGE NOT FOUND. DOM:', JSON.stringify(domSnapshot));
+    throw new Error('Badge not found');
+  }
+
+  // Type CPF using keyboard (most realistic)
+  const visibleTA = page.locator('textarea').filter({ visible: true }).first();
+  const visibleCE = page.locator('[contenteditable="true"]').filter({ visible: true }).first();
+  const taCount = await visibleTA.count();
+
+  if (taCount > 0) {
+    await visibleTA.click();
+    await visibleTA.pressSequentially('cpf 05042367466', { delay: 40 });
+  } else {
+    await visibleCE.click();
+    await visibleCE.pressSequentially('cpf 05042367466', { delay: 40 });
+  }
+
+  await page.waitForTimeout(800);
+
+  await page.waitForSelector('#atenna-protection-banner', { timeout: 6_000 });
+  console.log('BANNER appeared');
+
+  // Value and DOM state before
+  const before = await page.evaluate(() => {
+    const ta = Array.from(document.querySelectorAll<HTMLTextAreaElement>('textarea')).find(t => t.offsetParent !== null && t.offsetWidth > 50);
+    const ce = document.querySelector<HTMLElement>('[contenteditable="true"]');
+    return {
+      taValue: ta?.value ?? null,
+      taInDom: ta ? document.body.contains(ta) : false,
+      ceText: ce?.innerText ?? null,
+      ceInDom: ce ? document.body.contains(ce) : false,
+    };
+  });
+  console.log('BEFORE click:', JSON.stringify(before));
+
+  await page.click('.atenna-protection-banner__btn--primary');
+  await page.waitForTimeout(600);
+
+  const after = await page.evaluate(() => {
+    const ta = Array.from(document.querySelectorAll<HTMLTextAreaElement>('textarea')).find(t => t.offsetParent !== null && t.offsetWidth > 50);
+    const ce = document.querySelector<HTMLElement>('[contenteditable="true"]');
+    return {
+      taValue: ta?.value ?? null,
+      ceText: ce?.innerText ?? null,
+    };
+  });
+  console.log('AFTER click:', JSON.stringify(after));
+  console.log('ALL ATENNA LOGS:', JSON.stringify(logs));
+
+  const allValues = [after.taValue, after.ceText].filter(Boolean).join('|');
+  expect(allValues).toContain('[CPF]');
+
+  await page.close();
+});
