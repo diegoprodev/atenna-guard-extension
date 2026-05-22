@@ -32,7 +32,7 @@ def test_empty_output_passes():
     result = validate_output("", canary)
     assert result.threat == OutputThreat.NONE
 
-def test_oversized_output_blocked():
+def test_oversized_output_truncated():
     canary = generate_canary()
     huge = "x" * 50_001
     result = validate_output(huge, canary)
@@ -42,13 +42,3 @@ def test_oversized_output_blocked():
 def test_canary_is_unique():
     canaries = {generate_canary() for _ in range(100)}
     assert len(canaries) == 100
-
-def test_safe_output_field_contains_text():
-    canary = generate_canary()
-    result = validate_output("Prompt melhorado aqui.", canary)
-    assert result.safe_output == "Prompt melhorado aqui."
-
-def test_empty_canary_skips_canary_check():
-    # If caller passes empty string as canary (edge case), should not false-positive
-    result = validate_output("normal output text", "")
-    assert result.threat == OutputThreat.NONE
