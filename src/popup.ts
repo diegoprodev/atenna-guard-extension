@@ -219,7 +219,17 @@ function renderLogin(container: HTMLElement, tabId: number | null): void {
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erro.';
-      errEl.textContent = msg.includes('Invalid') ? 'Email ou senha incorretos.' : msg;
+      if (msg.includes('email_not_found') || msg.includes('user_not_found')) {
+        errEl.textContent = 'Email não encontrado. Verifique o endereço ou crie uma conta.';
+      } else if (msg.includes('wrong_password') || msg.includes('Invalid login credentials') || msg.includes('invalid_credentials')) {
+        errEl.textContent = 'Senha incorreta. Verifique sua senha e tente novamente.';
+      } else if (msg.includes('email_not_confirmed') || msg.includes('Email not confirmed')) {
+        errEl.textContent = 'Conta não confirmada. Verifique seu email e clique no link de ativação.';
+      } else if (msg.includes('too_many_requests') || msg.includes('rate_limit')) {
+        errEl.textContent = 'Muitas tentativas. Aguarde alguns minutos.';
+      } else {
+        errEl.textContent = msg || 'Erro inesperado. Tente novamente.';
+      }
       errEl.style.display = 'block';
       btn.disabled = false; btn.textContent = mode === 'signup' ? 'Criar conta' : 'Entrar';
     }

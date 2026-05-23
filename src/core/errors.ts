@@ -52,5 +52,16 @@ export function classifyError(err: unknown): AppErrorCode {
 }
 
 export function friendlyError(err: unknown): string {
-  return MESSAGES[classifyError(err)];
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg.includes('email_not_found') || msg.includes('user_not_found'))
+    return 'Email não encontrado. Verifique o endereço ou crie uma conta.';
+  if (msg.includes('wrong_password') || msg.includes('invalid_credentials') || msg.includes('Invalid login credentials'))
+    return 'Senha incorreta. Verifique sua senha e tente novamente.';
+  if (msg.includes('email_not_confirmed') || msg.includes('Email not confirmed'))
+    return 'Conta não confirmada. Verifique seu email e clique no link de confirmação.';
+  if (msg.includes('too_many_requests') || msg.includes('rate_limit'))
+    return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+  if (msg.includes('NETWORK') || msg.includes('fetch'))
+    return 'Sem conexão. Verifique sua internet e tente novamente.';
+  return msg || 'Erro inesperado. Tente novamente.';
 }

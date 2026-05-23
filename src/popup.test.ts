@@ -19,3 +19,12 @@ describe('popup.ts — no Copilot references', () => {
     expect(src).not.toContain("'Copilot'");
   });
 });
+
+describe('popup.ts — personalized error messages', () => {
+  it('has specific error mappings for email_not_found, wrong_password, email_not_confirmed', () => {
+    const src = fs.readFileSync('src/popup.ts', 'utf-8');
+    expect(src).toContain('email_not_found');
+    expect(src).toContain('Senha incorreta');
+    expect(src).toContain('email_not_confirmed');
+  });
+});

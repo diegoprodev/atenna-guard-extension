@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import fs from 'fs';
 import * as planManager from '../core/planManager';
 
 // CRITICAL: Mock auth BEFORE importing modal, since modal has direct import of getActiveSession
@@ -613,5 +614,23 @@ describe('badge color picker — saved feedback', () => {
     expect(src).toContain('savedFeedback');
     expect(src).toContain('1500');
     expect(src).toContain("opacity = '1'");
+  });
+});
+
+describe('friendlyError — personalized messages', () => {
+  it('maps email_not_found to friendly message', () => {
+    const src = fs.readFileSync('src/core/errors.ts', 'utf-8');
+    expect(src).toContain('email_not_found');
+    expect(src).toContain('não encontrado');
+  });
+  it('maps wrong_password to friendly message', () => {
+    const src = fs.readFileSync('src/core/errors.ts', 'utf-8');
+    expect(src).toContain('wrong_password');
+    expect(src).toContain('Senha incorreta');
+  });
+  it('maps email_not_confirmed to friendly message', () => {
+    const src = fs.readFileSync('src/core/errors.ts', 'utf-8');
+    expect(src).toContain('email_not_confirmed');
+    expect(src).toContain('confirmada');
   });
 });
