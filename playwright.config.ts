@@ -23,6 +23,11 @@ export default defineConfig({
       use: {},
     },
     {
+      name: 'stress',
+      testMatch: /tests\/e2e\/stress-full-flow\.spec\.ts/,
+      use: {},
+    },
+    {
       name: 'api',
       testMatch: /tests\/e2e\/(fase-5\.1|fase-4\.2a).*\.spec\.ts/,
       use: {

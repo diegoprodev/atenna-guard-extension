@@ -52,14 +52,63 @@ export const test = base.extend<ExtensionFixtures>({
 export const expect = base.expect;
 
 /**
- * Inject a fake authenticated session into chrome.storage.local via the service worker.
+ * Inject a properly encrypted session into chrome.storage.local via the service worker.
+ * Uses the same AES-GCM derivation as sessionManager.ts (keyed on chrome.runtime.id).
  */
 export async function injectSession(context: BrowserContext): Promise<void> {
-  const workers = context.serviceWorkers();
-  if (workers.length === 0) return;
-  await workers[0].evaluate((session) => {
-    chrome.storage.local.set({ atenna_jwt: session, atenna_app_onboarding_seen: true });
-  }, FAKE_SESSION);
+  let [sw] = context.serviceWorkers();
+  if (!sw) {
+    sw = await context.waitForEvent('serviceworker', { timeout: 15_000 });
+  }
+  await sw.evaluate(async (session) => {
+    const STORAGE_KEY = 'atenna_session';
+    const SALT_KEY    = 'atenna_enc_salt';
+
+    // Derive AES-GCM key the same way sessionManager.ts does
+    const saltRaw = await new Promise<number[] | undefined>(r =>
+      chrome.storage.local.get(SALT_KEY, res => r(res[SALT_KEY] as number[] | undefined))
+    );
+    let salt: Uint8Array;
+    if (!saltRaw) {
+      salt = crypto.getRandomValues(new Uint8Array(16));
+      await new Promise<void>(r => chrome.storage.local.set({ [SALT_KEY]: Array.from(salt) }, r));
+    } else {
+      salt = new Uint8Array(saltRaw);
+    }
+    const baseKey = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(chrome.runtime.id),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveKey'],
+    );
+    const key = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt, iterations: 100_000, hash: 'SHA-256' },
+      baseKey,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt'],
+    );
+    const iv  = crypto.getRandomValues(new Uint8Array(12));
+    const enc = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      new TextEncoder().encode(JSON.stringify(session)),
+    );
+    const stored = { iv: Array.from(iv), data: Array.from(new Uint8Array(enc)) };
+    await new Promise<void>(r =>
+      chrome.storage.local.set({
+        [STORAGE_KEY]: stored,
+        atenna_app_onboarding_seen: true,
+      }, r)
+    );
+  }, {
+    token:      FAKE_SESSION.access_token,
+    email:      FAKE_SESSION.email,
+    plan:       'free',
+    expires_at: FAKE_SESSION.expires_at,
+    user_id:    'e2e-user-id',
+  });
 }
 
 /**
