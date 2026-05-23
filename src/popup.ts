@@ -1,5 +1,5 @@
 import { signUpWithPassword } from './core/auth';
-import { bffLogin, bffLogout, bffMe, bffResetPassword } from './auth/bffClient';
+import { bffLogin, bffLogout, bffMe, bffResetPassword, bffGoogleLogin } from './auth/bffClient';
 import { openSettingsOverlay } from './ui/modal';
 
 const SUPPORTED_HOSTS = ['chatgpt.com', 'chat.openai.com', 'claude.ai', 'gemini.google.com', 'perplexity.ai', 'copilot.microsoft.com'];
@@ -123,6 +123,11 @@ function renderLogin(container: HTMLElement, tabId: number | null): void {
         </div>
         <button class="ap-btn ap-btn--primary" id="ap-login-btn">Entrar</button>
       </div>
+      <div class="ap-login-divider"><span>ou</span></div>
+      <button class="ap-btn ap-btn--google" id="ap-google-btn">
+        <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.17 2.86l6.1-6.1C34.46 3.01 29.5 1 24 1 14.85 1 7.08 6.48 3.69 14.24l7.1 5.52C12.53 13.1 17.83 9.5 24 9.5z"/><path fill="#4285F4" d="M46.52 24.5c0-1.64-.15-3.22-.43-4.75H24v9h12.7c-.55 2.99-2.2 5.53-4.68 7.24l7.18 5.58C43.44 37.44 46.52 31.42 46.52 24.5z"/><path fill="#FBBC05" d="M10.8 28.5A14.52 14.52 0 0 1 9.5 24c0-1.57.27-3.09.76-4.5l-7.1-5.52A23.94 23.94 0 0 0 0 24c0 3.87.93 7.53 2.57 10.76l8.23-6.26z"/><path fill="#34A853" d="M24 47c5.5 0 10.12-1.83 13.49-4.96l-7.18-5.58C28.54 37.77 26.38 38.5 24 38.5c-6.17 0-11.47-3.6-13.2-8.76l-8.23 6.26C6.08 43.52 14.45 47 24 47z"/></svg>
+        Entrar com Google
+      </button>
       <div class="ap-login-links">
         <button class="ap-link-btn" id="ap-signup-link">Criar conta</button>
         <span style="color:#ccc">·</span>
@@ -207,6 +212,24 @@ function renderLogin(container: HTMLElement, tabId: number | null): void {
 
   btn.addEventListener('click', () => void doAction());
   passEl.addEventListener('keydown', e => { if (e.key === 'Enter') void doAction(); });
+
+  const googleBtn = document.getElementById('ap-google-btn') as HTMLButtonElement;
+  googleBtn.addEventListener('click', async () => {
+    googleBtn.disabled = true;
+    googleBtn.textContent = 'Aguardando Google…';
+    errEl.style.display = 'none';
+    try {
+      await bffGoogleLogin();
+      if (tabId) { relayToggleModal(tabId); window.close(); }
+      else { window.location.reload(); }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Erro no login com Google.';
+      errEl.textContent = msg.includes('NETWORK') ? 'Sem conexão ou login cancelado.' : msg;
+      errEl.style.display = 'block';
+      googleBtn.disabled = false;
+      googleBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.17 2.86l6.1-6.1C34.46 3.01 29.5 1 24 1 14.85 1 7.08 6.48 3.69 14.24l7.1 5.52C12.53 13.1 17.83 9.5 24 9.5z"/><path fill="#4285F4" d="M46.52 24.5c0-1.64-.15-3.22-.43-4.75H24v9h12.7c-.55 2.99-2.2 5.53-4.68 7.24l7.18 5.58C43.44 37.44 46.52 31.42 46.52 24.5z"/><path fill="#FBBC05" d="M10.8 28.5A14.52 14.52 0 0 1 9.5 24c0-1.57.27-3.09.76-4.5l-7.1-5.52A23.94 23.94 0 0 0 0 24c0 3.87.93 7.53 2.57 10.76l8.23-6.26z"/><path fill="#34A853" d="M24 47c5.5 0 10.12-1.83 13.49-4.96l-7.18-5.58C28.54 37.77 26.38 38.5 24 38.5c-6.17 0-11.47-3.6-13.2-8.76l-8.23 6.26C6.08 43.52 14.45 47 24 47z"/></svg> Entrar com Google`;
+    }
+  });
 }
 
 function renderHome(

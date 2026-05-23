@@ -193,6 +193,26 @@
     }
     .ap-link-btn:hover { text-decoration: underline; }
 
+    /* Google OAuth */
+    .ap-login-divider {
+      display: flex; align-items: center; gap: 8px;
+      width: 100%; color: #bbb; font-size: 11px;
+    }
+    .ap-login-divider::before, .ap-login-divider::after {
+      content: ''; flex: 1; height: 1px; background: #e5e5e5;
+    }
+    .ap-btn--google {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 10px 14px;
+      background: #fff; color: #3c4043;
+      border: 1.5px solid #dadce0; border-radius: 8px;
+      font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer;
+      transition: background 140ms ease, box-shadow 140ms ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .ap-btn--google:hover:not(:disabled) { background: #f8f9fa; box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+    .ap-btn--google:disabled { opacity: 0.55; cursor: not-allowed; }
+
     /* Skeleton loading */
     .ap-skeleton { padding: 24px; display: flex; flex-direction: column; gap: 10px; }
     .ap-sk-line  { height: 12px; border-radius: 6px; background: #2a2a2a; animation: ap-sk-pulse 1.4s ease infinite; }
