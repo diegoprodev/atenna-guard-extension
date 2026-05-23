@@ -2688,7 +2688,47 @@ function renderLoginView(container: HTMLElement, switchView: (view: string) => v
   emailInput.focus();
 }
 
-function renderSignupView(container: HTMLElement, switchView: (view: string) => void): void {
+function renderEmailConfirmationScreen(container: HTMLElement, email: string, switchView: (view: string) => void): void {
+  container.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'atenna-modal__login';
+  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:20px;padding:32px 24px;text-align:center;';
+
+  const iconWrap = document.createElement('div');
+  iconWrap.style.cssText = 'width:64px;height:64px;border-radius:50%;background:rgba(59,130,246,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+  iconWrap.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`;
+
+  const titleEl = document.createElement('h3');
+  titleEl.style.cssText = 'margin:0;font-size:16px;font-weight:600;color:var(--at-text,#e8e8e8);';
+  titleEl.textContent = 'Verifique seu email';
+
+  const desc = document.createElement('p');
+  desc.style.cssText = 'margin:0;font-size:13px;color:var(--at-text-secondary,rgba(232,232,232,0.65));line-height:1.5;max-width:260px;';
+  desc.innerHTML = `Enviamos um link de confirmação para<br><strong style="color:var(--at-text,#e8e8e8)">${email}</strong>.<br>Clique no link para ativar sua conta.`;
+
+  const gmailBtn = document.createElement('a');
+  gmailBtn.href = 'https://mail.google.com/';
+  gmailBtn.target = '_blank';
+  gmailBtn.rel = 'noopener noreferrer';
+  gmailBtn.className = 'atenna-modal__login-btn';
+  gmailBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;padding:10px 20px;';
+  gmailBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg> Abrir Gmail`;
+
+  const backBtn2 = document.createElement('button');
+  backBtn2.className = 'atenna-modal__login-link';
+  backBtn2.style.cssText = 'margin-top:4px;font-size:13px;';
+  backBtn2.textContent = 'Voltar ao login';
+  backBtn2.addEventListener('click', () => switchView('login'));
+
+  wrap.appendChild(iconWrap);
+  wrap.appendChild(titleEl);
+  wrap.appendChild(desc);
+  wrap.appendChild(gmailBtn);
+  wrap.appendChild(backBtn2);
+  container.appendChild(wrap);
+}
+
+export function renderSignupView(container: HTMLElement, switchView: (view: string) => void): void {
   void trackEvent('signup_clicked');
   clearMsgInterval();
   container.innerHTML = '';
@@ -2850,11 +2890,7 @@ function renderSignupView(container: HTMLElement, switchView: (view: string) => 
       btn.textContent = 'Criar conta';
     } else {
       void trackEvent('signup_success');
-      setStatus('Conta criada! Verifique seu email e clique no link de confirmação.', 'success');
-      emailInput.disabled = true;
-      passwordInput.disabled = true;
-      confirmInput.disabled = true;
-      btn.style.display = 'none';
+      renderEmailConfirmationScreen(container, email, switchView);
     }
   };
 

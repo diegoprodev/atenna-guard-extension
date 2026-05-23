@@ -24,7 +24,7 @@ vi.mock('../auth/bffClient', () => ({
   bffGoogleLogin: vi.fn(),
 }));
 
-import { toggleModal, generateFromBadge, fetchPrompts, clearPromptCache } from './modal';
+import { toggleModal, generateFromBadge, fetchPrompts, clearPromptCache, renderSignupView } from './modal';
 import * as auth from '../core/auth';
 import * as bffClient from '../auth/bffClient';
 
@@ -570,5 +570,38 @@ describe('fetchPrompts', () => {
     stubChrome({ ok: false, status: 503 });
     const result = await fetchPrompts('texto');
     expect(result.direct).toContain('texto');
+  });
+});
+
+describe('renderSignupView — email confirmation screen', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('shows confirmation screen with email after successful signup', async () => {
+    vi.mocked(auth.signUpWithPassword).mockResolvedValueOnce({ error: null });
+
+    const container = document.createElement('div');
+    renderSignupView(container, vi.fn());
+
+    // Fill form fields
+    const inputs = container.querySelectorAll('input');
+    (inputs[0] as HTMLInputElement).value = 'João';        // name
+    (inputs[1] as HTMLInputElement).value = 'joao@example.com'; // email
+    (inputs[2] as HTMLInputElement).value = 'senha123';    // password
+    (inputs[3] as HTMLInputElement).value = 'senha123';    // confirm
+
+    // Find and click the submit button (not back btn)
+    const btn = container.querySelector('.atenna-modal__login-btn') as HTMLButtonElement;
+    btn.click();
+    await vi.runAllTimersAsync();
+
+    expect(container.textContent).toContain('Verifique seu email');
+    expect(container.textContent).toContain('joao@example.com');
+    expect(container.textContent).toContain('Abrir Gmail');
+    expect(container.textContent).toContain('Voltar ao login');
   });
 });
