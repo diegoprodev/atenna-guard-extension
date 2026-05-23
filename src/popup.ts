@@ -189,9 +189,25 @@ function renderLogin(container: HTMLElement, tabId: number | null): void {
         const name = nameEl.value.trim();
         const { error } = await signUpWithPassword(email, pass, name || undefined);
         if (error) throw new Error(error);
-        errEl.style.color = '#16a34a'; errEl.style.background = '#f0fdf4'; errEl.style.borderColor = '#bbf7d0';
-        errEl.textContent = 'Conta criada! Verifique seu email.'; errEl.style.display = 'block';
-        btn.disabled = false; btn.textContent = 'Criar conta';
+        container.innerHTML = `
+          <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px 20px;text-align:center;">
+            <div style="width:56px;height:56px;border-radius:50%;background:rgba(59,130,246,0.12);display:flex;align-items:center;justify-content:center;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+            </div>
+            <h3 style="margin:0;font-size:15px;font-weight:600;color:#1a1a2e;">Verifique seu email</h3>
+            <p style="margin:0;font-size:12px;color:#666;line-height:1.5;">Enviamos um link de confirmação para<br><strong>${email}</strong>.<br>Clique no link para ativar sua conta.</p>
+            <a href="https://mail.google.com/" target="_blank" rel="noopener noreferrer"
+               style="display:flex;align-items:center;gap:6px;background:#3b82f6;color:#fff;padding:9px 18px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:500;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+              Abrir Gmail
+            </a>
+            <button id="ap-back-to-login" style="background:none;border:none;color:#3b82f6;cursor:pointer;font-size:12px;text-decoration:underline;">Voltar ao login</button>
+          </div>`;
+        const backBtn = container.querySelector('#ap-back-to-login') as HTMLButtonElement | null;
+        if (backBtn) {
+          backBtn.addEventListener('click', () => renderLogin(container, tabId));
+        }
+        return;
       } else {
         await bffLogin(email, pass);
         if (tabId) {
