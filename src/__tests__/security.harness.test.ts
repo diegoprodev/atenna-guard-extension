@@ -71,11 +71,16 @@ describe('Google OAuth — Security Invariants (SI-31 to SI-36)', () => {
     expect(fnBody).toContain('setSession(s)');
   });
 
-  it('SI-35: bffGoogleLogin never references access_token (raw Supabase JWT not stored)', () => {
+  it('SI-35: bffGoogleLogin stores opaque token via setSession, never the raw Supabase access_token', () => {
     const client = readFile('auth/bffClient.ts');
     const fnStart = client.indexOf('export async function bffGoogleLogin');
     const fnBody = client.slice(fnStart, fnStart + 2000);
-    expect(fnBody).not.toContain('access_token');
+    // Must call setSession (stores session)
+    expect(fnBody).toContain('setSession(s)');
+    // Must NOT pass access_token directly to setSession — only the opaque BFF session
+    expect(fnBody).not.toMatch(/setSession\s*\(\s*\{[^}]*access_token/);
+    // access_token must only appear in the BFF request body, not stored locally
+    expect(fnBody).toContain('body: JSON.stringify(body)');
   });
 
   it('SI-36: sessionManager encrypts before chrome.storage write (AES-GCM)', () => {

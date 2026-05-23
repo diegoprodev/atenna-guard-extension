@@ -1,5 +1,5 @@
 import { getCurrentInput, getInputText, setInputText } from '../core/inputHandler';
-import { getUsage, incrementUsage, isAtLimit, isAtAnyLimit, DAILY_LIMIT, getTotalCount, incrementTotalCount, getMonthlyUsage, MONTHLY_LIMIT, incrementMonthlyUsage, syncUsageFromSupabase } from '../core/usageCounter';
+import { getUsage, incrementUsage, isAtLimit, isAtAnyLimit, DAILY_LIMIT, getTotalCount, incrementTotalCount, getMonthlyUsage, MONTHLY_LIMIT, incrementMonthlyUsage } from '../core/usageCounter';
 import { isPro, consumeProWelcome, getPlan, setPlan } from '../core/planManager';
 import { consumeProWelcome as _consumeProWelcomeOnboarding, resolveWelcomeState, setProWelcomeFlag } from './modal/onboarding';
 import { signUpWithPassword, saveDisplayName } from '../core/auth';
@@ -13,7 +13,7 @@ import { scan } from '../dlp/detector';
 import { buildAdvisory } from '../dlp/advisory';
 import type { Advisory } from '../dlp/types';
 import { updateBadgeDotRisk, setAutoBanner, getDlpMetadata } from '../content/injectButton';
-import { getDlpStats, syncDlpStats } from '../core/dlpStats';
+import { getDlpStats } from '../core/dlpStats';
 import { renderPrivacyDataSection } from './privacy-data';
 import { UploadWidget } from './upload-widget';
 import { getFlag } from '../core/featureFlags';
@@ -784,31 +784,10 @@ function renderSettingsPage(
         getDlpStats(),
       ]);
 
-      // Supabase 2-way sync — usage + DLP
-      let dlp = dlpLocal;
-      let usage = usageLocal;
-      let monthly = monthlyLocal;
-      let total = totalLocal;
-
-      if (session.access_token) {
-        try {
-          const { decodeJwtPayload } = await import('../core/auth');
-          const payload = decodeJwtPayload(session.access_token);
-          const userId = payload['sub'] as string | undefined;
-
-          const [syncedUsage, syncedDlp] = await Promise.all([
-            syncUsageFromSupabase(session.access_token),
-            userId ? syncDlpStats(session.access_token, userId) : Promise.resolve(dlpLocal),
-          ]);
-
-          if (syncedUsage) {
-            usage   = { ...usage,   count: syncedUsage.todayCount };
-            monthly = syncedUsage.monthlyCount;
-            total   = syncedUsage.totalCount;
-          }
-          dlp = syncedDlp;
-        } catch { /* offline — use local values */ }
-      }
+      const dlp = dlpLocal;
+      const usage = usageLocal;
+      const monthly = monthlyLocal;
+      const total = totalLocal;
 
       const taxaProtecao = dlp.scansTotal > 0
         ? Math.min(100, Math.round(dlp.protectedCount / dlp.scansTotal * 100))
@@ -980,15 +959,8 @@ function renderSettingsPage(
           { id: 'white',       label: 'Branco',       bg: '#ffffff' },
         ];
 
-        // Load current color from Supabase (or local fallback)
-        let currentColor: BC = await getBadgeColor(session.access_token);
-
-        // Extract userId for Supabase writes
-        let settingsUserId: string | undefined;
-        try {
-          const { decodeJwtPayload } = await import('../core/auth');
-          settingsUserId = (decodeJwtPayload(session.access_token)['sub'] as string) ?? undefined;
-        } catch { /* offline */ }
+        let currentColor: BC = await getBadgeColor();
+        const settingsUserId = (session as { user_id?: string }).user_id;
 
         COLORS.forEach(({ id, label, bg }) => {
           const sw = document.createElement('button');
@@ -1175,9 +1147,11 @@ function renderSettingsPage(
         reportProblemBtn.textContent = 'Enviando…';
         reportProblemBtn.style.opacity = '0.4';
         try {
+          const { getSession: _gs } = await import('../auth/sessionManager');
+          const _bff = await _gs();
           const resp = await fetch('https://atennaplugin.maestro-n8n.site/report-problem', {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+            headers: { 'Authorization': `Bearer ${_bff?.token ?? ''}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
               error_code: 'user_feedback',
               error_message: 'Usuário reportou problema via Configurações',

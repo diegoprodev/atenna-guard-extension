@@ -118,20 +118,34 @@ export async function bffGoogleLogin(): Promise<Session> {
 
   if (!redirectUrl) throw new AppError(E.NETWORK);
 
-  let code: string | null = null;
+  // Supabase OAuth uses implicit flow by default:
+  // tokens arrive in the URL fragment (#access_token=...&refresh_token=...)
+  // PKCE flow would use query param (?code=...) — support both.
+  let body: Record<string, string>;
   try {
-    code = new URL(redirectUrl).searchParams.get('code');
-  } catch {
+    const url = new URL(redirectUrl);
+    const hash = new URLSearchParams(url.hash.slice(1));
+    const accessToken = hash.get('access_token');
+    const refreshToken = hash.get('refresh_token');
+
+    if (accessToken) {
+      body = { access_token: accessToken, refresh_token: refreshToken ?? '' };
+    } else {
+      const code = url.searchParams.get('code');
+      if (!code) throw new AppError(E.NETWORK);
+      body = { code, redirect_uri: redirectUri };
+    }
+  } catch (err) {
+    if (err instanceof AppError) throw err;
     throw new AppError(E.NETWORK);
   }
-  if (!code) throw new AppError(E.NETWORK);
 
   let r: Response;
   try {
     r = await fetch(`${BFF_BASE}/auth/google`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, redirect_uri: redirectUri }),
+      body: JSON.stringify(body),
     });
   } catch {
     throw new AppError(E.NETWORK);

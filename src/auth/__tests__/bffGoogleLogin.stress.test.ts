@@ -59,8 +59,8 @@ describe('bffGoogleLogin() — Stress & Edge Cases', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('STRESS-02: rejects redirect with only fragment (no query params)', async () => {
-    mockFlow(`${REDIRECT_URI}#access_token=jwt`);
+  it('STRESS-02: rejects redirect with empty fragment and no query params', async () => {
+    mockFlow(`${REDIRECT_URI}#`);
     await expect(bffGoogleLogin()).rejects.toMatchObject({ code: E.NETWORK });
     expect(fetchMock).not.toHaveBeenCalled();
   });

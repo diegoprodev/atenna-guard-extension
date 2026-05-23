@@ -2,7 +2,6 @@ import { detectPlatform } from './detectInput';
 import { injectButton, removeButton } from './injectButton';
 import { toggleModal, openSettingsOverlay } from '../ui/modal';
 import { getSession } from '../auth/sessionManager';
-import { getActiveSession } from '../core/auth';
 import { attachImageInterceptor } from '../dlp/imageInterceptor';
 
 // Cached session state — avoids re-checking on every MutationObserver tick
@@ -10,15 +9,8 @@ let _isAuthenticated = false;
 
 async function checkAuth(): Promise<boolean> {
   try {
-    // BFF session (new auth system) takes priority
     const bffSession = await getSession();
-    if (bffSession) {
-      _isAuthenticated = true;
-      return true;
-    }
-    // Fallback: legacy Supabase JWT
-    const session = await getActiveSession();
-    _isAuthenticated = !!session;
+    _isAuthenticated = !!bffSession;
   } catch {
     _isAuthenticated = false;
   }

@@ -1,18 +1,15 @@
-// TODO(FASE 4.7): migrate direct Supabase REST calls to BFF endpoints
 import { sk } from './scopedStorage';
 
 const STORAGE_KEY  = 'atenna_usage';
 const TOTAL_KEY    = 'atenna_total_count';
 const MONTHLY_KEY  = 'atenna_monthly_usage';
-const SUPABASE_URL = 'https://kezbssjmgwtrunqeoyir.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlemJzc2ptZ3d0cnVucWVveWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MzY0NzcsImV4cCI6MjA5MzUxMjQ3N30.c2YNPrG7WcbwtFij8UJlS7BNxY_XeaKoeqPlrKHloKs';
 
-export const DAILY_LIMIT = 5;    // must match backend DAILY_LIMIT_FREE in rate_limit.py
+export const DAILY_LIMIT   = 5;
 export const MONTHLY_LIMIT = 25;
 
 export interface UsageData {
   count:     number;
-  resetDate: number; // ms timestamp — midnight tonight
+  resetDate: number;
 }
 
 function midnightTonight(): number {
@@ -47,13 +44,11 @@ async function storageSet(data: UsageData): Promise<void> {
 export async function getUsage(): Promise<UsageData> {
   const raw = await storageGet();
   const now = Date.now();
-
   if (!raw || now >= raw.resetDate) {
     const fresh: UsageData = { count: 0, resetDate: midnightTonight() };
     await storageSet(fresh);
     return fresh;
   }
-
   return raw;
 }
 
@@ -73,8 +68,6 @@ export async function isAtAnyLimit(usage: UsageData): Promise<boolean> {
   const monthly = await getMonthlyUsage();
   return monthly >= MONTHLY_LIMIT;
 }
-
-// ─── All-time total (never resets — used for conversion triggers) ──
 
 export async function getTotalCount(): Promise<number> {
   return new Promise(resolve => {
@@ -97,11 +90,9 @@ export async function incrementTotalCount(): Promise<number> {
   });
 }
 
-// ─── Monthly usage (resets on 1st of month) ──
-
 interface MonthlyData {
   count: number;
-  resetMonth: string; // YYYY-MM format
+  resetMonth: string;
 }
 
 function getCurrentMonth(): string {
@@ -143,60 +134,14 @@ export async function isAtMonthlyLimit(): Promise<boolean> {
   return usage >= MONTHLY_LIMIT;
 }
 
-// ── Supabase usage sync ──────────────────────────────────────
-// Queries analytics_events table for real prompt counts and merges with local storage.
-
 export interface UsageSyncResult {
   todayCount:   number;
   monthlyCount: number;
   totalCount:   number;
 }
 
-export async function syncUsageFromSupabase(jwt: string): Promise<UsageSyncResult | null> {
-  try {
-    const todayStart  = new Date(); todayStart.setHours(0, 0, 0, 0);
-    const monthStart  = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
-    const todayMs     = todayStart.getTime();
-    const monthMs     = monthStart.getTime();
-
-    const headers = {
-      'apikey':        SUPABASE_KEY,
-      'Authorization': `Bearer ${jwt}`,
-      'Content-Type':  'application/json',
-    };
-
-    // Fetch all prompt_generate_success events for this user
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/analytics_events?event_name=eq.prompt_generate_success&select=created_at`,
-      { headers },
-    );
-    if (!res.ok) return null;
-
-    const rows = await res.json() as Array<{ created_at: string }>;
-    if (!Array.isArray(rows)) return null;
-
-    const totalCount   = rows.length;
-    const monthlyCount = rows.filter(r => new Date(r.created_at).getTime() >= monthMs).length;
-    const todayCount   = rows.filter(r => new Date(r.created_at).getTime() >= todayMs).length;
-
-    // Merge with local (take higher value — offline-first, no data loss)
-    const [localUsage, localMonthly, localTotal] = await Promise.all([
-      getUsage(), getMonthlyUsage(), getTotalCount(),
-    ]);
-
-    const mergedToday   = Math.max(todayCount,   localUsage.count);
-    const mergedMonthly = Math.max(monthlyCount, localMonthly);
-    const mergedTotal   = Math.max(totalCount,   localTotal);
-
-    // Write merged back to local storage
-    const currentMonth = getCurrentMonth();
-    await Promise.all([
-      new Promise<void>(r => { try { chrome.storage.local.set({ [sk(TOTAL_KEY)]: mergedTotal }, () => r()); } catch { r(); } }),
-      new Promise<void>(r => { try { chrome.storage.local.set({ [sk(MONTHLY_KEY)]: { count: mergedMonthly, resetMonth: currentMonth } }, () => r()); } catch { r(); } }),
-    ]);
-
-    return { todayCount: mergedToday, monthlyCount: mergedMonthly, totalCount: mergedTotal };
-  } catch {
-    return null;
-  }
+// Kept for API compatibility — returns local counts (no remote Supabase sync)
+export async function syncUsageFromSupabase(_jwt: string): Promise<UsageSyncResult | null> {
+  const [local, monthly, total] = await Promise.all([getUsage(), getMonthlyUsage(), getTotalCount()]);
+  return { todayCount: local.count, monthlyCount: monthly, totalCount: total };
 }
