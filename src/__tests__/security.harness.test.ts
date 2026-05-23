@@ -40,3 +40,48 @@ describe('Security Harness', () => {
     expect(bg).not.toMatch(/supabaseClient|createClient.*supabase/);
   });
 });
+
+describe('Google OAuth — Security Invariants (SI-31 to SI-36)', () => {
+  it('SI-31: Google button class present in modal.ts login view', () => {
+    const modal = readFile('ui/modal.ts');
+    expect(modal).toContain('atenna-modal__login-btn--google');
+    expect(modal).toContain('bffGoogleLogin');
+  });
+
+  it('SI-32: bffGoogleLogin uses launchWebAuthFlow with Supabase Google OAuth URL', () => {
+    const client = readFile('auth/bffClient.ts');
+    expect(client).toContain('launchWebAuthFlow');
+    expect(client).toContain('provider=google');
+    expect(client).toContain('supabase.co/auth/v1/authorize');
+  });
+
+  it('SI-33: bffGoogleLogin POSTs to BFF /auth/google — NOT directly to Supabase token endpoint', () => {
+    const client = readFile('auth/bffClient.ts');
+    const fnStart = client.indexOf('export async function bffGoogleLogin');
+    expect(fnStart).toBeGreaterThan(-1);
+    const fnBody = client.slice(fnStart, fnStart + 2000);
+    expect(fnBody).toContain('/auth/google');
+    expect(fnBody).not.toContain('/auth/v1/token');
+  });
+
+  it('SI-34: bffGoogleLogin calls setSession — opaque BFF token stored encrypted', () => {
+    const client = readFile('auth/bffClient.ts');
+    const fnStart = client.indexOf('export async function bffGoogleLogin');
+    const fnBody = client.slice(fnStart, fnStart + 2000);
+    expect(fnBody).toContain('setSession(s)');
+  });
+
+  it('SI-35: bffGoogleLogin never references access_token (raw Supabase JWT not stored)', () => {
+    const client = readFile('auth/bffClient.ts');
+    const fnStart = client.indexOf('export async function bffGoogleLogin');
+    const fnBody = client.slice(fnStart, fnStart + 2000);
+    expect(fnBody).not.toContain('access_token');
+  });
+
+  it('SI-36: sessionManager encrypts before chrome.storage write (AES-GCM)', () => {
+    const sm = readFile('auth/sessionManager.ts');
+    expect(sm).toContain('chrome.storage.local.set');
+    // Must encrypt — either encrypt() call or AES-GCM reference
+    expect(sm).toMatch(/encrypt|AES-GCM|AES_GCM/);
+  });
+});
