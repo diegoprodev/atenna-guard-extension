@@ -962,6 +962,10 @@ function renderSettingsPage(
         let currentColor: BC = await getBadgeColor();
         const settingsUserId = (session as { user_id?: string }).user_id;
 
+        const savedFeedback = document.createElement('span');
+        savedFeedback.style.cssText = 'font-size:11px;color:#22c55e;font-weight:500;opacity:0;transition:opacity 200ms ease;white-space:nowrap;';
+        savedFeedback.textContent = 'Salvo ✓';
+
         COLORS.forEach(({ id, label, bg }) => {
           const sw = document.createElement('button');
           sw.style.cssText = `width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;background:${bg};transition:transform 150ms cubic-bezier(0.34,1.4,0.64,1),box-shadow 150ms ease;flex-shrink:0;outline:none;`;
@@ -991,12 +995,15 @@ function renderSettingsPage(
             currentColor = id;
             void saveBadgeColor(id, session.access_token, settingsUserId);
             applyBadgeColorToDom(id);
+            savedFeedback.style.opacity = '1';
+            setTimeout(() => { savedFeedback.style.opacity = '0'; }, 1500);
           });
 
           colorPicker.appendChild(sw);
         });
 
         colorRow.appendChild(colorPicker);
+        colorRow.appendChild(savedFeedback);
         personalSection.appendChild(colorRow);
       }
 

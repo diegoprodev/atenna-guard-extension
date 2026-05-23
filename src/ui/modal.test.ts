@@ -605,3 +605,13 @@ describe('renderSignupView — email confirmation screen', () => {
     expect(container.textContent).toContain('Voltar ao login');
   });
 });
+
+describe('badge color picker — saved feedback', () => {
+  it('source contains Salvo feedback logic with 1500ms timeout', async () => {
+    const src = await import('fs').then(fs => fs.readFileSync('src/ui/modal.ts', 'utf-8'));
+    expect(src).toContain('Salvo ✓');
+    expect(src).toContain('savedFeedback');
+    expect(src).toContain('1500');
+    expect(src).toContain("opacity = '1'");
+  });
+});
