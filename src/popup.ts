@@ -2,7 +2,7 @@ import { signUpWithPassword } from './core/auth';
 import { bffLogin, bffLogout, bffMe, bffResetPassword, bffGoogleLogin } from './auth/bffClient';
 import { openSettingsOverlay } from './ui/modal';
 
-const SUPPORTED_HOSTS = ['chatgpt.com', 'chat.openai.com', 'claude.ai', 'gemini.google.com', 'perplexity.ai', 'copilot.microsoft.com'];
+const SUPPORTED_HOSTS = ['chatgpt.com', 'chat.openai.com', 'claude.ai', 'gemini.google.com', 'perplexity.ai'];
 
 async function getActiveTabInfo(): Promise<{ url: string; host: string; supported: boolean } | null> {
   return new Promise(resolve => {
@@ -41,7 +41,6 @@ function getPlatformLabel(host: string): { name: string; svg: string } {
   if (host.includes('claude')) return { name: 'Claude.ai', svg: SVG_SPARKLE };
   if (host.includes('gemini')) return { name: 'Gemini', svg: SVG_SPARKLE };
   if (host.includes('perplexity')) return { name: 'Perplexity', svg: SVG_GLOBE };
-  if (host.includes('copilot')) return { name: 'Copilot', svg: SVG_GLOBE };
   return { name: host, svg: SVG_GLOBE };
 }
 
