@@ -390,3 +390,108 @@ describe('FASE 5.2 — PT-BR Enterprise Recognizers', () => {
   });
 
 });
+
+describe('FASE 7.1 — DLP Extended Recognizers', () => {
+
+  describe('CRN', () => {
+    it('detecta CRN-3 com número', () => {
+      const r = scanPatterns('nutricionista CRN-3 12345');
+      expect(r.some(e => e.type === 'CRN')).toBe(true);
+    });
+    it('detecta CRN/SP com número', () => {
+      const r = scanPatterns('registro CRN/SP 98765');
+      expect(r.some(e => e.type === 'CRN')).toBe(true);
+    });
+  });
+
+  describe('CRO', () => {
+    it('detecta CRO/SP com número', () => {
+      const r = scanPatterns('dentista CRO/SP 54321');
+      expect(r.some(e => e.type === 'CRO')).toBe(true);
+    });
+    it('detecta CRO-RJ com número', () => {
+      const r = scanPatterns('CRO-RJ 11234');
+      expect(r.some(e => e.type === 'CRO')).toBe(true);
+    });
+  });
+
+  describe('CREA', () => {
+    it('detecta CREA/SP com número', () => {
+      const r = scanPatterns('engenheiro CREA/SP 0601234-5');
+      expect(r.some(e => e.type === 'CREA')).toBe(true);
+    });
+    it('detecta CREA-RJ com número', () => {
+      const r = scanPatterns('CREA-RJ 12345');
+      expect(r.some(e => e.type === 'CREA')).toBe(true);
+    });
+  });
+
+  describe('CRP', () => {
+    it('detecta CRP com formato 06/12345', () => {
+      const r = scanPatterns('psicóloga CRP 06/12345');
+      expect(r.some(e => e.type === 'CRP')).toBe(true);
+    });
+    it('detecta CRP com hífen', () => {
+      const r = scanPatterns('CRP 01-98765');
+      expect(r.some(e => e.type === 'CRP')).toBe(true);
+    });
+  });
+
+  describe('COREN', () => {
+    it('detecta COREN/SP com número', () => {
+      const r = scanPatterns('enfermeira COREN/SP 123456');
+      expect(r.some(e => e.type === 'COREN')).toBe(true);
+    });
+    it('detecta COREN-GO com número', () => {
+      const r = scanPatterns('COREN-GO 98765');
+      expect(r.some(e => e.type === 'COREN')).toBe(true);
+    });
+  });
+
+  describe('PIS/PASEP/NIT', () => {
+    it('detecta PIS com label e formatação', () => {
+      const r = scanPatterns('PIS: 123.45678.90-1');
+      expect(r.some(e => e.type === 'PIS')).toBe(true);
+    });
+    it('detecta PASEP com label', () => {
+      const r = scanPatterns('PASEP 123.45678.90-1');
+      expect(r.some(e => e.type === 'PIS')).toBe(true);
+    });
+    it('detecta NIT com label', () => {
+      const r = scanPatterns('NIT: 123.45678.90-1');
+      expect(r.some(e => e.type === 'PIS')).toBe(true);
+    });
+    it('não detecta sequência com todos dígitos iguais', () => {
+      const r = scanPatterns('PIS: 111.11111.11-1');
+      const pis = r.filter(e => e.type === 'PIS');
+      expect(pis.length).toBe(0);
+    });
+  });
+
+  describe('Título de Eleitor', () => {
+    it('detecta título de eleitor com label', () => {
+      const r = scanPatterns('título de eleitor: 123456789012');
+      expect(r.some(e => e.type === 'TITULO_ELEITOR')).toBe(true);
+    });
+    it('detecta titulo eleitor (sem acento)', () => {
+      const r = scanPatterns('titulo eleitor 987654321098');
+      expect(r.some(e => e.type === 'TITULO_ELEITOR')).toBe(true);
+    });
+  });
+
+  describe('Passaporte', () => {
+    it('detecta passaporte com label', () => {
+      const r = scanPatterns('passaporte: AA123456');
+      expect(r.some(e => e.type === 'PASSAPORTE')).toBe(true);
+    });
+    it('detecta passport (inglês) com número', () => {
+      const r = scanPatterns('passport AA123456');
+      expect(r.some(e => e.type === 'PASSAPORTE')).toBe(true);
+    });
+    it('não detecta 2 letras + 6 dígitos sem contexto de passaporte', () => {
+      const r = scanPatterns('código AA123456 do produto');
+      expect(r.some(e => e.type === 'PASSAPORTE')).toBe(false);
+    });
+  });
+
+});

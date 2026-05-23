@@ -5,7 +5,9 @@ export type EntityType =
   | 'API_KEY' | 'TOKEN' | 'PASSWORD' | 'CREDIT_CARD'
   | 'ADDRESS' | 'MEDICAL' | 'LEGAL' | 'GENERIC_PII'
   | 'PROCESS_NUM' | 'NAME'
-  | 'RG' | 'CNH' | 'OAB' | 'PLACA' | 'CRM';
+  | 'RG' | 'CNH' | 'OAB' | 'PLACA' | 'CRM'
+  | 'CRN' | 'CRO' | 'CREA' | 'CRP' | 'COREN'
+  | 'PIS' | 'TITULO_ELEITOR' | 'PASSAPORTE';
 
 export interface DetectedEntity {
   type:       EntityType;

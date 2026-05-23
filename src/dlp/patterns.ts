@@ -59,6 +59,7 @@ const NAME_STOPWORDS = new Set([
   'CPF', 'CNPJ', 'CEP', 'API', 'KEY', 'JWT', 'SQL', 'HTTP', 'HTTPS', 'URL',
   'GET', 'POST', 'PUT', 'DEL', 'AWS', 'RDS', 'IAM', 'VPC', 'PDF', 'CSV',
   'XML', 'JSON', 'HTML', 'CSS', 'OAB', 'CRM', 'RG', 'CNH', 'CTF', 'STF', 'STJ',
+  'CRN', 'CRO', 'CREA', 'CRP', 'COREN', 'PIS', 'PASEP', 'NIT', 'PASSAPORTE',
   'CODIGO', 'CODE', 'TOKEN', 'BEARER', 'SECRET', 'SENHA', 'EMAIL', 'USER',
   // Programming / framework terms
   'OBSERVER', 'PATTERN', 'TYPESCRIPT', 'JAVASCRIPT', 'GENERICS', 'IMPLEMENTAR',
@@ -229,6 +230,63 @@ const PATTERNS: PatternDef[] = [
     type: 'CRM',
     pattern: /\bCRM[/\-][A-Z]{2}\s*\d{4,6}\b/gi,
     confidence: 0.95,
+  },
+  // CRN — Nutrição: CRN-3 12345 or CRN/SP 12345
+  {
+    type: 'CRN',
+    pattern: /\bCRN[-/][A-Z0-9]{1,2}\s*\d{3,6}\b/gi,
+    confidence: 0.95,
+  },
+  // CRO — Odontologia: CRO/SP 54321
+  {
+    type: 'CRO',
+    pattern: /\bCRO[/\-][A-Z]{2}\s*\d{4,6}\b/gi,
+    confidence: 0.95,
+  },
+  // CREA — Engenharia: CREA/SP 0601234-5 or CREA-RJ 12345
+  {
+    type: 'CREA',
+    pattern: /\bCREA[/\-][A-Z]{2}\s*\d{4,8}[-]?\d?\b/gi,
+    confidence: 0.95,
+  },
+  // CRP — Psicologia: CRP 06/12345
+  {
+    type: 'CRP',
+    pattern: /\bCRP\s*\d{1,2}[/\-]\d{3,6}\b/gi,
+    confidence: 0.95,
+  },
+  // COREN — Enfermagem: COREN/SP 123456 or COREN-GO 98765
+  {
+    type: 'COREN',
+    pattern: /\bCOREN[/\-][A-Z]{2}\s*\d{4,7}\b/gi,
+    confidence: 0.95,
+  },
+  // PIS / PASEP / NIT — 11 digits, with or without dots/hyphens
+  // Format: DDD.DDDDD.DD-D  or 11 raw digits with context label
+  {
+    type: 'PIS',
+    pattern: /\b(?:PIS|PASEP|NIT)[:\s./-]*\d{3}[.\s]?\d{5}[.\s]?\d{2}[-\s]?\d\b|\b\d{3}[.\s]\d{5}[.\s]\d{2}[-]\d\b/gi,
+    confidence: 0.90,
+    validate: (raw: string) => {
+      const d = raw.replace(/\D/g, '');
+      return d.length === 11 && !/^(\d)\1{10}$/.test(d);
+    },
+  },
+  // Título de Eleitor — 12 digits (optional spacing/dots)
+  {
+    type: 'TITULO_ELEITOR',
+    pattern: /\b(?:título\s+de\s+eleitor|título\s+eleitor|titulo\s+eleitor|n[uú]mero\s+do\s+t[ií]tulo)[:\s]*[\d.\s-]{12,18}\b|\b\d{4}\s?\d{4}\s?\d{4}\b(?=\s*(?:zona|seção|se[çc][aã]o|título|eleitor))/gi,
+    confidence: 0.88,
+    validate: (raw: string) => {
+      const d = raw.replace(/\D/g, '');
+      return d.length === 12 && !/^(\d)\1{11}$/.test(d);
+    },
+  },
+  // Passaporte Brasileiro — 2 letras + 6 dígitos (ex: AA123456) com contexto
+  {
+    type: 'PASSAPORTE',
+    pattern: /\b(?:passaporte|passport)[:\s.#]*[A-Z]{2}\d{6}\b|\b[A-Z]{2}\d{6}\b(?=\s*(?:passaporte|passport|validade|emiss[aã]o))/gi,
+    confidence: 0.92,
   },
   // Brazilian CEP
   {
