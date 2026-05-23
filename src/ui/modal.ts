@@ -2878,10 +2878,10 @@ export function renderSignupView(container: HTMLElement, switchView: (view: stri
     const pwd     = passwordInput.value;
     const confirm = confirmInput.value;
 
-    if (!name)  { setStatus('Informe seu nome', 'warning'); return; }
-    if (!email) { setStatus('Informe seu email', 'warning'); return; }
-    if (pwd.length < 6) { setStatus('Senha deve ter no mínimo 6 caracteres', 'warning'); return; }
-    if (pwd !== confirm) { setStatus('As senhas não conferem', 'warning'); return; }
+    if (!name)  { setStatus('Informe seu nome', 'warning'); nameInput.focus(); return; }
+    if (!email) { setStatus('Informe seu email', 'warning'); emailInput.focus(); return; }
+    if (pwd.length < 6) { setStatus('Senha deve ter no mínimo 6 caracteres', 'warning'); passwordInput.focus(); return; }
+    if (pwd !== confirm) { setStatus('As senhas não conferem', 'warning'); confirmInput.focus(); return; }
 
     void trackEvent('signup_submitted', { input_length: email.length });
 

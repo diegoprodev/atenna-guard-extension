@@ -181,7 +181,8 @@ function renderLogin(container: HTMLElement, tabId: number | null): void {
     const email = emailEl.value.trim();
     const pass  = passEl.value;
     errEl.style.color = ''; errEl.style.background = ''; errEl.style.borderColor = '';
-    if (!email || (!pass && mode !== 'forgot')) { errEl.textContent = 'Preencha email e senha.'; errEl.style.display = 'block'; return; }
+    if (!email) { errEl.textContent = 'Digite seu email.'; errEl.style.display = 'block'; emailEl.focus(); return; }
+    if (!pass && mode !== 'forgot') { errEl.textContent = 'Digite sua senha.'; errEl.style.display = 'block'; passEl.focus(); return; }
     btn.disabled = true; btn.textContent = mode === 'signup' ? 'Criando…' : 'Entrando…';
     errEl.style.display = 'none';
     try {

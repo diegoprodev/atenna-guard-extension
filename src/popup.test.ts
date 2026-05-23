@@ -28,3 +28,11 @@ describe('popup.ts — personalized error messages', () => {
     expect(src).toContain('email_not_confirmed');
   });
 });
+
+describe('popup.ts — auto-focus on error', () => {
+  it('source contains focus() calls in validation block', () => {
+    const src = fs.readFileSync('src/popup.ts', 'utf-8');
+    expect(src).toContain('emailEl.focus()');
+    expect(src).toContain('passEl.focus()');
+  });
+});
