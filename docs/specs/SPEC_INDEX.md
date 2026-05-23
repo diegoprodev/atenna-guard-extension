@@ -15,7 +15,7 @@
 | 5 | **5.3** | [FASE_5.3_PLAYWRIGHT_E2E_PRD.md](FASE_5.3_PLAYWRIGHT_E2E_PRD.md) | Playwright E2E Suite — extensão carregada, 6 testes reais (T1–T6) | ✅ Completo |
 | 6 | **6.1** | [2026-05-20-fase-6.1-ocr-image-dlp.md](../superpowers/plans/2026-05-20-fase-6.1-ocr-image-dlp.md) | OCR + Image DLP + Enterprise Guardrails (EasyOCR, Presidio, prompt injection defense) | ✅ Completo |
 | 7 | **6.2** | [2026-05-22-fase-6.2-compliance-dashboard.md](../superpowers/plans/2026-05-22-fase-6.2-compliance-dashboard.md) | Compliance Dashboard + Audit Trail — eventos DLP, filtros, trend chart, CSV export LGPD | ✅ Completo |
-| 8 | **6.3** | [2026-05-22-fase-6.3-google-login.md](../superpowers/plans/2026-05-22-fase-6.3-google-login.md) | Google OAuth Login — chrome.identity + BFF /auth/google + SI-31 a SI-36 | 📋 Planejado |
+| 8 | **6.3** | [2026-05-22-fase-6.3-google-login.md](../superpowers/plans/2026-05-22-fase-6.3-google-login.md) | Google OAuth Login — chrome.identity + BFF /auth/google + SI-31 a SI-36 | ✅ Completo |
 
 ---
 
