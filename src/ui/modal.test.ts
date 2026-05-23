@@ -617,6 +617,14 @@ describe('badge color picker — saved feedback', () => {
   });
 });
 
+describe('settings — save name loading state', () => {
+  it('source contains Salvando… loading state and Salvo ✓ success state', () => {
+    const src = fs.readFileSync('src/ui/modal.ts', 'utf-8');
+    expect(src).toContain('Salvando…');
+    expect(src).toContain('Salvo ✓');
+  });
+});
+
 describe('friendlyError — personalized messages', () => {
   it('maps email_not_found to friendly message', () => {
     const src = fs.readFileSync('src/core/errors.ts', 'utf-8');

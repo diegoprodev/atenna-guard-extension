@@ -916,14 +916,19 @@ function renderSettingsPage(
           const val = nameField.value.trim();
           if (!val) return;
           saveNameBtn.disabled = true;
-          saveNameBtn.textContent = '✓';
-          await saveDisplayName(session, val);
-          // Atualizar avatar e nome no header imediatamente
-          const avatarEl = document.querySelector('.atenna-settings__avatar') as HTMLElement | null;
-          if (avatarEl) avatarEl.textContent = val[0].toUpperCase();
-          const emailEl2 = document.querySelector('.atenna-settings__user-email') as HTMLElement | null;
-          if (emailEl2) emailEl2.textContent = val;
-          setTimeout(() => { saveNameBtn.disabled = false; saveNameBtn.textContent = 'Salvar'; }, 1500);
+          saveNameBtn.textContent = 'Salvando…';
+          try {
+            await saveDisplayName(session, val);
+            const avatarEl = document.querySelector('.atenna-settings__avatar') as HTMLElement | null;
+            if (avatarEl) avatarEl.textContent = val[0].toUpperCase();
+            const emailEl2 = document.querySelector('.atenna-settings__user-email') as HTMLElement | null;
+            if (emailEl2) emailEl2.textContent = val;
+            saveNameBtn.textContent = 'Salvo ✓';
+            setTimeout(() => { saveNameBtn.disabled = false; saveNameBtn.textContent = 'Salvar'; }, 1500);
+          } catch {
+            saveNameBtn.disabled = false;
+            saveNameBtn.textContent = 'Salvar';
+          }
         });
 
         nameRight.appendChild(nameField);
