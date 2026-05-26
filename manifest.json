@@ -3,7 +3,7 @@
   "name": "Atenna Safe Prompt",
   "version": "1.2.0",
   "description": "Proteja seus dados sensíveis e gere prompts melhores com IA no ChatGPT,Perplexity, Claude e Gemini.",
-  "permissions": ["storage", "tabs"],
+  "permissions": ["storage", "tabs", "identity"],
   "host_permissions": [
     "https://chat.openai.com/*",
     "https://chatgpt.com/*",
@@ -42,7 +42,7 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "Atenna Guard Prompt"
+    "default_title": "Atenna Safe Prompt"
   },
   "icons": {
     "16": "icons/icon16.png",
