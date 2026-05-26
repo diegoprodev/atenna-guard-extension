@@ -3291,6 +3291,22 @@ async function openCheckout(source: string, btn?: HTMLButtonElement, plan: 'year
     if (url) {
       window.open(url, '_blank', 'noopener');
       void trackEvent('checkout_url_opened', { source, plan } as Parameters<typeof trackEvent>[1]);
+      showToast('Checkout aberto! Após o pagamento seu plano é atualizado automaticamente.', 'info');
+      // Poll bffMe every 5s for up to 2min — update UI when plan becomes pro
+      let polls = 0;
+      const pollId = setInterval(async () => {
+        polls++;
+        if (polls > 24) { clearInterval(pollId); return; }
+        try {
+          const me = await bffMe();
+          if (me?.plan === 'pro') {
+            clearInterval(pollId);
+            await syncPlanFromBff(me);
+            showToast('🎉 Bem-vindo ao Atenna Pro! Aproveite todos os recursos.', 'success');
+            void trackEvent('checkout_plan_upgraded', { source, plan } as Parameters<typeof trackEvent>[1]);
+          }
+        } catch { /* network error — keep polling */ }
+      }, 5_000);
     } else {
       showToast('Não foi possível abrir o checkout. Tente novamente.', 'error');
     }

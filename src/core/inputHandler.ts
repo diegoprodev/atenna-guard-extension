@@ -26,8 +26,10 @@ export function setInputText(input: HTMLElement, text: string): void {
     input.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertReplacementText', data: text }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
   } else {
-    // contenteditable — execCommand while user activation is live (banner click handler)
+    // contenteditable (Lexical / ProseMirror / Draft.js / plain)
     input.focus();
+
+    // Select all existing content
     const sel = window.getSelection();
     if (sel) {
       const range = document.createRange();
@@ -35,15 +37,32 @@ export function setInputText(input: HTMLElement, text: string): void {
       sel.removeAllRanges();
       sel.addRange(range);
     }
+
+    // Strategy 1: execCommand('insertText') — works for most contenteditables,
+    // including Lexical when focus + selection is live (user activation required).
     const ok = document.execCommand('insertText', false, text);
-    if (!ok) {
+
+    if (!ok || input.textContent === text.slice(0, -1) || (input.innerText || input.textContent || '') !== text) {
+      // Strategy 2: DataTransfer beforeinput — Lexical/ProseMirror intercept this
       const dt = new DataTransfer();
       dt.setData('text/plain', text);
-      input.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertFromPaste', dataTransfer: dt }));
-      input.textContent = text;
-      input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertReplacementText', data: text }));
+      input.dispatchEvent(new InputEvent('beforeinput', {
+        bubbles: true, cancelable: true,
+        inputType: 'insertFromPaste',
+        dataTransfer: dt,
+      }));
+
+      // Strategy 3: direct write + input event (React/Vue)
+      if ((input.innerText || input.textContent || '') !== text) {
+        input.textContent = text;
+        input.dispatchEvent(new InputEvent('input', {
+          bubbles: true, cancelable: true,
+          inputType: 'insertReplacementText', data: text,
+        }));
+      }
     }
+
     input.dispatchEvent(new Event('change', { bubbles: true }));
+    input.focus();
   }
-  input.focus();
 }

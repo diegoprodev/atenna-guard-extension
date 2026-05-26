@@ -6,6 +6,20 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased]
 
+### Fixed (Manifest + UX Polish) — 2026-05-26
+- **Chrome Web Store rejection**: adicionada permissão `"identity"` obrigatória para `chrome.identity.launchWebAuthFlow` (OAuth Google)
+- **`default_title` incorreto**: era "Atenna Guard Prompt", corrigido para "Atenna Safe Prompt"
+- **Badge não aparecia após login Google**: `relayToggleModal` agora só dispara se a aba ativa for uma plataforma suportada; em outras abas exibe tela de onboarding com links diretos
+- **Injeção de texto em editores Lexical/ProseMirror/React**: `setInputText()` refatorado com 3 estratégias em cascata — `execCommand('insertText')` → `DataTransfer beforeinput` → `textContent + InputEvent`; corrige injeção no Claude após mudanças de editor interno
+- **Polling de upgrade pós-checkout**: após abrir URL de checkout, modal faz poll no `bffMe()` a cada 5s por até 2min; quando plano vira `pro`, atualiza UI e exibe toast "Bem-vindo ao Atenna Pro!" sem reload
+
+### Added (Email System) — 2026-05-26
+- **Templates T1–T4 Supabase**: HTML white/minimalist para Confirm signup, Reset Password, Magic Link e Invite User; com personalização de nome `{{if .Data.name}}` e logo via URL
+- **Sistema completo de lifecycle emails no VPS**: `email_service.py` (templates T1–T4, L1–L7), `lifecycle_emails.py` (welcome, onboarding D+1, upsell free→pro, pro welcome), `renewal.py` integrado
+- **APScheduler 4 jobs diários**: renovação 30d (09h), renovação urgente 7d (09h15), onboarding D+1 (10h), upsell (11h)
+- **Endpoints internos**: `POST /internal/email/welcome` e `POST /internal/email/pro-welcome` para triggers via webhook Supabase
+- **L7 pro welcome** disparado automaticamente ao promover usuário via `_promote_to_pro()` no checkout.py
+
 ### Fixed (Admin Panel + Cost Tracking) — 2026-05-21
 - **Admin 502 ao criar usuário**: `admin_auth.py` retornava `{'user_id': uid}` mas todas as rotas admin usavam `admin['id']` → KeyError capturado como 502; adicionado `'id': uid` ao dict de sessão
 - **Admin 401 no painel**: login admin agora usa endpoint dedicado `POST /auth/admin-login` com token opaco BFF em vez de JWT Supabase bruto — mesma segurança que o login normal

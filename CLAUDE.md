@@ -86,5 +86,17 @@
 - Rebuild: `docker compose up --build -d backend`
 
 ## Fases Completas
-- 4.6, 4.7, 5.1, 5.2, 5.3 — ver `docs/specs/SPEC_INDEX.md`
-- Próxima: 6.1 (OCR + Image DLP)
+- 4.6, 4.7, 5.1, 5.2, 5.3, 6.1, 6.2 — ver `docs/specs/SPEC_INDEX.md`
+
+## Planos e Cotas
+- **Free plan: 5 usos/dia** (não 10 — corrigir se encontrar 10 no código)
+- Pro plan: sem limite (ou conforme definido no Supabase profiles.plan)
+- Cota é validada server-side no BFF — nunca só no cliente
+
+## Posicionamento Estratégico — CRÍTICO
+- **Atenna Guard Extension ≠ Atenna Plataforma** — são produtos distintos
+- A **extensão é uma isca (freemium)** para captar usuários e conduzi-los à esteira Arckos
+- Governance Layer, Multi-tenant e features enterprise JÁ EXISTEM na Atenna Plataforma
+- **NÃO implementar na extensão** o que já existe na plataforma — isso desvia da estratégia
+- O fluxo de upsell é: Extensão (free/pro) → Atenna Plataforma → Arckos Enterprise
+- Features da extensão devem ter fricção proposital no free para converter para pro/plataforma
