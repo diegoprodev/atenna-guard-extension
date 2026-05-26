@@ -24,6 +24,7 @@ export default defineConfig({
         { src: 'src/ui/styles.css', dest: '.' },
         { src: 'src/ui/modal.css', dest: '.' },
         { src: 'src/auth-callback.html', dest: '.' },
+        { src: 'welcome.html', dest: '.' },
       ],
     }),
   ],

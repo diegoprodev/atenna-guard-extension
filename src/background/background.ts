@@ -28,6 +28,12 @@ async function getBffToken(): Promise<string | null> {
   } catch { return null; }
 }
 
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'install') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
+  }
+});
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // Only accept messages from this extension itself
   if (sender.id !== chrome.runtime.id) {
