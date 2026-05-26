@@ -68,7 +68,7 @@ async function initPopup(): Promise<void> {
   const [me, tabInfo, tabId] = await Promise.all([bffMe(), getActiveTabInfo(), getActiveTabId()]);
 
   if (!me) {
-    renderLogin(container, tabId);
+    renderLogin(container, tabId, tabInfo?.supported ?? false);
     return;
   }
 
@@ -104,7 +104,63 @@ export function renderPasswordResetConfirmation(container: HTMLElement, email: s
   container.appendChild(wrap);
 }
 
-function renderLogin(container: HTMLElement, tabId: number | null): void {
+function renderOnboarding(container: HTMLElement): void {
+  container.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'ap-root ap-root--login';
+  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px 20px;text-align:center;';
+
+  wrap.innerHTML = `
+    <div style="width:56px;height:56px;border-radius:50%;background:rgba(34,197,94,0.15);display:flex;align-items:center;justify-content:center;">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    </div>
+    <h3 style="margin:0;font-size:16px;font-weight:700;color:#f0f0f0;">Você está protegido! 🛡️</h3>
+    <p style="margin:0;font-size:13px;color:#888;line-height:1.6;">
+      Abra uma das plataformas abaixo.<br/>
+      O badge Atenna aparecerá automaticamente no campo de texto.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:8px;width:100%;">
+      <a id="ob-chatgpt" href="https://chatgpt.com" target="_blank" rel="noopener noreferrer"
+         style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;background:#1a1a1a;border:1px solid #2a2a2a;text-decoration:none;color:#f0f0f0;font-size:13px;font-weight:500;cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10a37f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Abrir ChatGPT
+        <span style="margin-left:auto;color:#555;font-size:11px;">chatgpt.com</span>
+      </a>
+      <a id="ob-claude" href="https://claude.ai" target="_blank" rel="noopener noreferrer"
+         style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;background:#1a1a1a;border:1px solid #2a2a2a;text-decoration:none;color:#f0f0f0;font-size:13px;font-weight:500;cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#cc785c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+        Abrir Claude.ai
+        <span style="margin-left:auto;color:#555;font-size:11px;">claude.ai</span>
+      </a>
+      <a id="ob-gemini" href="https://gemini.google.com" target="_blank" rel="noopener noreferrer"
+         style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;background:#1a1a1a;border:1px solid #2a2a2a;text-decoration:none;color:#f0f0f0;font-size:13px;font-weight:500;cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4285f4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        Abrir Gemini
+        <span style="margin-left:auto;color:#555;font-size:11px;">gemini.google.com</span>
+      </a>
+      <a id="ob-perplexity" href="https://www.perplexity.ai" target="_blank" rel="noopener noreferrer"
+         style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;background:#1a1a1a;border:1px solid #2a2a2a;text-decoration:none;color:#f0f0f0;font-size:13px;font-weight:500;cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#20b2aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Abrir Perplexity
+        <span style="margin-left:auto;color:#555;font-size:11px;">perplexity.ai</span>
+      </a>
+    </div>
+    <p style="margin:0;font-size:11px;color:#555;">
+      Ao abrir a plataforma, o badge <strong style="color:#22c55e">⚡ Atenna</strong> aparece no canto do campo de chat.
+    </p>
+  `;
+
+  container.appendChild(wrap);
+
+  // Close popup when user clicks any platform link
+  ['ob-chatgpt', 'ob-claude', 'ob-gemini', 'ob-perplexity'].forEach(id => {
+    wrap.querySelector(`#${id}`)?.addEventListener('click', () => {
+      setTimeout(() => window.close(), 300);
+    });
+  });
+}
+
+function renderLogin(container: HTMLElement, tabId: number | null, tabSupported = false): void {
   const logoUrl = chrome.runtime.getURL('icons/icon128.png');
   container.innerHTML = `
     <div class="ap-root ap-root--login">
@@ -211,11 +267,11 @@ function renderLogin(container: HTMLElement, tabId: number | null): void {
         return;
       } else {
         await bffLogin(email, pass);
-        if (tabId) {
+        if (tabId && tabSupported) {
           relayToggleModal(tabId);
           window.close();
         } else {
-          window.location.reload();
+          renderOnboarding(container);
         }
       }
     } catch (e: unknown) {
@@ -246,8 +302,8 @@ function renderLogin(container: HTMLElement, tabId: number | null): void {
     errEl.style.display = 'none';
     try {
       await bffGoogleLogin();
-      if (tabId) { relayToggleModal(tabId); window.close(); }
-      else { window.location.reload(); }
+      if (tabId && tabSupported) { relayToggleModal(tabId); window.close(); }
+      else { renderOnboarding(container); }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erro no login com Google.';
       errEl.textContent = msg.includes('NETWORK') ? 'Sem conexão ou login cancelado.' : msg;
