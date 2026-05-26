@@ -93,6 +93,27 @@
 - Pro plan: sem limite (ou conforme definido no Supabase profiles.plan)
 - Cota é validada server-side no BFF — nunca só no cliente
 
+## Qualidade — NUNCA entregar sem isso
+
+### Antes de qualquer entrega de código
+1. `npx vitest run` — 0 falhas (atualizar número no CLAUDE.md se mudar)
+2. `npm run build` — build limpo sem erros
+3. Reload manual da extensão e smoke test do fluxo principal
+4. Para qualquer tela nova: abrir no Chrome e validar visualmente antes de reportar como pronto
+
+### Para qualquer UX/UI front-end — 5 Leis de UX obrigatórias
+1. **Lei de Fitts** — botões/links com padding generoso (mín. 44px de altura em mobile), nenhum alvo clicável abaixo de 32px
+2. **Lei de Hick** — máximo 3–4 opções visíveis por vez; remova o que não é essencial; não mostre dois CTAs de mesmo peso
+3. **Lei de Jakob** — siga convenções conhecidas: verde = sucesso, vermelho = erro, breadcrumb à esquerda, voltar = chevron/seta esquerda
+4. **Lei de Miller** — agrupar info em chunks de ≤7 itens; nunca muro de texto; label sempre acima do input (não placeholder substituindo label)
+5. **Lei de Proximidade** — erros inline junto ao campo que os causou; label colado ao input; CTA primário próximo ao último campo preenchido
+
+### Padrão Anti Ping-Pong UI
+- NUNCA usar `onclick=` ou `<script>` inline em páginas da extensão — viola CSP e bloqueia tudo
+- TODO JS de páginas de extensão vai em arquivo `.ts` próprio compilado pelo Vite como IIFE
+- NUNCA chamar Supabase diretamente da welcome/popup para auth — usar `bffClient.ts` (`bffLogin`, `bffGoogleLogin`, `bffResetPassword`)
+- NUNCA confiar que "parece certo" — sempre testar o caminho crítico no Chrome antes de entregar
+
 ## Posicionamento Estratégico — CRÍTICO
 - **Atenna Guard Extension ≠ Atenna Plataforma** — são produtos distintos
 - A **extensão é uma isca (freemium)** para captar usuários e conduzi-los à esteira Arckos

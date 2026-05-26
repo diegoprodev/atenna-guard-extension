@@ -19,8 +19,8 @@
     }
     /* watermark — half-logo faded bottom-right */
     .w-wm{
-      position:absolute;bottom:-60px;right:-60px;
-      width:260px;height:260px;opacity:0.07;pointer-events:none;
+      position:absolute;bottom:-120px;right:-120px;
+      width:520px;height:520px;opacity:0.07;pointer-events:none;
       background:url('icons/icon128.png') center/contain no-repeat;
       filter:brightness(10);
     }
@@ -224,24 +224,20 @@
     <div class="w-plat-section" style="margin-top:20px">
       <div class="w-plat-label">Protege você em</div>
       <div class="w-plat-row">
-        <!-- ChatGPT -->
         <div class="w-plat-chip">
-          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#10a37f"/><path d="M12.5 6.5c-2.2 0-4 1.8-4 4v1H7v1.5h1.5V16h1.5v-3h3.5v3h1.5v-3H16v-1.5h-1V10.5c0-2.2-1.8-4-4-4h-.5z" fill="#fff" opacity=".9"/></svg>
+          <img src="icons/openai.svg" width="14" height="14" style="filter:brightness(0) invert(1)" alt="ChatGPT">
           ChatGPT
         </div>
-        <!-- Claude -->
         <div class="w-plat-chip">
-          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#c96442"/><text x="6.5" y="16.5" font-size="11" fill="#fff" font-family="Georgia,serif" font-weight="700">cl.</text></svg>
+          <img src="icons/anthropic.svg" width="14" height="14" style="filter:brightness(0) invert(1)" alt="Claude">
           Claude
         </div>
-        <!-- Gemini -->
         <div class="w-plat-chip">
-          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#1a73e8"/><path d="M12 5l1.8 5.5H19l-4.6 3.3 1.8 5.5L12 16l-4.2 3.3 1.8-5.5L5 10.5h5.2z" fill="#fff"/></svg>
+          <img src="icons/gemini.svg" width="14" height="14" alt="Gemini">
           Gemini
         </div>
-        <!-- Perplexity -->
         <div class="w-plat-chip">
-          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#20b2aa"/><path d="M8 8h8M8 12h8M8 16h5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <img src="icons/perplexity.svg" width="14" height="14" style="filter:brightness(0) invert(1)" alt="Perplexity">
           Perplexity
         </div>
       </div>
@@ -359,19 +355,27 @@
         <p>Abra qualquer plataforma abaixo.<br>O Atenna estará protegendo você automaticamente.</p>
         <div class="w-plat-links">
           <a href="https://chatgpt.com/" target="_blank" class="w-plat-link">
-            <div class="w-plat-link-ico"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="12" fill="#10a37f"/><path d="M8.5 8.5a3.5 3.5 0 0 1 7 0v1H14V8.5a1.5 1.5 0 0 0-3 0V10H9.5V8.5z" fill="#fff"/><rect x="8.5" y="10" width="7" height="5.5" rx="1" fill="#fff"/></svg></div>
+            <div class="w-plat-link-ico" style="background:#10a37f;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center">
+              <img src="icons/openai.svg" width="18" height="18" style="filter:brightness(0) invert(1)" alt="ChatGPT">
+            </div>
             <span>ChatGPT</span><span class="w-plat-link-arr">›</span>
           </a>
           <a href="https://claude.ai/" target="_blank" class="w-plat-link">
-            <div class="w-plat-link-ico"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="12" fill="#c96442"/><text x="5" y="16" font-size="10" fill="#fff" font-family="Georgia,serif" font-weight="700">cl.</text></svg></div>
+            <div class="w-plat-link-ico" style="background:#d97757;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center">
+              <img src="icons/anthropic.svg" width="18" height="18" style="filter:brightness(0) invert(1)" alt="Claude">
+            </div>
             <span>Claude</span><span class="w-plat-link-arr">›</span>
           </a>
           <a href="https://gemini.google.com/" target="_blank" class="w-plat-link">
-            <div class="w-plat-link-ico"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="12" fill="#1a73e8"/><path d="M12 5.5l1.6 5H18l-4 2.9 1.6 5-4.2-3-4.2 3 1.6-5L5 10.5h4.4z" fill="#fff"/></svg></div>
+            <div class="w-plat-link-ico" style="background:linear-gradient(135deg,#4285f4,#ea4335,#fbbc05,#34a853);border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center">
+              <img src="icons/gemini.svg" width="18" height="18" alt="Gemini">
+            </div>
             <span>Gemini</span><span class="w-plat-link-arr">›</span>
           </a>
           <a href="https://www.perplexity.ai/" target="_blank" class="w-plat-link">
-            <div class="w-plat-link-ico"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="12" fill="#20b2aa"/><path d="M7 8h10M7 12h10M7 16h6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="w-plat-link-ico" style="background:#1d1f27;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center">
+              <img src="icons/perplexity.svg" width="18" height="18" style="filter:brightness(0) invert(1)" alt="Perplexity">
+            </div>
             <span>Perplexity</span><span class="w-plat-link-arr">›</span>
           </a>
         </div>
