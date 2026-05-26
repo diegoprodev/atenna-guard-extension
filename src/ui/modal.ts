@@ -2716,7 +2716,12 @@ function renderEmailConfirmationScreen(container: HTMLElement, email: string, sw
 
   const desc = document.createElement('p');
   desc.style.cssText = 'margin:0;font-size:13px;color:var(--at-text-secondary,rgba(232,232,232,0.65));line-height:1.5;max-width:260px;';
-  desc.innerHTML = `Enviamos um link de confirmação para<br><strong style="color:var(--at-text,#e8e8e8)">${email}</strong>.<br>Clique no link para ativar sua conta.`;
+  desc.textContent = 'Enviamos um link de confirmação para ';
+  const emailStrong = document.createElement('strong');
+  emailStrong.style.color = 'var(--at-text,#e8e8e8)';
+  emailStrong.textContent = email;
+  desc.appendChild(emailStrong);
+  desc.appendChild(document.createTextNode('. Clique no link para ativar sua conta.'));
 
   const gmailBtn = document.createElement('a');
   gmailBtn.href = 'https://mail.google.com/';

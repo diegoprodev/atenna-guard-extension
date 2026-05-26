@@ -3,6 +3,7 @@ import { getSession } from '../auth/sessionManager';
 const BACKEND_URL    = 'https://atennaplugin.maestro-n8n.site/generate-prompts';
 const CHECKOUT_URL   = 'https://atennaplugin.maestro-n8n.site/checkout/create';
 const ANALYTICS_URL  = 'https://atennaplugin.maestro-n8n.site/track';
+const PROXY_ALLOWED_HOST = 'atennaplugin.maestro-n8n.site';
 
 function decodeJwtPayload(token: string): Record<string, unknown> {
   try {
@@ -211,6 +212,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     const { url, method, token, body: reqBody } = msg as {
       url: string; method: string; token: string; body?: unknown;
     };
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname !== PROXY_ALLOWED_HOST || parsed.protocol !== 'https:') {
+        sendResponse({ ok: false, status: 403, error: 'unauthorized_url' });
+        return true;
+      }
+    } catch {
+      sendResponse({ ok: false, status: 400, error: 'invalid_url' });
+      return true;
+    }
     const opts: RequestInit = {
       method,
       headers: {

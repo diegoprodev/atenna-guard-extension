@@ -65,7 +65,7 @@
         "https://claude.ai/*",
         "https://gemini.google.com/*",
         "https://www.perplexity.ai/*",
-        "https://*.supabase.co/*"
+        "https://kezbssjmgwtrunqeoyir.supabase.co/auth/*"
       ]
     }
   ]
