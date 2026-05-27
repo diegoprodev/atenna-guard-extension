@@ -96,6 +96,22 @@ export async function bffMe(): Promise<MeResponse | null> {
   }
 }
 
+export interface UsageSummary {
+  today:           number;
+  monthly:         number;
+  total:           number;
+  protected_count: number;
+  scans_total:     number;
+}
+
+export async function bffUsage(): Promise<UsageSummary | null> {
+  try {
+    return await bffFetch<UsageSummary>('/auth/usage');
+  } catch {
+    return null;
+  }
+}
+
 export async function bffResetPassword(email: string): Promise<void> {
   await fetch(`${BFF_BASE}/auth/reset-password`, {
     method: 'POST',

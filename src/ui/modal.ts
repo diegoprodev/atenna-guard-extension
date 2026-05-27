@@ -3,7 +3,7 @@ import { getUsage, incrementUsage, isAtLimit, isAtAnyLimit, DAILY_LIMIT, getTota
 import { isPro, consumeProWelcome, getPlan, setPlan } from '../core/planManager';
 import { consumeProWelcome as _consumeProWelcomeOnboarding, resolveWelcomeState, setProWelcomeFlag } from './modal/onboarding';
 import { signUpWithPassword, saveDisplayName } from '../core/auth';
-import { bffLogin, bffMe, bffResetPassword, bffGoogleLogin } from '../auth/bffClient';
+import { bffLogin, bffMe, bffResetPassword, bffGoogleLogin, bffUsage } from '../auth/bffClient';
 import { friendlyError } from '../core/errors';
 import { track, trackEvent } from '../core/analytics';
 import { getHistory, addToHistory, addGroupToHistory, toggleFavorite, isGroup } from '../core/history';
@@ -777,17 +777,23 @@ function renderSettingsPage(
   // ── Load all data async ──────────────────────────────────
   void (async () => {
     try {
-      const [usageLocal, monthlyLocal, totalLocal, dlpLocal] = await Promise.all([
+      const [usageLocal, monthlyLocal, totalLocal, dlpLocal, serverUsage] = await Promise.all([
         getUsage(),
         getMonthlyUsage(),
         getTotalCount(),
         getDlpStats(),
+        bffUsage(),
       ]);
 
+      // Server data is cross-device truth; use max(local, server) so nothing appears to go backwards
       const dlp = dlpLocal;
-      const usage = usageLocal;
-      const monthly = monthlyLocal;
-      const total = totalLocal;
+      const usage   = { ...usageLocal,  count: Math.max(usageLocal.count,   serverUsage?.today   ?? 0) };
+      const monthly = Math.max(monthlyLocal, serverUsage?.monthly ?? 0);
+      const total   = Math.max(totalLocal,   serverUsage?.total   ?? 0);
+      if (serverUsage) {
+        dlp.protectedCount  = Math.max(dlp.protectedCount,  serverUsage.protected_count);
+        dlp.scansTotal      = Math.max(dlp.scansTotal,      serverUsage.scans_total);
+      }
 
       const taxaProtecao = dlp.scansTotal > 0
         ? Math.min(100, Math.round(dlp.protectedCount / dlp.scansTotal * 100))
