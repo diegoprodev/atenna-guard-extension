@@ -31,6 +31,25 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [1.3.0] — 2026-05-27 — FASE 7.6: Estabilidade & Resiliência
+
+### Fixed
+
+- **MutationObserver sem cleanup**: `content.ts` desconecta o `MutationObserver` e chama `disconnectInjector()` no evento `pagehide` e em navegações SPA (pushState/popstate)
+- **incrementMonthlyUsage() race condition**: read-modify-write em callback único de `chrome.storage.local.get` — duas abas concorrentes agora produzem count correto
+
+### Performance
+
+- **Cache TTL 60s em GET /auth/usage** (VPS): resultados em memória 60s por user_id; invalidado ao receber `POST /auth/dlp/event` — elimina 5 queries Supabase por geração de prompt
+- **asyncio.wait_for(generate_prompts, timeout=40s)** (VPS): retorna 504 se OpenAI+Gemini demorarem >40s — previne workers uvicorn travados indefinidamente
+
+### Maintenance
+
+- **TTL 90 dias em dlp_events** (VPS): job APScheduler daily às 03h UTC — remove eventos antigos, aviso de log se >500k rows
+- **Documentação do sessionManager**: comentário explicando modelo de proteção AES-GCM (salt aleatório por device, isolamento por extensão)
+
+---
+
 ## [Unreleased]
 
 ### Fixed — 2026-05-27

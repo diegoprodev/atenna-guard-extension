@@ -10,6 +10,16 @@ export interface Session {
 }
 
 // AES-GCM helpers
+// Key derivation design:
+// - Base material: chrome.runtime.id (public, but not guessable without knowing extension ID)
+// - Salt: crypto.getRandomValues (16 bytes, stored per-device in chrome.storage.local)
+// - Combined via PBKDF2 / 100k iterations → AES-GCM-256
+//
+// Protection model: the random salt makes the key non-derivable from runtime.id alone.
+// An attacker needs BOTH the extension ID AND the salt from chrome.storage.local.
+// chrome.storage.local is isolated per extension — other extensions/pages cannot read it.
+// This defends against: devtools inspection, storage dump from Chrome profile backup.
+// This does NOT defend against: malware with full Chrome profile filesystem access.
 async function getDerivedKey(): Promise<CryptoKey> {
   const saltRaw = await new Promise<number[] | undefined>(r =>
     chrome.storage.local.get(SALT_KEY, res => r(res[SALT_KEY] as number[] | undefined))
