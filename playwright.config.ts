@@ -19,7 +19,7 @@ export default defineConfig({
   projects: [
     {
       name: 'extension',
-      testMatch: /tests\/e2e\/extension\.spec\.ts/,
+      testMatch: /tests\/e2e\/(extension|welcome)\.spec\.ts/,
       use: {},
     },
     {

@@ -47,6 +47,10 @@ async function checkExistingSession() {
 function switchTab(tab: Tab) {
   currentTab = tab;
   const isForgot = tab === 'forgot';
+  // Restore main content area and hide verify/success states
+  $('w-main-content').style.display = '';
+  $('w-verify').style.display       = 'none';
+  $('w-success').style.display      = 'none';
   $('form-login').style.display   = tab === 'login'  ? '' : 'none';
   $('form-signup').style.display  = tab === 'signup' ? '' : 'none';
   $('form-forgot').style.display  = isForgot          ? '' : 'none';
