@@ -4,6 +4,33 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [1.2.1] — 2026-05-27 — FASE 7.5: Security & Store Compliance
+
+### Security
+
+- **Manifest de produção sem localhost**: script `scripts/strip-localhost.mjs` remove `http://localhost/*` e `http://127.0.0.1/*` do `dist/manifest.json` em todo `npm run build`; arquivo fonte mantém localhost para testes E2E
+- **featureFlags.ts: remove acesso a `localStorage` do host**: `getFlag()` não lê mais `localStorage.getItem('atenna_flag_overrides')` — vetor de bypass onde qualquer página podia injetar flags sobrescrevendo comportamento da extensão; flags agora vivem exclusivamente em `chrome.storage.local` via `setFlag()`
+- **safeText() para innerHTML com dados de usuário**: helper de HTML escape adicionado em `src/ui/privacy-data.ts`; aplicado nos dois pontos onde labels de entidades DLP eram interpolados diretamente via template string
+- **host_permissions Supabase**: substituído `https://*.supabase.co/*` por `https://kezbssjmgwtrunqeoyir.supabase.co/*` — elimina acesso a projetos Supabase de terceiros
+- **withRefreshLock timeout**: `src/auth/refreshLock.ts` agora rejeita com `refresh_timeout` após 10s (configurável); impede travamento permanente de todos os callers em caso de rede presa
+- **Guard no-op em dlpStats**: `incrementScan()` e `incrementProtected()` retornam imediatamente se `getStorageUser()` for null — evita gravar eventos no storage global antes da sessão carregar e enviar tracking sem uid
+- **Rate limiting POST /auth/dlp/event** (VPS): máximo 60 eventos/minuto por `user_id` com sliding window em memória; responde 429 silencioso sem punir a UI (fire-and-forget)
+
+### Fixed
+
+- **syncUsageFromServer MONTHLY_KEY bug**: `chrome.storage.local.set` gravava `number` bruto em `MONTHLY_KEY` mas `getMonthlyUsage()` espera `{ count, resetMonth }`; corrigido para gravar `MonthlyData` completo
+
+### Performance
+
+- **Índice composto dlp_events**: `CREATE INDEX idx_dlp_events_user_type_date ON dlp_events (user_id, event_type, created_at DESC)` — queries de `GET /auth/usage` que filtram por `user_id + event_type + created_at` passam de full table scan para index scan
+
+### Store Compliance
+
+- **Privacy Policy URL**: `manifest.json` agora inclui `"homepage_url": "https://atennaplugin.maestro-n8n.site/privacy"` — obrigatório para aprovação na Chrome Web Store
+- **version_name**: adicionado `"version_name": "1.2.0"` para exibição amigável na Store
+
+---
+
 ## [Unreleased]
 
 ### Fixed — 2026-05-27

@@ -27,35 +27,33 @@ describe('withRefreshLock', () => {
     expect(refresh).toHaveBeenCalledTimes(2);
   });
 
-  it('timeout de 10s rejeita a Promise se o refresh travar', async () => {
-    vi.useFakeTimers();
+  it('timeout rejeita a Promise se o refresh travar', async () => {
     vi.resetModules();
     const { withRefreshLock } = await import('../refreshLock');
 
-    const hanging = new Promise<never>(() => { /* never resolves */ });
-    const resultPromise = withRefreshLock(() => hanging);
+    let rejectHanging!: (reason?: unknown) => void;
+    const hanging = new Promise<never>((_, reject) => { rejectHanging = reject; });
+    hanging.catch(() => {}); // suppress unhandled rejection
 
-    vi.advanceTimersByTime(10_001);
-    await vi.runAllTimersAsync();
-
+    const resultPromise = withRefreshLock(() => hanging, 50);
     await expect(resultPromise).rejects.toThrow('refresh_timeout');
-    vi.useRealTimers();
+    rejectHanging(new Error('cleanup'));
   });
 
   it('após timeout, próximo caller pode iniciar novo refresh', async () => {
-    vi.useFakeTimers();
     vi.resetModules();
     const { withRefreshLock } = await import('../refreshLock');
 
-    const hanging = new Promise<never>(() => {});
-    const p1 = withRefreshLock(() => hanging);
-    vi.advanceTimersByTime(10_001);
-    await vi.runAllTimersAsync();
+    let rejectHanging!: (reason?: unknown) => void;
+    const hanging = new Promise<never>((_, reject) => { rejectHanging = reject; });
+    hanging.catch(() => {}); // suppress unhandled rejection
+
+    const p1 = withRefreshLock(() => hanging, 50);
     await expect(p1).rejects.toThrow('refresh_timeout');
+    rejectHanging(new Error('cleanup'));
 
     const refresh2 = vi.fn().mockResolvedValue('new-token');
-    const result = await withRefreshLock(refresh2);
+    const result = await withRefreshLock(refresh2, 1000);
     expect(result).toBe('new-token');
-    vi.useRealTimers();
   });
 });
