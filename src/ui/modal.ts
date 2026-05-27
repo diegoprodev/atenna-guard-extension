@@ -1597,6 +1597,8 @@ export async function openSettingsOverlay(): Promise<void> {
   const me = await bffMe();
   if (!me) return;
 
+  // Always sync plan from BFF before rendering — ensures pro users see correct badge
+  await syncPlanFromBff(me);
   const pro = await isPro();
   const settingsPage = renderSettingsPage(
     me,
