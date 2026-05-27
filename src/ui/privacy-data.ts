@@ -12,6 +12,15 @@ interface Session {
 
 const BACKEND = 'https://atennaplugin.maestro-n8n.site';
 
+function safeText(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 async function backendFetch(
   path: string,
   method: string,
@@ -122,7 +131,7 @@ async function updateExportCardState(card: HTMLElement, token: string): Promise<
     } else if (status === 'ready') {
       const remaining = formatTimeRemaining(expiresAt || '');
       const downloads = `${downloadCount} download${(downloadCount ?? 0) !== 1 ? 's' : ''} restante${(downloadCount ?? 0) !== 1 ? 's' : ''}`;
-      statusEl.innerHTML = `<div class="atenna-privacy__status-text">Relatório disponível.<br><span style="font-size: 11px; color: var(--at-muted);">Disponível por mais ${remaining} · ${downloads}</span></div>`;
+      statusEl.innerHTML = `<div class="atenna-privacy__status-text">Relatório disponível.<br><span style="font-size: 11px; color: var(--at-muted);">Disponível por mais ${safeText(remaining)} · ${safeText(downloads)}</span></div>`;
       actionEl.innerHTML = '<button class="atenna-privacy__btn">Fazer download</button>';
       const btn = actionEl.querySelector('button') as HTMLButtonElement;
       btn?.addEventListener('click', () => void handleDownloadExport(card, token));
@@ -254,7 +263,7 @@ async function updateDeletionCardState(card: HTMLElement, token: string): Promis
         ? new Date(scheduledAt).toLocaleDateString('pt-BR')
         : 'data desconhecida';
 
-      statusEl.innerHTML = `<div class="atenna-privacy__status-text">Exclusão agendada para ${formattedDate}.<br><span style="font-size: 11px; color: var(--at-muted);">Restam ${daysRemaining} para cancelar.</span></div>`;
+      statusEl.innerHTML = `<div class="atenna-privacy__status-text">Exclusão agendada para ${safeText(formattedDate)}.<br><span style="font-size: 11px; color: var(--at-muted);">Restam ${safeText(daysRemaining)} para cancelar.</span></div>`;
       actionEl.innerHTML = '<button class="atenna-privacy__btn">Cancelar solicitação</button>';
       const btn = actionEl.querySelector('button') as HTMLButtonElement;
       btn?.addEventListener('click', () => void handleCancelDeletion(card, token));
