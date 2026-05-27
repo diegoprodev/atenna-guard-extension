@@ -6,6 +6,13 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased]
 
+### Fixed — 2026-05-27
+- **Usuário Pro vendo "Grátis" nas configurações**: `openSettingsOverlay()` lia plano do cache local sem sincronizar com o BFF; usuários Pro que abriam configurações via ícone de engrenagem (sem passar pelo modal principal) viam badge "Grátis". Corrigido: `syncPlanFromBff(me)` agora é chamado antes de `isPro()` em toda abertura de configurações
+- **Banner DLP não descartava após "Proteger dados"**: `clearTimeout(scanTimer)` no handler do botão referenciava `window.scanTimer` (global implícito) em vez da variável de closure de `injectButton()` — o timer DLP continuava agendado. Corrigido: `cancelDlpTimers()` registrada como callback de módulo dentro do closure de `injectButton()` e chamada por `dismissProtectionBanner()`
+- **Welcome page W3/W4 falhava em suite completa**: testes E2E da welcome page compartilhavam contexto persistente com os testes de extensão; `atenna_session` do Supabase mock vazava entre testes, fazendo `checkExistingSession()` redirecionar para tela de sucesso. Corrigido: `clearSession()` via service worker executada antes de cada `openWelcomePage()`
+- **Badge não aparecia após login Google/email**: popup enviava `TOGGLE_MODAL` (abre overlay Atenna) após login em vez de apenas injetar o badge; substituído por `RELAY_INJECT_BADGE` → `INJECT_BADGE` no content script. Welcome page adicionada `notifyBadgeInject()` com o mesmo comportamento
+- **`isInsideDialog` bloqueava badge no ChatGPT nova UI**: seletores `.modal`, `[class*="modal"]`, `[class*="overlay"]` eram amplos demais e bloqueavam containers do ChatGPT; removidos, mantidos apenas seletores semânticos ARIA
+
 ### Fixed (Manifest + UX Polish) — 2026-05-26
 - **Chrome Web Store rejection**: adicionada permissão `"identity"` obrigatória para `chrome.identity.launchWebAuthFlow` (OAuth Google)
 - **`default_title` incorreto**: era "Atenna Guard Prompt", corrigido para "Atenna Safe Prompt"
