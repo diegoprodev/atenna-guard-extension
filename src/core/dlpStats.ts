@@ -1,4 +1,4 @@
-import { sk } from './scopedStorage';
+import { sk, getStorageUser } from './scopedStorage';
 import { bffTrackDlp } from '../auth/bffClient';
 
 const STATS_KEY = 'atenna_dlp_stats';
@@ -40,6 +40,7 @@ export async function getDlpStats(): Promise<DlpStats> {
 }
 
 export async function incrementProtected(charsSaved: number, entityTypes: string[] = [], entityCount = 1): Promise<void> {
+  if (!getStorageUser()) return;
   const s = await storageGet();
   s.protectedCount  += 1;
   s.tokensEstimated += Math.max(0, Math.round(charsSaved / 4));
@@ -49,6 +50,7 @@ export async function incrementProtected(charsSaved: number, entityTypes: string
 }
 
 export async function incrementScan(entityTypes: string[] = [], entityCount = 0): Promise<void> {
+  if (!getStorageUser()) return;
   const s = await storageGet();
   s.scansTotal += 1;
   s.updatedAt   = Date.now();
