@@ -145,3 +145,28 @@ export async function syncUsageFromSupabase(_jwt: string): Promise<UsageSyncResu
   const [local, monthly, total] = await Promise.all([getUsage(), getMonthlyUsage(), getTotalCount()]);
   return { todayCount: local.count, monthlyCount: monthly, totalCount: total };
 }
+
+export async function syncUsageFromServer(): Promise<UsageSyncResult | null> {
+  try {
+    const { bffUsage } = await import('../auth/bffClient');
+    const server = await bffUsage();
+    if (!server) return null;
+
+    const [localUsage, localMonthly, localTotal] = await Promise.all([
+      getUsage(), getMonthlyUsage(), getTotalCount(),
+    ]);
+
+    const todayCount   = Math.max(localUsage.count, server.today);
+    const monthlyCount = Math.max(localMonthly, server.monthly);
+    const totalCount   = Math.max(localTotal, server.total);
+
+    await Promise.all([
+      storageSet({ ...localUsage, count: todayCount }),
+      chrome.storage.local.set({ [sk(MONTHLY_KEY)]: monthlyCount, [sk(TOTAL_KEY)]: totalCount }),
+    ]);
+
+    return { todayCount, monthlyCount, totalCount };
+  } catch {
+    return null;
+  }
+}

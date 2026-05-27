@@ -112,6 +112,25 @@ export async function bffUsage(): Promise<UsageSummary | null> {
   }
 }
 
+export interface DlpEventPayload {
+  event_type:    'dlp_scan' | 'dlp_protect';
+  entity_types?: string[];
+  entity_count?: number;
+  was_rewritten?: boolean;
+}
+
+export function bffTrackDlp(payload: DlpEventPayload): void {
+  void bffFetch('/auth/dlp/event', {
+    method: 'POST',
+    body: JSON.stringify({
+      event_type:    payload.event_type,
+      entity_types:  payload.entity_types  ?? [],
+      entity_count:  payload.entity_count  ?? 0,
+      was_rewritten: payload.was_rewritten ?? false,
+    }),
+  }).catch(() => {});
+}
+
 export async function bffResetPassword(email: string): Promise<void> {
   await fetch(`${BFF_BASE}/auth/reset-password`, {
     method: 'POST',

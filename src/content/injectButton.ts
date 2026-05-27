@@ -146,7 +146,8 @@ function showProtectionBanner(
     // that setInputText's 'input' event just scheduled.
     dismissProtectionBanner();
     updateBadgeDotRisk('NONE', 0);
-    void incrementProtected(charsSaved);
+    const entityTypes = [...new Set(entities.map(e => e.type))];
+    void incrementProtected(charsSaved, entityTypes, entities.length);
   });
 
   const ignoreBtn = document.createElement('button');
@@ -501,7 +502,8 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
         return;
       }
       const result = scan(text);
-      void incrementScan();
+      const scanEntityTypes = result.entities.map(e => e.type);
+      void incrementScan(scanEntityTypes, result.entities.length);
       const uniqueCount = new Set(result.entities.map(e => e.type)).size;
       updateBadgeDotRisk(result.riskLevel, uniqueCount);
 

@@ -1,5 +1,5 @@
 import { getCurrentInput, getInputText, setInputText } from '../core/inputHandler';
-import { getUsage, incrementUsage, isAtLimit, isAtAnyLimit, DAILY_LIMIT, getTotalCount, incrementTotalCount, getMonthlyUsage, MONTHLY_LIMIT, incrementMonthlyUsage } from '../core/usageCounter';
+import { getUsage, incrementUsage, isAtLimit, isAtAnyLimit, DAILY_LIMIT, getTotalCount, incrementTotalCount, getMonthlyUsage, MONTHLY_LIMIT, incrementMonthlyUsage, syncUsageFromServer } from '../core/usageCounter';
 import { isPro, consumeProWelcome, getPlan, setPlan } from '../core/planManager';
 import { consumeProWelcome as _consumeProWelcomeOnboarding, resolveWelcomeState, setProWelcomeFlag } from './modal/onboarding';
 import { signUpWithPassword, saveDisplayName } from '../core/auth';
@@ -2020,6 +2020,11 @@ async function runFlow(
     // Only decrement usage if API actually succeeded
     const [newUsage, newTotalCount] = await Promise.all([incrementUsage(), incrementTotalCount(), incrementMonthlyUsage()]) as [Awaited<ReturnType<typeof incrementUsage>>, number, number];
     await updateUsageBadge(usageBadge, newUsage.count, pro);
+    void syncUsageFromServer().then(synced => {
+      if (synced && synced.todayCount !== newUsage.count) {
+        void updateUsageBadge(usageBadge, synced.todayCount, pro);
+      }
+    });
 
     await renderSuccess(container);
 

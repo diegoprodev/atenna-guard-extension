@@ -1,4 +1,5 @@
 import { sk } from './scopedStorage';
+import { bffTrackDlp } from '../auth/bffClient';
 
 const STATS_KEY = 'atenna_dlp_stats';
 
@@ -38,19 +39,21 @@ export async function getDlpStats(): Promise<DlpStats> {
   return storageGet();
 }
 
-export async function incrementProtected(charsSaved: number): Promise<void> {
+export async function incrementProtected(charsSaved: number, entityTypes: string[] = [], entityCount = 1): Promise<void> {
   const s = await storageGet();
   s.protectedCount  += 1;
   s.tokensEstimated += Math.max(0, Math.round(charsSaved / 4));
   s.updatedAt        = Date.now();
   await storageSet(s);
+  bffTrackDlp({ event_type: 'dlp_protect', entity_types: entityTypes, entity_count: entityCount, was_rewritten: true });
 }
 
-export async function incrementScan(): Promise<void> {
+export async function incrementScan(entityTypes: string[] = [], entityCount = 0): Promise<void> {
   const s = await storageGet();
   s.scansTotal += 1;
   s.updatedAt   = Date.now();
   await storageSet(s);
+  bffTrackDlp({ event_type: 'dlp_scan', entity_types: entityTypes, entity_count: entityCount });
 }
 
 // Kept for API compatibility — returns local stats (no remote sync with opaque BFF tokens)
