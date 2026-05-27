@@ -162,7 +162,12 @@ export async function syncUsageFromServer(): Promise<UsageSyncResult | null> {
 
     await Promise.all([
       storageSet({ ...localUsage, count: todayCount }),
-      chrome.storage.local.set({ [sk(MONTHLY_KEY)]: monthlyCount, [sk(TOTAL_KEY)]: totalCount }),
+      new Promise<void>(resolve => {
+        chrome.storage.local.set({
+          [sk(MONTHLY_KEY)]: { count: monthlyCount, resetMonth: getCurrentMonth() },
+          [sk(TOTAL_KEY)]: totalCount,
+        }, resolve);
+      }),
     ]);
 
     return { todayCount, monthlyCount, totalCount };

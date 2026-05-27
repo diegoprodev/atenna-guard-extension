@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   getUsage, incrementUsage, isAtLimit, DAILY_LIMIT,
-  getTotalCount, incrementTotalCount,
+  getTotalCount, incrementTotalCount, syncUsageFromServer, getMonthlyUsage,
 } from './usageCounter';
 
 let store: Record<string, unknown> = {};
@@ -76,6 +76,27 @@ describe('usageCounter', () => {
 
   it('DAILY_LIMIT is 5', () => {
     expect(DAILY_LIMIT).toBe(5);
+  });
+});
+
+describe('syncUsageFromServer', () => {
+  beforeEach(() => { store = {}; });
+
+  it('após sync, getMonthlyUsage() retorna valor correto sem corromper formato', async () => {
+    // Mock bffUsage to return server data
+    const bffClientModule = await import('../auth/bffClient');
+    const originalBffUsage = bffClientModule.bffUsage;
+    vi.spyOn(bffClientModule, 'bffUsage').mockResolvedValue({
+      today: 2, monthly: 7, total: 15, protected_count: 3, scans_total: 5,
+    });
+
+    const result = await syncUsageFromServer();
+
+    expect(result?.monthlyCount).toBe(7);
+
+    // This is the key assertion: getMonthlyUsage() must still work correctly after sync
+    const monthly = await getMonthlyUsage();
+    expect(monthly).toBe(7);
   });
 });
 
