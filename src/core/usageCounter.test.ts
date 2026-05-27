@@ -120,3 +120,38 @@ describe('totalCount', () => {
     expect(await getTotalCount()).toBe(1); // total not reset
   });
 });
+
+describe('incrementMonthlyUsage — read-modify-write atômico', () => {
+  beforeEach(() => { store = {}; });
+
+  it('duas chamadas concorrentes produzem count=2, não count=1', async () => {
+    vi.resetModules();
+
+    let testStore: Record<string, unknown> = {};
+    vi.stubGlobal('chrome', {
+      storage: {
+        local: {
+          get: vi.fn((key: string, cb: (r: Record<string, unknown>) => void) => {
+            cb({ [key]: testStore[key] });
+          }),
+          set: vi.fn((obj: Record<string, unknown>, cb?: () => void) => {
+            Object.assign(testStore, obj);
+            cb?.();
+          }),
+        },
+      },
+      runtime: { id: 'test-ext-id' },
+    });
+
+    const { incrementMonthlyUsage, getMonthlyUsage } = await import('./usageCounter');
+
+    const [a, b] = await Promise.all([
+      incrementMonthlyUsage(),
+      incrementMonthlyUsage(),
+    ]);
+
+    expect(a + b).toBe(3); // 1+2=3
+    const final = await getMonthlyUsage();
+    expect(final).toBe(2);
+  });
+});

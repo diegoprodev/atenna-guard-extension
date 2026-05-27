@@ -119,13 +119,17 @@ export async function getMonthlyUsage(): Promise<number> {
 }
 
 export async function incrementMonthlyUsage(): Promise<number> {
-  const current = await getMonthlyUsage();
-  const next = current + 1;
-  const currentMonth = getCurrentMonth();
   return new Promise(resolve => {
     try {
-      chrome.storage.local.set({ [sk(MONTHLY_KEY)]: { count: next, resetMonth: currentMonth } }, () => resolve(next));
-    } catch { resolve(next); }
+      const key = sk(MONTHLY_KEY);
+      chrome.storage.local.get(key, r => {
+        const currentMonth = getCurrentMonth();
+        const data = r[key] as MonthlyData | undefined;
+        const base = (data?.resetMonth === currentMonth) ? (data?.count ?? 0) : 0;
+        const next = base + 1;
+        chrome.storage.local.set({ [key]: { count: next, resetMonth: currentMonth } }, () => resolve(next));
+      });
+    } catch { resolve(1); }
   });
 }
 
