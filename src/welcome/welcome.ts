@@ -3,6 +3,23 @@ import { getSession } from '../auth/sessionManager';
 import { signUpWithPassword } from '../core/auth';
 import { AppError, E } from '../core/errors';
 
+const SUPPORTED_HOSTS = ['chatgpt.com', 'chat.openai.com', 'claude.ai', 'gemini.google.com', 'perplexity.ai'];
+
+async function notifyBadgeInject(): Promise<void> {
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    for (const tab of tabs) {
+      if (!tab.id || !tab.url) continue;
+      try {
+        const host = new URL(tab.url).hostname;
+        if (SUPPORTED_HOSTS.some(h => host.includes(h))) {
+          chrome.tabs.sendMessage(tab.id, { type: 'INJECT_BADGE' }, () => void chrome.runtime.lastError);
+        }
+      } catch { /* invalid URL */ }
+    }
+  } catch { /* non-extension env */ }
+}
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 function $<T extends HTMLElement = HTMLElement>(id: string): T {
   return document.getElementById(id) as T;
@@ -92,6 +109,7 @@ async function loginGoogle() {
   try {
     const session = await bffGoogleLogin();
     showSuccess(session.email ?? '');
+    void notifyBadgeInject();
   } catch (err) {
     btn.disabled = false;
     label.textContent = 'Tentar novamente com Google';
@@ -114,6 +132,7 @@ async function submitLogin() {
   try {
     const session = await bffLogin(email, pass);
     showSuccess(session.email ?? email);
+    void notifyBadgeInject();
   } catch (err) {
     btn.disabled = false; btn.textContent = 'Entrar';
     setErr(errMsg(err));

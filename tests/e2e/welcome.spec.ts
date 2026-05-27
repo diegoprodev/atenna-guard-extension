@@ -6,7 +6,19 @@ import { test, expect } from './helpers/extension';
 
 // ─── helpers ───────────────────────────────────────────────────────────────────
 
+async function clearSession(context: import('@playwright/test').BrowserContext): Promise<void> {
+  let [sw] = context.serviceWorkers();
+  if (!sw) {
+    sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  }
+  await sw.evaluate(() => new Promise<void>(r =>
+    chrome.storage.local.remove(['atenna_session', 'atenna_jwt'], () => r())
+  ));
+}
+
 async function openWelcomePage(context: import('@playwright/test').BrowserContext, extensionId: string) {
+  // Clear any session left by extension tests so welcome page starts unauthenticated
+  await clearSession(context);
   const page = await context.newPage();
 
   // Mock BFF endpoints usados pelo welcome.ts

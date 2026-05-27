@@ -30,16 +30,13 @@ function isElementVisible(el: Element): boolean {
 }
 
 // Returns true if el lives inside a modal/dialog overlay.
-// Catches: Claude settings modal, any ARIA dialog, common modal class patterns.
+// Catches: Claude settings modal, any ARIA dialog, Radix UI dialogs.
+// Intentionally avoids [class*="overlay"] — too broad, blocks ChatGPT input containers.
 function isInsideDialog(el: Element): boolean {
   return !!(
     el.closest('[role="dialog"]') ||
     el.closest('[aria-modal="true"]') ||
     el.closest('[data-radix-dialog-content]') ||
-    el.closest('.modal') ||
-    el.closest('[class*="modal"]') ||
-    el.closest('[class*="dialog"]') ||
-    el.closest('[class*="overlay"]') ||
     el.closest('aside[class*="settings"]')
   );
 }
@@ -119,6 +116,14 @@ try {
         tryInject();
       }
       void toggleModal();
+    }
+    if (msg?.type === 'INJECT_BADGE') {
+      // Inject badge without opening modal — used after login from popup/welcome
+      if (!_isAuthenticated) {
+        void checkAuth().then(authed => { if (authed) tryInject(); });
+      } else {
+        tryInject();
+      }
     }
     if (msg?.type === 'OPEN_SETTINGS') {
       void openSettingsOverlay();

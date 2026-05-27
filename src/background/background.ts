@@ -51,6 +51,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // ── Relay INJECT_BADGE — injects badge without opening the modal ──
+  if (msg.type === 'RELAY_INJECT_BADGE') {
+    const tabId = typeof msg.tabId === 'number' ? msg.tabId : null;
+    if (tabId) {
+      chrome.tabs.sendMessage(tabId, { type: 'INJECT_BADGE' }, () => void chrome.runtime.lastError);
+    }
+    sendResponse({ ok: true });
+    return true;
+  }
+
   // ── Prompt generation ────────────────────────────────────
   if (msg.type === 'ATENNA_FETCH') {
     const inputText = typeof msg.input === 'string' ? msg.input.trim() : '';

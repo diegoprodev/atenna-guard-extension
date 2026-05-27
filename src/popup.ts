@@ -21,6 +21,10 @@ function relayToggleModal(tabId: number): void {
   chrome.runtime.sendMessage({ type: 'RELAY_TOGGLE_MODAL', tabId }, () => void chrome.runtime.lastError);
 }
 
+function relayInjectBadge(tabId: number): void {
+  chrome.runtime.sendMessage({ type: 'RELAY_INJECT_BADGE', tabId }, () => void chrome.runtime.lastError);
+}
+
 async function getActiveTabId(): Promise<number | null> {
   return new Promise(resolve => {
     chrome.tabs.query({ active: true }, tabs => {
@@ -268,7 +272,7 @@ function renderLogin(container: HTMLElement, tabId: number | null, tabSupported 
       } else {
         await bffLogin(email, pass);
         if (tabId && tabSupported) {
-          relayToggleModal(tabId);
+          relayInjectBadge(tabId);
           window.close();
         } else {
           renderOnboarding(container);
@@ -302,7 +306,7 @@ function renderLogin(container: HTMLElement, tabId: number | null, tabSupported 
     errEl.style.display = 'none';
     try {
       await bffGoogleLogin();
-      if (tabId && tabSupported) { relayToggleModal(tabId); window.close(); }
+      if (tabId && tabSupported) { relayInjectBadge(tabId); window.close(); }
       else { renderOnboarding(container); }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erro no login com Google.';

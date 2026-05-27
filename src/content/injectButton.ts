@@ -18,9 +18,10 @@ const BADGE_GAP          = 10; // px gap between badge bottom and input top
 import { getBadgeColor } from '../core/userSettings';
 import { sk } from '../core/scopedStorage';
 
-let currentCleanup: (() => void) | undefined;
-let rafId:          number | undefined;
-let savedPos:       { top: number; left: number } | null = null;
+let currentCleanup:   (() => void) | undefined;
+let rafId:            number | undefined;
+let savedPos:         { top: number; left: number } | null = null;
+let cancelDlpTimers:  (() => void) | undefined;
 
 // ── Settings ────────────────────────────────────────────────
 
@@ -141,6 +142,8 @@ function showProtectionBanner(
     inputEl.focus();
     setInputText(inputEl, rewritten);
 
+    // dismissProtectionBanner calls cancelDlpTimers() which cancels the DLP re-scan
+    // that setInputText's 'input' event just scheduled.
     dismissProtectionBanner();
     updateBadgeDotRisk('NONE', 0);
     void incrementProtected(charsSaved);
@@ -175,7 +178,11 @@ function positionBannerAbove(btn: HTMLButtonElement, banner: HTMLElement): void 
 }
 
 function dismissProtectionBanner(): void {
+  // Cancel any pending DLP re-scan so "Proteger dados" doesn't trigger a new banner
+  cancelDlpTimers?.();
   bannerEl?.remove();
+  // Belt-and-suspenders: remove by ID in case bannerEl ref became stale
+  document.getElementById('atenna-protection-banner')?.remove();
   bannerEl       = undefined;
   lastEntities   = [];
   lastScanInput  = undefined;
@@ -465,6 +472,12 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   // Realtime DLP scan — debounced 400ms after last keystroke
   let typingTimer: ReturnType<typeof setTimeout> | undefined;
   let scanTimer:   ReturnType<typeof setTimeout> | undefined;
+
+  // Register module-level cancel so dismissProtectionBanner() can cancel these timers
+  cancelDlpTimers = () => {
+    clearTimeout(scanTimer);  scanTimer  = undefined;
+    clearTimeout(typingTimer); typingTimer = undefined;
+  };
 
   const onInput = () => {
     // Immediate visual: typing indicator

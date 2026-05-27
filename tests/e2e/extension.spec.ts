@@ -239,8 +239,8 @@ test('T8: clicking "Proteger dados" masks CPF in Perplexity React-controlled tex
   // Click "Proteger dados"
   await page.click('.atenna-protection-banner__btn--primary');
 
-  // Wait for the setTimeout(0) + setInputText to complete
-  await page.waitForTimeout(300);
+  // Banner dismissal is synchronous, but wait for detachment to avoid flaky timing
+  await page.waitForSelector('#atenna-protection-banner', { state: 'detached', timeout: 3_000 });
 
   // Verify DOM value changed
   const valueDomAfter = await page.$eval('#prompt-textarea', (el: HTMLTextAreaElement) => el.value);
@@ -258,7 +258,7 @@ test('T8: clicking "Proteger dados" masks CPF in Perplexity React-controlled tex
   expect(valueReactAfter).toContain('[CPF]');
   expect(valueReactAfter).not.toContain('123.456.789-09');
 
-  // Banner must be dismissed
+  // Confirm banner is gone
   const banner = await page.$('#atenna-protection-banner');
   expect(banner).toBeNull();
 
