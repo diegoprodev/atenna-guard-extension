@@ -1,6 +1,6 @@
 /**
  * Feature Flags for Atenna Guard
- * Centralized flag management with localStorage fallback + admin override
+ * Centralized flag management — overrides via setFlag() stored in chrome.storage.local
  */
 
 interface FlagConfig {
@@ -25,22 +25,9 @@ const FLAGS: Record<string, FlagConfig> = {
 
 /**
  * Get feature flag value
- * Priority: localStorage override > default config
+ * Priority: chrome.storage.local override > default config
  */
 export async function getFlag(flagName: string): Promise<boolean> {
-  // Check for admin override in localStorage (for testing/rollout)
-  try {
-    const overrides = localStorage.getItem('atenna_flag_overrides');
-    if (overrides) {
-      const parsed = JSON.parse(overrides) as Record<string, boolean>;
-      if (flagName in parsed) {
-        return parsed[flagName];
-      }
-    }
-  } catch {
-    // Fallthrough to default
-  }
-
   // Check Chrome storage (for extension persistence) — only in top frame
   try {
     if (typeof window === 'undefined' || window !== window.top) {
