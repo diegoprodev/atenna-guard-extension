@@ -11,7 +11,9 @@
     "https://gemini.google.com/*",
     "https://www.perplexity.ai/*",
     "https://atennaplugin.maestro-n8n.site/*",
-    "https://*.supabase.co/*"
+    "https://*.supabase.co/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'"
@@ -23,7 +25,9 @@
         "https://chatgpt.com/*",
         "https://claude.ai/*",
         "https://gemini.google.com/*",
-        "https://www.perplexity.ai/*"
+        "https://www.perplexity.ai/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
       ],
       "js": ["content.js"],
       "css": ["styles.css", "modal.css"],

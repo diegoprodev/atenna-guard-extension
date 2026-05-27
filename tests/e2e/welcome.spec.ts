@@ -26,12 +26,12 @@ async function openWelcomePage(context: import('@playwright/test').BrowserContex
   await page.route('**/atennaplugin.maestro-n8n.site/auth/reset-password', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
   );
-  // Supabase signup endpoint — URL exata (subdomínio não é capturado por **/supabase.co/**)
-  await page.route('https://kezbssjmgwtrunqeoyir.supabase.co/auth/v1/signup', (route) =>
+  // BFF signup endpoint
+  await page.route('**/atennaplugin.maestro-n8n.site/auth/signup', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ id: 'mock-signup-id', email: 'novo@atenna.ai' }),
+      body: JSON.stringify({}),
     })
   );
 
@@ -349,11 +349,12 @@ test('W11: Google button has correct initial state and shows loading immediately
 
 test('W12: signup with already registered email shows friendly error', async ({ context, extensionId }) => {
   const page = await context.newPage();
-  await page.route('https://kezbssjmgwtrunqeoyir.supabase.co/auth/v1/signup', (route) =>
+  // BFF retorna 400 com error=email_already_registered
+  await page.route('**/atennaplugin.maestro-n8n.site/auth/signup', (route) =>
     route.fulfill({
-      status: 422,
+      status: 400,
       contentType: 'application/json',
-      body: JSON.stringify({ error: 'user_already_exists', error_description: 'User already registered' }),
+      body: JSON.stringify({ detail: { error: 'email_already_registered' } }),
     })
   );
   await page.goto(`chrome-extension://${extensionId}/welcome.html`, { waitUntil: 'domcontentloaded' });
@@ -366,7 +367,7 @@ test('W12: signup with already registered email shows friendly error', async ({ 
 
   const errAlert = page.locator('#w-err');
   await expect(errAlert).toBeVisible({ timeout: 5000 });
-  await expect(errAlert).toContainText('já está cadastrado');
+  await expect(errAlert).toContainText('já está registrado');
 
   // Botão re-habilitado
   await expect(page.locator('#signup-btn')).toBeEnabled();

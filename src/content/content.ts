@@ -2,6 +2,7 @@ import { detectPlatform } from './detectInput';
 import { injectButton, removeButton } from './injectButton';
 import { toggleModal, openSettingsOverlay } from '../ui/modal';
 import { getSession } from '../auth/sessionManager';
+import { setStorageUser } from '../core/scopedStorage';
 import { attachImageInterceptor } from '../dlp/imageInterceptor';
 
 // Cached session state — avoids re-checking on every MutationObserver tick
@@ -10,6 +11,10 @@ let _isAuthenticated = false;
 async function checkAuth(): Promise<boolean> {
   try {
     const bffSession = await getSession();
+    if (bffSession) {
+      // Initialise user-scoped key prefix so modal's sk() calls resolve correctly
+      setStorageUser(bffSession.user_id ?? null);
+    }
     _isAuthenticated = !!bffSession;
   } catch {
     _isAuthenticated = false;

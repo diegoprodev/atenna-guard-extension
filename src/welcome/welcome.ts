@@ -1,5 +1,6 @@
 import { bffLogin, bffGoogleLogin, bffResetPassword } from '../auth/bffClient';
 import { getSession } from '../auth/sessionManager';
+import { signUpWithPassword } from '../core/auth';
 import { AppError, E } from '../core/errors';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -119,7 +120,7 @@ async function submitLogin() {
   }
 }
 
-// ── Signup (Supabase direct — email confirmation flow, no BFF session yet) ────
+// ── Signup (via BFF — email confirmation flow, no BFF session yet) ───────────
 async function submitSignup() {
   clearErrors();
   const name  = $<HTMLInputElement>('signup-name').value.trim();
@@ -132,28 +133,13 @@ async function submitSignup() {
   const btn = $<HTMLButtonElement>('signup-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="w-spin"></span>Criando conta…';
-  try {
-    const res  = await fetch('https://kezbssjmgwtrunqeoyir.supabase.co/auth/v1/signup', {
-      method:  'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlemJzc2ptZ3d0cnVucWVveWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwMDQ5MTAsImV4cCI6MjA2MjU4MDkxMH0.FVTep4LmpPh2bVB5_f8CQ4JEYhoCb21mlzj3eSXJQoU',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlemJzc2ptZ3d0cnVucWVveWlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwMDQ5MTAsImV4cCI6MjA2MjU4MDkxMH0.FVTep4LmpPh2bVB5_f8CQ4JEYhoCb21mlzj3eSXJQoU',
-      },
-      body: JSON.stringify({ email, password: pass, data: { name } }),
-    });
-    const data = await res.json() as { error?: string; error_description?: string; msg?: string };
-    if (!res.ok) {
-      btn.disabled = false; btn.textContent = 'Criar conta grátis';
-      const m = data.error_description ?? data.msg ?? data.error ?? '';
-      setErr(m.includes('already') ? 'Este email já está cadastrado. Tente entrar.' : (m || 'Erro ao criar conta.'));
-      return;
-    }
-    showVerify(email);
-  } catch {
+  const result = await signUpWithPassword(email, pass, name);
+  if (result.error) {
     btn.disabled = false; btn.textContent = 'Criar conta grátis';
-    setErr('Erro de conexão. Verifique sua internet.');
+    setErr(result.error);
+    return;
   }
+  showVerify(email);
 }
 
 // ── Forgot password ───────────────────────────────────────────────────────────

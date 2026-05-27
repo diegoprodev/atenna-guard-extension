@@ -124,12 +124,14 @@ test('T6: clicking the badge opens the Atenna modal overlay', async ({ context }
       body: JSON.stringify([{ display_name: 'E2E User' }]),
     })
   );
-  // Mock BFF /auth/me so toggleModal() sees a valid session and renders the full modal
+  // Mock BFF /auth/me so toggleModal() sees a valid session and renders the full modal.
+  // plan must match the injected session plan ('free') — a 'pro' response would trigger
+  // the pro-welcome overlay and close the modal before tabs render.
   await context.route('**/maestro-n8n.site/auth/me**', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ user_id: 'e2e-user-id', email: 'e2e@atenna.ai', plan: 'pro', expires_at: 9999999999 }),
+      body: JSON.stringify({ user_id: 'e2e-user-id', email: 'e2e@atenna.ai', plan: 'free', expires_at: 9999999999 }),
     })
   );
 
@@ -156,7 +158,9 @@ test('T6: clicking the badge opens the Atenna modal overlay', async ({ context }
   const overlay = await page.$('#atenna-modal-overlay');
   expect(overlay).not.toBeNull();
 
-  // Modal must have the tab bar (Refinar / Histórico)
+  // Modal must have the tab bar (Refinar / Histórico).
+  // openModal() is async — tabs render after bffMe() + storage checks resolve.
+  await page.waitForSelector('.atenna-modal__tab', { timeout: 8_000 });
   const tabs = await page.$$('.atenna-modal__tab');
   expect(tabs.length).toBe(2);
 
@@ -264,7 +268,7 @@ test('T8: clicking "Proteger dados" masks CPF in Perplexity React-controlled tex
 // ─── DIAG: Perplexity.ai real DOM diagnostic ──────────────────
 // Run with: npx playwright test --project=extension --grep "DIAG"
 
-test('DIAG: perplexity.ai protect button diagnostic', async ({ context }) => {
+test.skip('DIAG: perplexity.ai protect button diagnostic', async ({ context }) => {
   await context.route('**/auth/v1/user**', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json',
       body: JSON.stringify({ id: 'e2e-diag-id', email: 'diag@atenna.ai' }) })
