@@ -23,4 +23,17 @@ describe('manifest.json de produção', () => {
     const src = JSON.parse(readFileSync(resolve(process.cwd(), 'manifest.json'), 'utf-8'));
     expect(Array.isArray(src.host_permissions)).toBe(true);
   });
+
+  it('dist/manifest.json usa project ref específico do Supabase', () => {
+    if (!existsSync(DIST_MANIFEST)) return;
+    const manifest = JSON.parse(readFileSync(DIST_MANIFEST, 'utf-8'));
+    expect(manifest.host_permissions).not.toContain('https://*.supabase.co/*');
+    expect(manifest.host_permissions).toContain('https://kezbssjmgwtrunqeoyir.supabase.co/*');
+  });
+
+  it('manifest.json fonte tem homepage_url válida', () => {
+    const src = JSON.parse(readFileSync(resolve(process.cwd(), 'manifest.json'), 'utf-8'));
+    expect(src.homepage_url).toBeTruthy();
+    expect(src.homepage_url).toMatch(/^https:\/\//);
+  });
 });
