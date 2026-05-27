@@ -18,4 +18,13 @@ describe('disconnectInjector', () => {
     const { disconnectInjector } = await import('../injectButton');
     expect(() => disconnectInjector()).not.toThrow();
   });
+
+  it('disconnectInjector() é idempotente — segunda chamada não lança', async () => {
+    vi.resetModules();
+    const { disconnectInjector } = await import('../injectButton');
+    // First call — currentCleanup is undefined, no-op
+    disconnectInjector();
+    // Second call — currentCleanup is still undefined, must not throw
+    expect(() => disconnectInjector()).not.toThrow();
+  });
 });

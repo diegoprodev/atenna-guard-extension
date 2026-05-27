@@ -181,7 +181,7 @@ if (window === window.top) {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       void init();
-      window.addEventListener('beforeunload', () => {
+      window.addEventListener('pagehide', () => {
         _domObserver?.disconnect();
         _domObserver = null;
         disconnectInjector();
@@ -189,7 +189,7 @@ if (window === window.top) {
     });
   } else {
     void init();
-    window.addEventListener('beforeunload', () => {
+    window.addEventListener('pagehide', () => {
       _domObserver?.disconnect();
       _domObserver = null;
       disconnectInjector();
@@ -201,8 +201,9 @@ if (window === window.top) {
   const _origPushState = history.pushState.bind(history);
   history.pushState = function (...args) {
     _origPushState(...args);
+    disconnectInjector();
     // Give the SPA a tick to update the DOM before re-evaluating
     setTimeout(tryInject, 0);
   };
-  window.addEventListener('popstate', () => setTimeout(tryInject, 0));
+  window.addEventListener('popstate', () => { disconnectInjector(); setTimeout(tryInject, 0); });
 }
