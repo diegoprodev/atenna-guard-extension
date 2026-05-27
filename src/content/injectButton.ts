@@ -294,6 +294,11 @@ function addDragBehavior(btn: HTMLButtonElement, onToggle: () => void): void {
 
 // ── Public API ──────────────────────────────────────────────
 
+export function disconnectInjector(): void {
+  currentCleanup?.();
+  currentCleanup = undefined;
+}
+
 export function injectButton(config: PlatformConfig, onToggle: () => void): void {
   const input = document.querySelector(config.inputSelector) as HTMLElement | null;
   if (!input) return;

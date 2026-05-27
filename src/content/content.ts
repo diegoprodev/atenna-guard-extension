@@ -1,5 +1,5 @@
 import { detectPlatform } from './detectInput';
-import { injectButton, removeButton } from './injectButton';
+import { injectButton, removeButton, disconnectInjector } from './injectButton';
 import { toggleModal, openSettingsOverlay } from '../ui/modal';
 import { getSession } from '../auth/sessionManager';
 import { setStorageUser } from '../core/scopedStorage';
@@ -7,6 +7,7 @@ import { attachImageInterceptor } from '../dlp/imageInterceptor';
 
 // Cached session state — avoids re-checking on every MutationObserver tick
 let _isAuthenticated = false;
+let _domObserver: MutationObserver | null = null;
 
 async function checkAuth(): Promise<boolean> {
   try {
@@ -82,10 +83,10 @@ async function init(): Promise<void> {
   if (authed) tryInject();
 
   // Re-inject on DOM changes (SPA navigation, conversation switch)
-  const observer = new MutationObserver(() => {
+  _domObserver = new MutationObserver(() => {
     if (_isAuthenticated) tryInject();
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  _domObserver.observe(document.body, { childList: true, subtree: true });
 
   // React to login / logout in another tab or popup
   try {
@@ -178,9 +179,21 @@ function injectContentIntoChat(content: string): void {
 // and don't contain the main chat input
 if (window === window.top) {
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => void init());
+    document.addEventListener('DOMContentLoaded', () => {
+      void init();
+      window.addEventListener('beforeunload', () => {
+        _domObserver?.disconnect();
+        _domObserver = null;
+        disconnectInjector();
+      });
+    });
   } else {
     void init();
+    window.addEventListener('beforeunload', () => {
+      _domObserver?.disconnect();
+      _domObserver = null;
+      disconnectInjector();
+    });
   }
 
   // SPA navigation: history.pushState does not fire popstate, so we patch it.
