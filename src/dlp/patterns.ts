@@ -329,7 +329,8 @@ export function scanPatterns(text: string): DetectedEntity[] {
   const raw: DetectedEntity[] = [];
 
   for (const def of PATTERNS) {
-    const re = new RegExp(def.pattern.source, def.pattern.flags);
+    const re = def.pattern;
+    re.lastIndex = 0;
     let match: RegExpExecArray | null;
 
     while ((match = re.exec(text)) !== null) {
