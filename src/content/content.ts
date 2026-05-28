@@ -5,6 +5,10 @@ import { getSession } from '../auth/sessionManager';
 import { setStorageUser } from '../core/scopedStorage';
 import { attachImageInterceptor } from '../dlp/imageInterceptor';
 
+self.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+  console.error('[Atenna] unhandledrejection:', event.reason);
+});
+
 // Cached session state — avoids re-checking on every MutationObserver tick
 let _isAuthenticated = false;
 let _domObserver: MutationObserver | null = null;

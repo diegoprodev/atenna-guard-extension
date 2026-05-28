@@ -1,5 +1,9 @@
 import { getSession, setSession } from '../auth/sessionManager';
 
+self.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+  console.error('[Atenna] unhandledrejection:', event.reason);
+});
+
 const BACKEND_URL    = 'https://atennaplugin.maestro-n8n.site/generate-prompts';
 const CHECKOUT_URL   = 'https://atennaplugin.maestro-n8n.site/checkout/create';
 const ANALYTICS_URL  = 'https://atennaplugin.maestro-n8n.site/track';

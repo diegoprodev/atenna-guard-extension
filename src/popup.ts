@@ -2,6 +2,10 @@ import { signUpWithPassword } from './core/auth';
 import { bffLogin, bffLogout, bffMe, bffResetPassword, bffGoogleLogin } from './auth/bffClient';
 import { openSettingsOverlay } from './ui/modal';
 
+self.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+  console.error('[Atenna] unhandledrejection:', event.reason);
+});
+
 const SUPPORTED_HOSTS = ['chatgpt.com', 'chat.openai.com', 'claude.ai', 'gemini.google.com', 'perplexity.ai'];
 
 async function getActiveTabInfo(): Promise<{ url: string; host: string; supported: boolean } | null> {
