@@ -1,4 +1,4 @@
-import { getSession } from '../auth/sessionManager';
+import { getSession, setSession } from '../auth/sessionManager';
 
 const BACKEND_URL    = 'https://atennaplugin.maestro-n8n.site/generate-prompts';
 const CHECKOUT_URL   = 'https://atennaplugin.maestro-n8n.site/checkout/create';
@@ -283,13 +283,7 @@ chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
 
       if (email) {
         const expiresAtSeconds = Math.floor(Date.now() / 1000) + parseInt(expiresIn, 10);
-        chrome.storage.local.set({
-          [JWT_KEY]: {
-            access_token: accessToken,
-            email,
-            expires_at: expiresAtSeconds,
-          },
-        });
+        void setSession({ token: accessToken, email, expires_at: expiresAtSeconds, plan: 'free' });
       }
     }
   }
