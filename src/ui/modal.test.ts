@@ -645,7 +645,7 @@ describe('friendlyError — personalized messages', () => {
 
 describe('renderSignupView — auto-focus on error', () => {
   it('source contains focus() calls in validation block', () => {
-    const src = fs.readFileSync('src/ui/modal.ts', 'utf-8');
+    const src = fs.readFileSync('src/ui/modal/auth-views.ts', 'utf-8');
     expect(src).toContain('nameInput.focus()');
     expect(src).toContain('emailInput.focus()');
     expect(src).toContain('passwordInput.focus()');

@@ -43,9 +43,9 @@ describe('Security Harness', () => {
 
 describe('Google OAuth — Security Invariants (SI-31 to SI-36)', () => {
   it('SI-31: Google button class present in modal.ts login view', () => {
-    const modal = readFile('ui/modal.ts');
-    expect(modal).toContain('atenna-modal__login-btn--google');
-    expect(modal).toContain('bffGoogleLogin');
+    const authViews = readFile('ui/modal/auth-views.ts');
+    expect(authViews).toContain('atenna-modal__login-btn--google');
+    expect(authViews).toContain('bffGoogleLogin');
   });
 
   it('SI-32: bffGoogleLogin uses launchWebAuthFlow with Supabase Google OAuth URL', () => {
