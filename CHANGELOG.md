@@ -4,6 +4,24 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [1.5.0] — 2026-05-28 — FASE 7.8: Performance, Production Readiness & Code Quality
+
+### Performance
+- **Regex reuse in DLP scan**: `scanPatterns()` reuses pre-compiled `RegExp` objects — eliminates ~30 constructor calls per 400ms debounce tick
+- **ResizeObserver fix**: Removed `document.documentElement` target (fired on every DOM mutation); badge position updates debounced via `requestAnimationFrame`
+- **IIFE limitation documented**: Dynamic import of `modal.ts` not feasible with current IIFE build format; documented inline in `injectButton.ts`
+
+### Production Readiness
+- **Hotfix**: `setSession()` now used for magic link auth callback in `background.ts` — `JWT_KEY` was undefined causing `ReferenceError` on email verification
+- **Global unhandled rejection handler**: `self.addEventListener('unhandledrejection')` added to all 3 entry points (background, content, popup)
+- **CSP expanded**: Added `style-src 'unsafe-inline'`, `img-src data: blob:`, explicit `connect-src` to `extension_pages` CSP
+- **imageInterceptor timeout**: 8s `AbortController` on `/dlp/image` fetch — fails open on timeout, never blocks user paste/drop
+
+### Code Quality
+- **console.* dropped in production**: All 3 Vite configs use `esbuild: { drop: ['console','debugger'] }` — zero console output in production bundles
+
+---
+
 ## [1.4.0] — 2026-05-28 — FASE 7.7: UX, Produto & Segurança Residual
 
 ### Security
