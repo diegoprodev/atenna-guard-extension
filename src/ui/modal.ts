@@ -3217,15 +3217,30 @@ function buildCard(
 
 // ─── Usage badge ───────────────────────────────────────────
 
-async function updateUsageBadge(badge: HTMLElement, dailyCount: number, pro = false): Promise<void> {
+export async function updateUsageBadge(badge: HTMLElement, dailyCount: number, pro = false): Promise<void> {
   if (pro) {
     badge.style.display = 'none'; // Pro badge já aparece no título — sem redundância
     return;
   }
+  badge.innerHTML = '';
   const remaining = Math.max(0, DAILY_LIMIT - dailyCount);
-  badge.textContent = `${remaining} gerações restantes`;
-  badge.className   = 'atenna-modal__usage';
+  const text = document.createElement('span');
+  text.textContent = dailyCount >= DAILY_LIMIT ? 'Limite atingido' : `${remaining} gerações restantes`;
+  badge.appendChild(text);
+  badge.className = 'atenna-modal__usage';
   if (dailyCount >= DAILY_LIMIT) badge.classList.add('atenna-modal__usage--danger');
+
+  if (dailyCount >= Math.floor(DAILY_LIMIT * 0.6)) {
+    const nudge = document.createElement('button');
+    nudge.className = 'atenna-modal__upgrade-nudge';
+    nudge.textContent = '↑ Pro';
+    nudge.setAttribute('title', 'Remover limite diário');
+    nudge.addEventListener('click', () => {
+      const upgradeOverlay = renderUpgradeModal(() => upgradeOverlay.remove());
+      document.body.appendChild(upgradeOverlay);
+    });
+    badge.appendChild(nudge);
+  }
 }
 
 // ─── Backend fetch (via background worker to bypass CORS) ──

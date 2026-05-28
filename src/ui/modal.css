@@ -301,6 +301,23 @@
 .atenna-modal__usage--warning { color: #dc2626; background: rgba(220,38,38,0.08); border-color: rgba(220,38,38,0.2); }
 .atenna-modal__usage--danger  { color: #dc2626; background: rgba(220,38,38,0.12); border-color: rgba(220,38,38,0.25); }
 
+.atenna-modal__upgrade-nudge {
+  margin-left: 6px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(251,146,60,0.15);
+  color: #fb923c;
+  border: 1px solid rgba(251,146,60,0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  vertical-align: middle;
+  font-family: inherit;
+}
+.atenna-modal__upgrade-nudge:hover {
+  background: rgba(251,146,60,0.25);
+}
+
 /* ── Account menu (gear) ─────────────────────────────────── */
 
 .atenna-modal__account {
