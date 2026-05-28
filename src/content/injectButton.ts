@@ -539,10 +539,14 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
 
   let ro: ResizeObserver | undefined;
   if (typeof ResizeObserver !== 'undefined') {
-    ro = new ResizeObserver(update);
-    ro.observe(input); // track textarea/div growth directly
+    let rafId: number | undefined;
+    ro = new ResizeObserver(() => {
+      if (rafId !== undefined) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => { rafId = undefined; update(); });
+    });
+    ro.observe(input);
     ro.observe(findVisualContainer(input));
-    ro.observe(document.documentElement);
+    // document.documentElement removed — window 'resize' listener already covers viewport changes
   }
 
   currentCleanup = () => {
