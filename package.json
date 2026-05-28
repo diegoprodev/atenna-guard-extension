@@ -8,7 +8,7 @@
     "dev": "vite build --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "npm run build && node scripts/add-localhost-e2e.mjs && playwright test --project=extension",
+    "test:e2e": "npm run build && node scripts/add-localhost-e2e.mjs && playwright test --project=extension && node scripts/strip-localhost.mjs",
     "test:e2e:api": "playwright test --project=api",
     "test:e2e:ui": "playwright test --ui"
   },
