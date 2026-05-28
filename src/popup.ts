@@ -65,7 +65,19 @@ export function replaceSkeleton(container: HTMLElement, content: HTMLElement): v
   container.appendChild(content);
 }
 
-async function initPopup(): Promise<void> {
+async function isOnboarded(): Promise<boolean> {
+  return new Promise(resolve => {
+    chrome.storage.local.get('atenna_onboarded', r => resolve(!!r['atenna_onboarded']));
+  });
+}
+
+async function markOnboarded(): Promise<void> {
+  return new Promise(resolve => {
+    chrome.storage.local.set({ atenna_onboarded: true }, resolve);
+  });
+}
+
+export async function initPopup(): Promise<void> {
   const container = document.getElementById('atenna-popup')!;
   renderSkeleton(container);
 
@@ -73,6 +85,12 @@ async function initPopup(): Promise<void> {
 
   if (!me) {
     renderLogin(container, tabId, tabInfo?.supported ?? false);
+    return;
+  }
+
+  const onboarded = await isOnboarded();
+  if (!onboarded) {
+    renderFirstRunOnboarding(container, () => renderHome(container, me, tabInfo, tabId));
     return;
   }
 
@@ -316,6 +334,67 @@ function renderLogin(container: HTMLElement, tabId: number | null, tabSupported 
       googleBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.17 2.86l6.1-6.1C34.46 3.01 29.5 1 24 1 14.85 1 7.08 6.48 3.69 14.24l7.1 5.52C12.53 13.1 17.83 9.5 24 9.5z"/><path fill="#4285F4" d="M46.52 24.5c0-1.64-.15-3.22-.43-4.75H24v9h12.7c-.55 2.99-2.2 5.53-4.68 7.24l7.18 5.58C43.44 37.44 46.52 31.42 46.52 24.5z"/><path fill="#FBBC05" d="M10.8 28.5A14.52 14.52 0 0 1 9.5 24c0-1.57.27-3.09.76-4.5l-7.1-5.52A23.94 23.94 0 0 0 0 24c0 3.87.93 7.53 2.57 10.76l8.23-6.26z"/><path fill="#34A853" d="M24 47c5.5 0 10.12-1.83 13.49-4.96l-7.18-5.58C28.54 37.77 26.38 38.5 24 38.5c-6.17 0-11.47-3.6-13.2-8.76l-8.23 6.26C6.08 43.52 14.45 47 24 47z"/></svg> Entrar com Google`;
     }
   });
+}
+
+function renderFirstRunOnboarding(
+  container: HTMLElement,
+  onDone: () => void,
+): void {
+  container.innerHTML = '';
+
+  const slides = [
+    { icon: '🛡️', title: 'Seus dados ficam no seu dispositivo', body: 'O DLP escaneia localmente antes de qualquer envio. Nenhuma informação sensível sai do Chrome.' },
+    { icon: '✨', title: 'Prompts mais eficazes', body: 'A IA transforma seu rascunho em 3 versões profissionais: direta, estruturada e técnica.' },
+    { icon: '👤', title: 'Ativo em 4 plataformas', body: 'O badge Atenna aparece automaticamente no ChatGPT, Claude.ai, Gemini e Perplexity.' },
+  ];
+
+  const wrap = document.createElement('div');
+  wrap.className = 'ap-root ap-root--login';
+  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px 20px;text-align:center;';
+
+  const slideList = document.createElement('div');
+  slideList.style.cssText = 'display:flex;flex-direction:column;gap:12px;width:100%;';
+
+  slides.forEach(({ icon, title, body }) => {
+    const slide = document.createElement('div');
+    slide.className = 'ap-onboarding__slide';
+    slide.style.cssText = 'padding:12px 14px;border-radius:8px;background:#1a1a1a;border:1px solid #2a2a2a;text-align:left;';
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:4px;';
+
+    const iconEl = document.createElement('span');
+    iconEl.style.cssText = 'font-size:18px;line-height:1;';
+    iconEl.textContent = icon;
+
+    const titleEl = document.createElement('strong');
+    titleEl.style.cssText = 'font-size:13px;color:#f0f0f0;font-family:inherit;';
+    titleEl.textContent = title;
+
+    header.appendChild(iconEl);
+    header.appendChild(titleEl);
+
+    const bodyEl = document.createElement('p');
+    bodyEl.style.cssText = 'margin:0;font-size:12px;color:#888;line-height:1.5;font-family:inherit;';
+    bodyEl.textContent = body;
+
+    slide.appendChild(header);
+    slide.appendChild(bodyEl);
+    slideList.appendChild(slide);
+  });
+
+  const cta = document.createElement('button');
+  cta.id = 'ap-onboarding-cta';
+  cta.className = 'ap-btn ap-btn--primary';
+  cta.style.cssText = 'width:100%;margin-top:4px;';
+  cta.textContent = 'Entendi, começar →';
+  cta.addEventListener('click', () => {
+    void markOnboarded().then(onDone);
+  });
+
+  wrap.appendChild(slideList);
+  wrap.appendChild(cta);
+  container.appendChild(wrap);
 }
 
 function renderHome(
