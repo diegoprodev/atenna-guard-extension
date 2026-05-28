@@ -4,6 +4,22 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [1.4.0] — 2026-05-28 — FASE 7.7: UX, Produto & Segurança Residual
+
+### Security
+- **C6 fix**: Removed `auth-callback.html` from `web_accessible_resources` — no longer reachable via iframe by host pages (chatgpt.com, claude.ai, etc.)
+- **C3 fix**: `addGroupToHistory()` now masks PII (CPF, CNPJ, email, phone, credit card, and 15+ more patterns) before persisting to `chrome.storage.local`; user's original prompt sent to ChatGPT/Claude is unaffected
+
+### Accessibility
+- **Focus trap in modal** (WCAG 2.1 AA): Tab/Shift+Tab now cycle within the modal overlay; Escape closes. Replaces the standalone `onKey` listener with `trapFocus()`
+
+### Product
+- **Upsell nudge**: Free users at ≥3/5 daily uses see a compact "↑ Pro" button next to the usage badge that opens the upgrade overlay inline
+- **Price anchor in upgrade modal**: R$19/mês · R$149/ano shown in hero section before Stripe redirect
+- **3-slide first-run onboarding**: New users see 3 value-prop slides on first popup open (DLP local, prompt quality, 4 platforms); "Entendi, começar →" marks `atenna_onboarded` and proceeds to home
+
+---
+
 ## [1.2.1] — 2026-05-27 — FASE 7.5: Security & Store Compliance
 
 ### Security
