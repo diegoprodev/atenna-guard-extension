@@ -18,7 +18,7 @@
     "http://127.0.0.1/*"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'"
+    "extension_pages": "script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src https://atennaplugin.maestro-n8n.site https://kezbssjmgwtrunqeoyir.supabase.co; object-src 'none'; base-uri 'none'"
   },
   "content_scripts": [
     {
