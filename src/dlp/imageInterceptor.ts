@@ -41,15 +41,27 @@ async function handleImageFile(file: File): Promise<void> {
   const token = await getToken();
   if (!token) return;
   const base64 = await fileToBase64(file);
-  const resp = await fetch(`${BFF_BASE}/dlp/image`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ image_b64: base64 }),
-  });
-  if (!resp.ok) return;
-  const data = await resp.json() as { show_warning: boolean; advisory?: string; entities?: Array<{ type: string }> };
-  if (data.show_warning) {
-    showImageDlpBanner(data.advisory || data.entities?.[0]?.type || 'PII');
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const resp = await fetch(`${BFF_BASE}/dlp/image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ image_b64: base64 }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!resp.ok) return;
+    const data = await resp.json() as { show_warning: boolean; advisory?: string; entities?: Array<{ type: string }> };
+    if (data.show_warning) {
+      showImageDlpBanner(data.advisory || data.entities?.[0]?.type || 'PII');
+    }
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if ((err as Error).name === 'AbortError') return; // timeout — fail open, don't block user
+    throw err;
   }
 }
 
