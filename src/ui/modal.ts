@@ -497,6 +497,30 @@ async function renderMeusPrompts(
   container.appendChild(wrap);
 }
 
+function trapFocus(container: HTMLElement, onEscape: () => void): () => void {
+  const focusable = () => Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  ).filter(el => el.offsetParent !== null);
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') { onEscape(); return; }
+    if (e.key !== 'Tab') return;
+    const els = focusable();
+    if (!els.length) return;
+    const first = els[0];
+    const last = els[els.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  };
+  document.addEventListener('keydown', onKeyDown);
+  return () => document.removeEventListener('keydown', onKeyDown);
+}
+
 function renderUpgradeModal(onClose: () => void): HTMLElement {
   const overlay = document.createElement('div');
   overlay.className = 'atenna-upgrade-modal';
@@ -1641,12 +1665,9 @@ async function openModal(autoGenerate = false): Promise<void> {
   }
 
   // ── Close handler ────────────────────────────────────
-  const close = () => { clearMsgInterval(); overlay.remove(); };
+  const close = () => { cleanupFocusTrap(); clearMsgInterval(); overlay.remove(); };
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
-  };
-  document.addEventListener('keydown', onKey);
+  const cleanupFocusTrap = trapFocus(overlay, close);
 
   // Track daily return (async — non-blocking)
   const today = new Date().toISOString().split('T')[0];
