@@ -1,4 +1,5 @@
 import { sk } from './scopedStorage';
+import { DLP_PATTERNS } from '../dlp/patterns';
 
 const HISTORY_KEY = 'atenna_history';
 const MAX_HISTORY = 30;
@@ -59,6 +60,19 @@ export async function getHistory(): Promise<StoredEntry[]> {
   return storageGet();
 }
 
+function maskPII(text: string): string {
+  let result = text;
+  for (const { type, pattern, validate } of DLP_PATTERNS) {
+    const re = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g');
+    re.lastIndex = 0;
+    result = result.replace(re, (match) => {
+      if (validate && !validate(match)) return match;
+      return `[${type}]`;
+    });
+  }
+  return result;
+}
+
 /** Save all 3 variants grouped under the user's original question */
 export async function addGroupToHistory(
   question: string,
@@ -68,7 +82,7 @@ export async function addGroupToHistory(
   const entries = await storageGet();
   const group: HistoryGroup = {
     id: 'hg_' + Math.random().toString(36).slice(2),
-    question,
+    question: maskPII(question),
     date: Date.now(),
     favorited: false,
     origin,

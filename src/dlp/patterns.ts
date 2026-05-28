@@ -323,6 +323,8 @@ const PATTERNS: PatternDef[] = [
   },
 ];
 
+export const DLP_PATTERNS = PATTERNS;
+
 export function scanPatterns(text: string): DetectedEntity[] {
   const raw: DetectedEntity[] = [];
 
