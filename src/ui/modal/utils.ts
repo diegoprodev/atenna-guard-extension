@@ -89,9 +89,9 @@ export function isDark(): boolean {
 // ─── Settings stat helpers ────────────────────────────────
 
 const _textColor = isDark() ? '#e8e8e8' : '#1a1a1a';
-const S_ROW   = 'display:flex;align-items:center;gap:8px;padding:9px 14px;flex-wrap:wrap;min-height:38px;box-sizing:border-box;border-bottom:1px solid rgba(128,128,128,0.10);';
-const S_LABEL = `flex:1;font-size:13px;color:${_textColor};opacity:0.78;line-height:1.4;font-family:inherit;`;
-const S_VALUE = `font-size:13px;font-weight:700;color:${_textColor};font-variant-numeric:tabular-nums;font-family:inherit;`;
+export const S_ROW   = 'display:flex;align-items:center;gap:8px;padding:9px 14px;flex-wrap:wrap;min-height:38px;box-sizing:border-box;border-bottom:1px solid rgba(128,128,128,0.10);';
+export const S_LABEL = `flex:1;font-size:13px;color:${_textColor};opacity:0.78;line-height:1.4;font-family:inherit;`;
+export const S_VALUE = `font-size:13px;font-weight:700;color:${_textColor};font-variant-numeric:tabular-nums;font-family:inherit;`;
 const S_SUB   = `width:100%;font-size:10px;color:${_textColor};opacity:0.40;margin-top:-3px;padding-bottom:2px;display:block;font-family:inherit;`;
 
 export function makeProgressBar(value: number, max: number, color = '#22c55e'): HTMLElement {
