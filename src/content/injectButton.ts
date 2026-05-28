@@ -7,6 +7,10 @@ import type { DetectedEntity, DlpMetadata } from '../dlp/types';
 import { getDotTooltip, getDotClass, shouldShowBanner, getBannerBackgroundColor } from '../dlp/advisory';
 import { getFlag } from '../core/featureFlags';
 import { trackEvent } from '../core/analytics';
+// NOTE: Dynamic import() of modal.ts is not possible here — the content script
+// is bundled as IIFE with inlineDynamicImports:true (vite.config.ts).
+// All imports are statically inlined. Lazy-loading modal would require changing
+// the build format to ES modules, which is a separate architectural decision.
 import { openSettingsOverlay, generateFromBadge, openUploadFromBadge } from '../ui/modal';
 
 const INJECTED_ATTR      = 'data-atenna-injected';
@@ -436,7 +440,6 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   btn.appendChild(actionsBar);
   btn.appendChild(iconWrap);
   btn.appendChild(dot);
-
 
   // Set default immediately to avoid green→transparent flash
   btn.setAttribute('data-badge-color', 'transparent');
