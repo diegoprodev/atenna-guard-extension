@@ -1216,6 +1216,17 @@
   line-height: 1.5;
 }
 
+.atenna-upgrade-modal__price-anchor {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #e8e8e8;
+  text-align: center;
+}
+
+.atenna-upgrade-modal__price-anchor strong {
+  color: #22c55e;
+}
+
 .atenna-upgrade-modal__body {
   padding: 18px 22px 22px;
 }

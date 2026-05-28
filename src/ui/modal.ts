@@ -550,10 +550,15 @@ function renderUpgradeModal(onClose: () => void): HTMLElement {
   subtitle.className = 'atenna-upgrade-modal__subtitle';
   subtitle.textContent = 'Sem limites diários. Seus dados sensíveis protegidos antes de chegar a qualquer IA.';
 
+  const priceAnchor = document.createElement('p');
+  priceAnchor.className = 'atenna-upgrade-modal__price-anchor';
+  priceAnchor.innerHTML = '<strong>R$&nbsp;19/mês</strong> · ou <strong>R$&nbsp;149/ano</strong> <span style="opacity:0.6;font-size:11px;">(≈ R$&nbsp;12,41/mês)</span>';
+
   hero.appendChild(heroClose);
   hero.appendChild(badge);
   hero.appendChild(title);
   hero.appendChild(subtitle);
+  hero.appendChild(priceAnchor);
 
   // Body
   const body = document.createElement('div');
