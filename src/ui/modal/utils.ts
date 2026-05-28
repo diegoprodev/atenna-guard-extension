@@ -1,5 +1,7 @@
 // ─── Modal Utils — pure helpers and constants ─────────────────────────────────
-// Extracted from modal.ts. No imports from other modal/* files.
+// Extracted from modal.ts. No imports from other modal/* files (except state).
+
+import { modalState } from './state';
 
 export const OVERLAY_ID  = 'atenna-modal-overlay';
 export const SUCCESS_MS  = 500;
@@ -142,12 +144,11 @@ export function makeSectionTitle(text: string): HTMLElement {
 
 // ─── Interval / logo helpers ─────────────────────────────
 
-// NOTE: msgIntervalId will be migrated to state.ts in Task 2.
-// For now it lives here so clearMsgInterval() compiles standalone.
-let msgIntervalId: ReturnType<typeof setInterval> | undefined;
-
 export function clearMsgInterval(): void {
-  if (msgIntervalId !== undefined) { clearInterval(msgIntervalId); msgIntervalId = undefined; }
+  if (modalState.msgIntervalId !== undefined) {
+    clearInterval(modalState.msgIntervalId);
+    modalState.msgIntervalId = undefined;
+  }
 }
 
 export function getLogoUrl(): string {

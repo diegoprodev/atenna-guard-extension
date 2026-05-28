@@ -45,20 +45,10 @@ async function syncPlanFromBff(me: { plan: string; email?: string }): Promise<{ 
 
 // ─── Module-level state ────────────────────────────────────
 
-let msgIntervalId: ReturnType<typeof setInterval> | undefined;
-
-interface PromptData {
-  direct: string; technical: string; structured: string;
-  direct_preview?: string; technical_preview?: string; structured_preview?: string;
-}
-
-// Cache last generated prompts so reopening with the same text skips re-generation.
-let promptCache: { forText: string; data: PromptData } | null = null;
-
-let upgradeShown = false;
-const UPGRADE_TRIGGER = 3; // show upgrade banner after this many total generations
-
-export function clearPromptCache(): void { promptCache = null; upgradeShown = false; }
+import { modalState, clearPromptCache, UPGRADE_TRIGGER } from './modal/state';
+import type { PromptData } from './modal/state';
+export type { PromptData };
+export { clearPromptCache };
 
 // ─── Modal de planos (side-by-side, neuromarketing) ──────────────────────────
 
@@ -1833,9 +1823,9 @@ async function openModal(autoGenerate = false): Promise<void> {
     switchTab('edit');
 
     // Cache hit: same text was generated before — render instantly, skip backend
-    if (promptCache && promptCache.forText === userText) {
+    if (modalState.promptCache && modalState.promptCache.forText === userText) {
       void renderSuccess(resultsView).then(() =>
-        renderPrompts(resultsView, promptCache!.data, platformInput, overlay, 'manual', 0)
+        renderPrompts(resultsView, modalState.promptCache!.data, platformInput, overlay, 'manual', 0)
       );
     } else {
       renderLoading(resultsView);
@@ -1934,7 +1924,7 @@ async function runFlow(
       void trackEvent('fifth_prompt_generated');
     }
 
-    promptCache = { forText: userText, data };
+    modalState.promptCache = { forText: userText, data };
 
     renderPrompts(container, data, platformInput, overlay, origin, newTotalCount);
   } catch (error) {
@@ -2069,7 +2059,7 @@ function renderLoading(container: HTMLElement): void {
   });
 
   let i = 0;
-  msgIntervalId = setInterval(() => {
+  modalState.msgIntervalId = setInterval(() => {
     if (!msg.isConnected) { clearMsgInterval(); return; }
     i = (i + 1) % LOADING_MESSAGES.length;
     msg.textContent = LOADING_MESSAGES[i];
@@ -2971,8 +2961,8 @@ function renderPrompts(
   cards.className = 'atenna-modal__cards';
   entries.forEach((v, i) => cards.appendChild(buildCard(v, i, platformInput, overlay, origin)));
 
-  if (!upgradeShown && totalCount >= UPGRADE_TRIGGER) {
-    upgradeShown = true;
+  if (!modalState.upgradeShown && totalCount >= UPGRADE_TRIGGER) {
+    modalState.upgradeShown = true;
     cards.appendChild(renderUpgradeTrigger());
   }
 
