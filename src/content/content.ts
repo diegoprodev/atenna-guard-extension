@@ -115,9 +115,12 @@ async function init(): Promise<void> {
 try {
   chrome.runtime.onMessage.addListener((msg: { type?: string; content?: string }) => {
     if (msg?.type === 'TOGGLE_MODAL') {
-      // Ensure badge is injected before opening modal
+      // Verify session before injecting badge — prevent auth bypass
       if (!_isAuthenticated) {
-        _isAuthenticated = true;
+        void checkAuth().then(authed => {
+          if (authed) tryInject();
+        });
+      } else {
         tryInject();
       }
       void toggleModal();

@@ -474,24 +474,40 @@ export class UploadWidget {
     const wrap = document.createElement('div');
     wrap.className = 'atenna-upw__clean';
 
-    wrap.innerHTML = `
-      <div class="atenna-upw__clean-shield">
-        <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="28" cy="28" r="27" stroke="#22c55e" stroke-width="2" class="atenna-upw__clean-ring"/>
-          <path d="M17 29l8 8 14-14" stroke="#22c55e" stroke-width="2.5"
-            stroke-linecap="round" stroke-linejoin="round" class="atenna-upw__clean-check"/>
-        </svg>
-      </div>
-      <div class="atenna-upw__clean-title">
-        ${name ? `<strong>${name}</strong>, seu documento` : 'Documento'} passou limpo!
-      </div>
-      <div class="atenna-upw__clean-sub">
-        Nenhum dado sensível encontrado. Pode usar à vontade.
-      </div>
-      <div class="atenna-upw__clean-direct-tip">
-        💡 Seu documento é seguro para envio direto — arraste no ChatGPT, Gemini, Claude ou Perplexity.
-      </div>
-    `;
+    // Shield icon — safe with innerHTML (SVG from hardcoded HTML, no user input)
+    const shield = document.createElement('div');
+    shield.className = 'atenna-upw__clean-shield';
+    shield.innerHTML = `<svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="28" cy="28" r="27" stroke="#22c55e" stroke-width="2" class="atenna-upw__clean-ring"/>
+      <path d="M17 29l8 8 14-14" stroke="#22c55e" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round" class="atenna-upw__clean-check"/>
+    </svg>`;
+    wrap.appendChild(shield);
+
+    // Title — SAFE: use textContent for user input (name)
+    const titleEl = document.createElement('div');
+    titleEl.className = 'atenna-upw__clean-title';
+    if (name) {
+      const strong = document.createElement('strong');
+      strong.textContent = name; // ← textContent prevents XSS
+      titleEl.appendChild(strong);
+      titleEl.appendChild(document.createTextNode(', seu documento passou limpo!'));
+    } else {
+      titleEl.textContent = 'Documento passou limpo!';
+    }
+    wrap.appendChild(titleEl);
+
+    // Subtitle — safe (static text)
+    const subEl = document.createElement('div');
+    subEl.className = 'atenna-upw__clean-sub';
+    subEl.textContent = 'Nenhum dado sensível encontrado. Pode usar à vontade.';
+    wrap.appendChild(subEl);
+
+    // Tip — safe (static text with emoji)
+    const tipEl = document.createElement('div');
+    tipEl.className = 'atenna-upw__clean-direct-tip';
+    tipEl.textContent = '💡 Seu documento é seguro para envio direto — arraste no ChatGPT, Gemini, Claude ou Perplexity.';
+    wrap.appendChild(tipEl);
 
     const applyBtn = document.createElement('button');
     applyBtn.className = 'atenna-doc-action-btn atenna-doc-action-btn--primary atenna-upw__btn--primary atenna-upw__clean-apply';
