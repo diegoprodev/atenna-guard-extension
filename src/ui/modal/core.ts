@@ -472,7 +472,8 @@ async function runFlow(
 
   if (!pro && await isAtAnyLimit(usage)) {
     void trackEvent('quota_limit_reached', { origin });
-    renderLimitReached(container);
+    const monthly = await getMonthlyUsage();
+    renderLimitReached(container, monthly >= MONTHLY_LIMIT ? 'monthly' : 'daily');
     return;
   }
 
@@ -527,7 +528,7 @@ async function runFlow(
     if (error instanceof QuotaExceededError) {
       // Server-side quota exceeded — user bypassed client-side limit
       void trackEvent('quota_limit_reached_server', { origin, count: error.count, limit: error.limit });
-      renderLimitReached(container);
+      renderLimitReached(container, error.limit <= 5 ? 'daily' : 'monthly');
       return;
     }
     void trackEvent('prompt_generate_error', { origin, error: String(error) });

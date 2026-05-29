@@ -154,25 +154,48 @@ export function renderSuccess(container: HTMLElement): Promise<void> {
 
 // ─── Render: limit reached ─────────────────────────────────
 
-export function renderLimitReached(container: HTMLElement): void {
+export function renderLimitReached(container: HTMLElement, limitType: 'daily' | 'monthly' = 'daily'): void {
   clearMsgInterval();
   container.innerHTML = '';
   container.parentElement?.querySelector<HTMLElement>('.atenna-modal__builder-toggle')
     ?.classList.remove('atenna-modal__builder-toggle--loading');
 
+  const isMonthly = limitType === 'monthly';
+
   const wrap = document.createElement('div');
   wrap.className = 'atenna-modal__limit-reached';
+  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px 16px 8px;gap:6px;';
 
-  const msg = document.createElement('p');
-  msg.className = 'atenna-modal__limit-msg';
-  msg.textContent = 'Limite diário atingido.';
+  // Icon
+  const icon = document.createElement('div');
+  icon.style.cssText = 'font-size:32px;margin-bottom:2px;';
+  icon.textContent = isMonthly ? '📅' : '⚡';
+  wrap.appendChild(icon);
 
+  // Title
+  const title = document.createElement('p');
+  title.style.cssText = 'font-size:15px;font-weight:700;color:var(--at-text,#f0f0f0);margin:0;';
+  title.textContent = isMonthly ? 'Limite mensal atingido' : 'Suas 5 gerações de hoje foram usadas';
+  wrap.appendChild(title);
+
+  // Subtitle
   const sub = document.createElement('p');
-  sub.className = 'atenna-modal__limit-sub';
-  sub.textContent = 'Você utilizou as 5 gerações gratuitas de hoje. O limite reinicia à meia-noite — ou continue sem restrições.';
-
-  wrap.appendChild(msg);
+  sub.style.cssText = 'font-size:12px;color:var(--at-muted,#888);margin:0 0 8px;line-height:1.5;max-width:260px;';
+  sub.textContent = isMonthly
+    ? 'Você usou os 25 prompts gratuitos deste mês. Renova no dia 1º — ou desbloqueie agora.'
+    : 'O limite reinicia à meia-noite. Com o Pro você gera sem restrições, todos os dias.';
   wrap.appendChild(sub);
-  renderPricingCards(wrap, 'limit_screen');
+
+  // What Pro unlocks — 3 bullets
+  const bullets = document.createElement('div');
+  bullets.style.cssText = 'background:var(--at-surface,#1a1a1a);border:1px solid var(--at-border,#2a2a2a);border-radius:8px;padding:10px 14px;text-align:left;width:100%;margin-bottom:4px;';
+  bullets.innerHTML = [
+    '✨ Prompts ilimitados todos os dias',
+    '🛡️ Proteção de dados sem restrição',
+    '📄 Arquivos PDF, DOCX e Excel',
+  ].map(b => `<div style="font-size:11px;color:var(--at-muted,#aaa);padding:3px 0;">${b}</div>`).join('');
+  wrap.appendChild(bullets);
+
+  renderPricingCards(wrap, isMonthly ? 'monthly_limit_screen' : 'daily_limit_screen');
   container.appendChild(wrap);
 }
