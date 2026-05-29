@@ -44,5 +44,9 @@ export function detectPlatform(): PlatformConfig | null {
     return { name: 'Test', inputSelector: '#prompt-textarea' };
   }
 
+  // Fallback for unrecognized platforms: [role="textbox"] is a WAI-ARIA semantic selector
+  // that matches text input elements in modern web apps that don't use native <textarea> or <input>.
+  // This provides a catch-all for chat platforms using custom input components with proper accessibility attributes.
+  // Returns null if no match found; content script will not inject the detection badge.
   return null;
 }
