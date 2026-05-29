@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { scanPatterns } from '../patterns';
+import { rewritePII } from '../rewriter';
 
 describe('scanPatterns — regex reuse', () => {
   it('detects CPF correctly after multiple calls', () => {
@@ -46,5 +47,34 @@ describe('scanPatterns — NAME_LOWER removal + CEP contextual label', () => {
     const result = scanPatterns('CEP 12345 678');
     const cep = result.find(e => e.type === 'ADDRESS');
     expect(cep).toBeDefined();
+  });
+});
+
+describe('scanPatterns — PIX chave aleatória', () => {
+  it('should detect PIX chave aleatória with label "chave pix:"', () => {
+    const result = scanPatterns('minha chave pix: a1b2c3d4-e5f6-7890-abcd-ef1234567890');
+    const pix = result.filter(m => m.type === 'PIX');
+    expect(pix.length).toBeGreaterThan(0);
+  });
+
+  it('should detect PIX with label "pix:"', () => {
+    const result = scanPatterns('pix: a1b2c3d4-e5f6-7890-abcd-ef1234567890');
+    const pix = result.filter(m => m.type === 'PIX');
+    expect(pix.length).toBeGreaterThan(0);
+  });
+
+  it('should NOT detect bare UUID as PIX without label', () => {
+    const result = scanPatterns('id: a1b2c3d4-e5f6-7890-abcd-ef1234567890');
+    const pix = result.filter(m => m.type === 'PIX');
+    expect(pix).toHaveLength(0);
+  });
+
+  it('should rewrite PIX chave with [PIX] token', () => {
+    const text = 'minha chave pix: a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+    const entities = scanPatterns(text).filter(m => m.type === 'PIX');
+    expect(entities.length).toBeGreaterThan(0);
+    const rewritten = rewritePII(text, entities);
+    expect(rewritten).toContain('[PIX]');
+    expect(rewritten).not.toContain('a1b2c3d4');
   });
 });

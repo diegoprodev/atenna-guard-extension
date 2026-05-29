@@ -28,6 +28,7 @@ const ENTITY_TOKEN: Partial<Record<string, string>> = {
   LEGAL_CONTEXT:         '[CONTEXTO_JURIDICO]',
   CONFIDENTIAL_DOCUMENT: '[DOCUMENTO_CONFIDENCIAL]',
   NAME:                  '[NOME]',
+  PIX:                   '[PIX]',
   GENERIC_PII:           '[DADO]',
 };
 

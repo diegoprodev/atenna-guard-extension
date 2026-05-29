@@ -7,7 +7,8 @@ export type EntityType =
   | 'PROCESS_NUM' | 'NAME'
   | 'RG' | 'CNH' | 'OAB' | 'PLACA' | 'CRM'
   | 'CRN' | 'CRO' | 'CREA' | 'CRP' | 'COREN'
-  | 'PIS' | 'TITULO_ELEITOR' | 'PASSAPORTE';
+  | 'PIS' | 'TITULO_ELEITOR' | 'PASSAPORTE'
+  | 'PIX';
 
 export interface DetectedEntity {
   type:       EntityType;

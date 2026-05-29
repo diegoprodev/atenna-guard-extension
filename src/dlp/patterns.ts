@@ -288,6 +288,12 @@ const PATTERNS: PatternDef[] = [
     pattern: /\b(?:passaporte|passport)[:\s.#]*[A-Z]{2}\d{6}\b|\b[A-Z]{2}\d{6}\b(?=\s*(?:passaporte|passport|validade|emiss[aã]o))/gi,
     confidence: 0.92,
   },
+  // PIX chave aleatória — UUID format, requer label "pix" ou "chave"
+  {
+    type: 'PIX' as EntityType,
+    pattern: /\b(?:chave\s+pix|pix\s+key|pix)[:\s]+[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
+    confidence: 0.92,
+  },
   // Brazilian CEP — requires "CEP:" label for context
   {
     type: 'ADDRESS',
