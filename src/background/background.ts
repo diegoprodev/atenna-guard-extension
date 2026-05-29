@@ -134,7 +134,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   // ── Checkout session creation ─────────────────────────────
   if (msg.type === 'ATENNA_CHECKOUT') {
-    const plan = (msg.plan === 'monthly') ? 'monthly' : 'yearly';
+    const plan = (msg.plan === 'monthly') ? 'monthly' : (msg.plan === 'pix_yearly') ? 'pix_yearly' : 'yearly';
     getBffToken().then(jwt => {
       if (!jwt) { sendResponse({ ok: false, error: 'auth_required' }); return; }
       return fetch(CHECKOUT_URL, {

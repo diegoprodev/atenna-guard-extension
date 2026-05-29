@@ -3,6 +3,24 @@ BFF Auth Service — opaque token layer over Supabase JWTs.
 
 Sessions are persisted in Supabase `bff_sessions` table.
 This allows sessions to survive service restarts.
+
+MIGRATION REQUIRED — run once in Supabase SQL editor:
+  CREATE TABLE IF NOT EXISTS bff_sessions (
+    token TEXT PRIMARY KEY,
+    supabase_jwt TEXT NOT NULL DEFAULT '',
+    refresh_token TEXT NOT NULL DEFAULT '',
+    user_id UUID NOT NULL,
+    email TEXT NOT NULL,
+    plan TEXT NOT NULL DEFAULT 'free',
+    role TEXT,
+    expires_at BIGINT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_bff_sessions_expires ON bff_sessions (expires_at);
+  CREATE INDEX IF NOT EXISTS idx_bff_sessions_user_id ON bff_sessions (user_id);
+  ALTER TABLE bff_sessions ENABLE ROW LEVEL SECURITY;
+
+If the table doesn't exist, sessions fall back to in-memory (restart = logout).
 """
 import os
 import uuid
@@ -20,6 +38,24 @@ router = APIRouter(prefix="/auth", tags=["BFF Auth"])
 _bearer = HTTPBearer()
 
 TOKEN_TTL = 3600
+
+# In-memory fallback used when bff_sessions table not yet created
+_sessions_fallback: dict[str, dict] = {}
+_table_ok: bool | None = None  # None = not checked, True = ok, False = missing
+
+def _check_table() -> bool:
+    global _table_ok
+    if _table_ok is not None:
+        return _table_ok
+    try:
+        get_admin_client().table('bff_sessions').select('token').limit(0).execute()
+        _table_ok = True
+        logger.info("bff_sessions table verified ✓")
+    except Exception:
+        _table_ok = False
+        logger.warning("bff_sessions table not found — using in-memory fallback. "
+                       "Run the migration SQL in Supabase dashboard to enable persistent sessions.")
+    return _table_ok
 
 # Rate limiting for login endpoint — 5 attempts per email per minute
 _login_attempts: dict[str, deque] = {}
@@ -57,28 +93,45 @@ class ResetRequest(BaseModel):
     email: str
 
 def _issue_token(supabase_jwt: str, refresh_token: str, user_id: str, email: str, plan: str) -> dict:
-    """Issue a new opaque BFF token stored in Supabase."""
+    """Issue a new opaque BFF token. Persists to Supabase if table exists, else in-memory."""
     opaque = str(uuid.uuid4())
     expires_at = int(time.time()) + TOKEN_TTL
 
-    try:
-        client = get_admin_client()
-        client.table('bff_sessions').insert({
-            'token': opaque,
-            'supabase_jwt': supabase_jwt,
-            'refresh_token': refresh_token,
-            'user_id': user_id,
-            'email': email,
-            'plan': plan,
-            'expires_at': expires_at,
-        }).execute()
-        return {"token": opaque, "expires_at": expires_at, "plan": plan}
-    except Exception as e:
-        logger.error(f"Failed to issue token: {e}")
-        raise HTTPException(500, "Failed to create session")
+    if _check_table():
+        try:
+            get_admin_client().table('bff_sessions').insert({
+                'token': opaque,
+                'supabase_jwt': supabase_jwt,
+                'refresh_token': refresh_token,
+                'user_id': user_id,
+                'email': email,
+                'plan': plan,
+                'expires_at': expires_at,
+            }).execute()
+        except Exception as e:
+            logger.error(f"Failed to persist token: {e}")
+            raise HTTPException(500, "Failed to create session")
+    else:
+        # Fallback: in-memory session (lost on restart)
+        _sessions_fallback[opaque] = {
+            'user_id': user_id, 'email': email, 'plan': plan,
+            'expires_at': expires_at, 'supabase_jwt': supabase_jwt,
+        }
+
+    return {"token": opaque, "expires_at": expires_at, "plan": plan}
 
 def resolve_token(opaque: str) -> dict:
-    """Resolve token from Supabase, delete if expired."""
+    """Resolve token. Checks Supabase if table exists, else falls back to in-memory."""
+    if not _check_table():
+        # In-memory fallback
+        session = _sessions_fallback.get(opaque)
+        if not session:
+            raise HTTPException(401, "Invalid or expired token")
+        if session['expires_at'] < int(time.time()):
+            _sessions_fallback.pop(opaque, None)
+            raise HTTPException(401, "Token expired")
+        return session
+
     try:
         client = get_admin_client()
         resp = client.table('bff_sessions').select('*').eq('token', opaque).single().execute()
@@ -90,7 +143,6 @@ def resolve_token(opaque: str) -> dict:
         now = int(time.time())
 
         if session['expires_at'] < now:
-            # Expired, delete it
             try:
                 client.table('bff_sessions').delete().eq('token', opaque).execute()
             except Exception:
@@ -188,3 +240,33 @@ async def reset_password(req: ResetRequest):
     except Exception:
         pass
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Scheduled cleanup — called from main.py scheduler daily at 3am
+# ---------------------------------------------------------------------------
+
+async def cleanup_old_dlp_events() -> dict:
+    """Remove dlp_events older than 90 days. Called by APScheduler."""
+    from datetime import datetime, timedelta, timezone
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
+    try:
+        client = get_admin_client()
+        result = client.table('dlp_events').delete().lt('created_at', cutoff).execute()
+        deleted = len(result.data) if result.data else 0
+        logger.info(f'cleanup_old_dlp_events: deleted {deleted} rows older than 90 days')
+
+        # Also cleanup expired bff_sessions if table exists
+        if _check_table():
+            now_ts = int(time.time())
+            client.table('bff_sessions').delete().lt('expires_at', now_ts - 3600).execute()
+
+        count_result = client.table('dlp_events').select('id', count='exact').execute()
+        total = count_result.count or 0
+        if total > 500_000:
+            logger.warning(f'dlp_events has {total} rows — consider reducing TTL')
+
+        return {'deleted': deleted, 'remaining': total}
+    except Exception as e:
+        logger.warning(f'cleanup_old_dlp_events failed: {e}')
+        return {'deleted': 0, 'error': str(e)}

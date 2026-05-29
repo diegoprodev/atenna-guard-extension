@@ -89,7 +89,7 @@ export function sendToBackground(inputText: string): Promise<{ ok: boolean; data
   });
 }
 
-export async function openCheckout(source: string, btn?: HTMLButtonElement, plan: 'yearly' | 'monthly' = 'yearly'): Promise<void> {
+export async function openCheckout(source: string, btn?: HTMLButtonElement, plan: 'yearly' | 'monthly' | 'pix_yearly' = 'yearly'): Promise<void> {
   if (btn) { btn.disabled = true; btn.textContent = 'Abrindo...'; }
   void trackEvent('checkout_started', { source, plan } as Parameters<typeof trackEvent>[1]);
   try {

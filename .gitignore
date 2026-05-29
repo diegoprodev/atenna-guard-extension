@@ -22,7 +22,8 @@ coverage/
 # Temp/build artifacts never for git
 dist-*.zip
 *.zip
-C*.py
+check_*.py
+C[0-9]*.py
 tests/e2e/perplexity-debug.spec.ts
 test-results/
 playwright-report/data/
