@@ -70,7 +70,14 @@ export interface EventPayload {
 
 const USER_ID_KEY = 'atenna_user_id';
 const SESSION_ID_KEY = 'atenna_session_id';
-const EXTENSION_VERSION = '1.2.0';
+
+function getExtensionVersion(): string {
+  try {
+    return chrome.runtime.getManifest().version ?? '1.0.0';
+  } catch {
+    return '1.0.0';
+  }
+}
 
 function genAnonId(): string {
   return 'anon_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -122,7 +129,7 @@ export async function trackEvent(
       user_id,
       timestamp: Date.now(),
       session_id: sessionId,
-      extension_version: EXTENSION_VERSION,
+      extension_version: getExtensionVersion(),
       plan,
       ...meta,
     };
