@@ -54,7 +54,7 @@ export async function fetchPrompts(inputText: string): Promise<PromptResponse> {
     const response = await sendToBackground(inputText);
     if (response && (response as { error?: string }).error === 'daily_limit_reached') {
       const r = response as { limit?: number; count?: number; reset_at?: string | null };
-      throw new QuotaExceededError(r.count ?? 10, r.limit ?? 10, r.reset_at ?? null);
+      throw new QuotaExceededError(r.count ?? 5, r.limit ?? 5, r.reset_at ?? null);
     }
     if (!response || !response.ok) {
       console.warn('[Atenna] backend response not ok:', response);

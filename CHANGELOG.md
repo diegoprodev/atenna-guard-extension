@@ -4,6 +4,15 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [1.9.0] — 2026-05-29 — Hotfix: limite free 5/dia, sync plan PRO/FREE
+
+### Fixed
+- **Limite free corrigido em todos os pontos**: `quota_service.py` e `main.py` no backend tinham `FREE_DAILY_LIMIT = 10`; corrigido para 5 em todos os lugares. Fallbacks `?? 10` em `background.ts` e `network.ts` corrigidos para `?? 5`
+- **profiles.plan dessincronizado com user_plans**: `_get_plan()` no BFF agora sincroniza `profiles.plan` após cada leitura de `user_plans` — elimina a divergência em que `profiles.plan = 'free'` enquanto `user_plans.plan_type = 'pro'` (ou vice-versa). Inclui verificação de expiração de `plan_expires_at`
+- **Raiz do bug PRO/FREE**: o BFF lê plano de `user_plans` (correto), não de `profiles`. O usuário `devdiegopro@gmail.com` tinha `user_plans.plan_type = 'pro'` ativo — a extensão mostrava PRO corretamente. Adicionado sync para que `profiles.plan` sempre reflita `user_plans`
+
+---
+
 ## [1.8.0] — 2026-05-29 — Analytics, Code Quality
 
 ### Analytics

@@ -110,8 +110,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                 ok: false,
                 error: 'daily_limit_reached',
                 status: 429,
-                limit: body?.detail?.limit ?? 10,
-                count: body?.detail?.count ?? 10,
+                limit: body?.detail?.limit ?? 5,
+                count: body?.detail?.count ?? 5,
                 reset_at: body?.detail?.reset_at ?? null,
               });
             }).catch(() => sendResponse({ ok: false, error: 'daily_limit_reached', status: 429 }));
