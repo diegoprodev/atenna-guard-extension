@@ -15,3 +15,11 @@ coverage/
 
 # Claude Code permission history — may contain command logs with secrets
 .claude/settings.json
+
+# Temp/build artifacts never for git
+dist-*.zip
+*.zip
+C*.py
+tests/e2e/perplexity-debug.spec.ts
+test-results/
+playwright-report/data/
