@@ -93,16 +93,6 @@ export async function addGroupToHistory(
   await storageSet(entries);
 }
 
-/** Legacy: save single prompt (kept for compatibility) */
-export async function addToHistory(
-  text: string,
-  type: PromptEntry['type'],
-  origin: PromptEntry['origin'],
-): Promise<void> {
-  // no-op: use addGroupToHistory instead
-  void text; void type; void origin;
-}
-
 export async function toggleFavorite(id: string): Promise<void> {
   const entries = await storageGet();
   const entry = entries.find(e => e.id === id);
