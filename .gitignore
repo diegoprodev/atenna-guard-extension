@@ -8,6 +8,9 @@ dist/
 .env
 .env.*
 .env.local
+backend/.env
+**/backend/.env
+**/.env
 .DS_Store
 Thumbs.db
 *.log
