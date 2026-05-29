@@ -1,15 +1,14 @@
 """
 BFF Auth Service — opaque token layer over Supabase JWTs.
 
-IMPORTANT — Single-worker constraint:
-  _sessions is an in-memory dict. This is intentional for our single-VPS deployment.
-  The uvicorn/gunicorn process MUST be started with --workers 1 (see docker-compose.yml).
-  If you ever need multiple workers, replace _sessions with Redis or a Supabase table.
+Sessions are persisted in Supabase `bff_sessions` table.
+This allows sessions to survive service restarts.
 """
 import os
 import uuid
 import time
 import logging
+from collections import deque
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
@@ -20,9 +19,29 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["BFF Auth"])
 _bearer = HTTPBearer()
 
-# In-memory session store — single-worker only (see module docstring).
-_sessions: dict[str, dict] = {}
-_TOKEN_TTL = 3600
+TOKEN_TTL = 3600
+
+# Rate limiting for login endpoint — 5 attempts per email per minute
+_login_attempts: dict[str, deque] = {}
+LOGIN_WINDOW = 60  # seconds
+LOGIN_MAX = 5
+
+def _check_login_rate_limit(email: str) -> bool:
+    """Check if email has exceeded login attempts. Return False if rate-limited."""
+    now = time.monotonic()
+    dq = _login_attempts.setdefault(email, deque())
+
+    # Remove old attempts outside the window
+    while dq and now - dq[0] > LOGIN_WINDOW:
+        dq.popleft()
+
+    # Check if we've hit the limit
+    if len(dq) >= LOGIN_MAX:
+        return False  # Rate limited
+
+    # Record this attempt
+    dq.append(now)
+    return True  # Not rate limited
 
 class LoginRequest(BaseModel):
     email: str
@@ -38,26 +57,52 @@ class ResetRequest(BaseModel):
     email: str
 
 def _issue_token(supabase_jwt: str, refresh_token: str, user_id: str, email: str, plan: str) -> dict:
+    """Issue a new opaque BFF token stored in Supabase."""
     opaque = str(uuid.uuid4())
-    expires_at = int(time.time()) + _TOKEN_TTL
-    _sessions[opaque] = {
-        "supabase_jwt": supabase_jwt,
-        "refresh_token": refresh_token,
-        "expires_at": expires_at,
-        "user_id": user_id,
-        "email": email,
-        "plan": plan,
-    }
-    return {"token": opaque, "expires_at": expires_at, "plan": plan}
+    expires_at = int(time.time()) + TOKEN_TTL
+
+    try:
+        client = get_admin_client()
+        client.table('bff_sessions').insert({
+            'token': opaque,
+            'supabase_jwt': supabase_jwt,
+            'refresh_token': refresh_token,
+            'user_id': user_id,
+            'email': email,
+            'plan': plan,
+            'expires_at': expires_at,
+        }).execute()
+        return {"token": opaque, "expires_at": expires_at, "plan": plan}
+    except Exception as e:
+        logger.error(f"Failed to issue token: {e}")
+        raise HTTPException(500, "Failed to create session")
 
 def resolve_token(opaque: str) -> dict:
-    session = _sessions.get(opaque)
-    if not session:
+    """Resolve token from Supabase, delete if expired."""
+    try:
+        client = get_admin_client()
+        resp = client.table('bff_sessions').select('*').eq('token', opaque).single().execute()
+
+        if not resp.data:
+            raise HTTPException(401, "Invalid or expired token")
+
+        session = resp.data
+        now = int(time.time())
+
+        if session['expires_at'] < now:
+            # Expired, delete it
+            try:
+                client.table('bff_sessions').delete().eq('token', opaque).execute()
+            except Exception:
+                pass
+            raise HTTPException(401, "Token expired")
+
+        return session
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to resolve token: {e}")
         raise HTTPException(401, "Invalid or expired token")
-    if session["expires_at"] < int(time.time()):
-        del _sessions[opaque]
-        raise HTTPException(401, "Token expired")
-    return session
 
 def _get_plan(user_id: str) -> str:
     try:
@@ -70,6 +115,10 @@ def _get_plan(user_id: str) -> str:
 
 @router.post("/login")
 async def login(req: LoginRequest):
+    # Rate limiting check — 5 attempts per email per minute
+    if not _check_login_rate_limit(req.email):
+        raise HTTPException(429, "Too many login attempts. Please try again later.")
+
     try:
         client = get_admin_client()
         r = client.auth.sign_in_with_password({"email": req.email, "password": req.password})
@@ -94,12 +143,21 @@ async def refresh(req: RefreshRequest):
         new_refresh = r.session.refresh_token
     except Exception:
         raise HTTPException(401, "Could not refresh session")
-    del _sessions[req.token]
+    # Delete old token
+    try:
+        client = get_admin_client()
+        client.table('bff_sessions').delete().eq('token', req.token).execute()
+    except Exception as e:
+        logger.warning(f"Failed to delete old token: {e}")
     return _issue_token(new_jwt, new_refresh, session["user_id"], session["email"], session["plan"])
 
 @router.post("/logout")
 async def logout(req: LogoutRequest):
-    _sessions.pop(req.token, None)
+    try:
+        client = get_admin_client()
+        client.table('bff_sessions').delete().eq('token', req.token).execute()
+    except Exception as e:
+        logger.warning(f"Failed to logout token: {e}")
     return {"ok": True}
 
 @router.get("/me")
