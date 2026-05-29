@@ -272,24 +272,50 @@ function renderLogin(container: HTMLElement, tabId: number | null, tabSupported 
         const name = nameEl.value.trim();
         const { error } = await signUpWithPassword(email, pass, name || undefined);
         if (error) throw new Error(error);
-        container.innerHTML = `
-          <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px 20px;text-align:center;">
-            <div style="width:56px;height:56px;border-radius:50%;background:rgba(59,130,246,0.12);display:flex;align-items:center;justify-content:center;">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-            </div>
-            <h3 style="margin:0;font-size:15px;font-weight:600;color:#1a1a2e;">Verifique seu email</h3>
-            <p style="margin:0;font-size:12px;color:#666;line-height:1.5;">Enviamos um link de confirmação para<br><strong>${email}</strong>.<br>Clique no link para ativar sua conta.</p>
-            <a href="https://mail.google.com/" target="_blank" rel="noopener noreferrer"
-               style="display:flex;align-items:center;gap:6px;background:#3b82f6;color:#fff;padding:9px 18px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:500;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-              Abrir Gmail
-            </a>
-            <button id="ap-back-to-login" style="background:none;border:none;color:#3b82f6;cursor:pointer;font-size:12px;text-decoration:underline;">Voltar ao login</button>
-          </div>`;
-        const backBtn = container.querySelector('#ap-back-to-login') as HTMLButtonElement | null;
-        if (backBtn) {
-          backBtn.addEventListener('click', () => renderLogin(container, tabId));
-        }
+        // Build confirmation screen with DOM APIs — never interpolate user data into innerHTML
+        container.innerHTML = '';
+        const confirmWrapper = document.createElement('div');
+        confirmWrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px 20px;text-align:center;';
+
+        const iconWrap = document.createElement('div');
+        iconWrap.style.cssText = 'width:56px;height:56px;border-radius:50%;background:rgba(59,130,246,0.12);display:flex;align-items:center;justify-content:center;';
+        iconWrap.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>';
+        confirmWrapper.appendChild(iconWrap);
+
+        const h3 = document.createElement('h3');
+        h3.style.cssText = 'margin:0;font-size:15px;font-weight:600;color:#1a1a2e;';
+        h3.textContent = 'Verifique seu email';
+        confirmWrapper.appendChild(h3);
+
+        const p = document.createElement('p');
+        p.style.cssText = 'margin:0;font-size:12px;color:#666;line-height:1.5;';
+        p.appendChild(document.createTextNode('Enviamos um link de confirmação para'));
+        p.appendChild(document.createElement('br'));
+        const strong = document.createElement('strong');
+        strong.textContent = email; // textContent = safe, never executes HTML
+        p.appendChild(strong);
+        p.appendChild(document.createTextNode('.'));
+        p.appendChild(document.createElement('br'));
+        p.appendChild(document.createTextNode('Clique no link para ativar sua conta.'));
+        confirmWrapper.appendChild(p);
+
+        const gmailLink = document.createElement('a');
+        gmailLink.href = 'https://mail.google.com/';
+        gmailLink.target = '_blank';
+        gmailLink.rel = 'noopener noreferrer';
+        gmailLink.style.cssText = 'display:flex;align-items:center;gap:6px;background:#3b82f6;color:#fff;padding:9px 18px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:500;';
+        gmailLink.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>';
+        gmailLink.appendChild(document.createTextNode('Abrir Gmail'));
+        confirmWrapper.appendChild(gmailLink);
+
+        const backBtn = document.createElement('button');
+        backBtn.id = 'ap-back-to-login';
+        backBtn.style.cssText = 'background:none;border:none;color:#3b82f6;cursor:pointer;font-size:12px;text-decoration:underline;';
+        backBtn.textContent = 'Voltar ao login';
+        confirmWrapper.appendChild(backBtn);
+
+        container.appendChild(confirmWrapper);
+        backBtn.addEventListener('click', () => renderLogin(container, tabId));
         return;
       } else {
         await bffLogin(email, pass);
