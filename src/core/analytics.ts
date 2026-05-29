@@ -43,6 +43,8 @@ export type AnalyticsEvent =
   | 'monthly_limit_warning'
   // Performance events
   | 'generation_latency_ms'
+  | 'modal_time_to_first_generate'
+  | 'dlp_banner_shown_but_ignored'
   | 'backend_error'
   | 'auth_401'
   | 'timeout_warning_shown';

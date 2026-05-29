@@ -91,6 +91,7 @@ export async function openSettingsOverlay(): Promise<void> {
 
 async function openModal(autoGenerate = false): Promise<void> {
   void trackEvent('modal_opened');
+  const _modalOpenTime = Date.now();
 
   // Create and mount overlay synchronously — tests and UX see it immediately.
   const overlay = document.createElement('div');
@@ -125,8 +126,9 @@ async function openModal(autoGenerate = false): Promise<void> {
     try { chrome.storage.local.get(lastOpenKey, r => resolve(r[lastOpenKey] as string | null)); }
     catch { resolve(null); }
   });
-  if (lastOpen && lastOpen !== today) {
-    void trackEvent('daily_return');
+  if (lastOpen) {
+    void trackEvent('returning_user_detected');
+    if (lastOpen !== today) void trackEvent('daily_return');
   }
   await new Promise(resolve => {
     try { chrome.storage.local.set({ [lastOpenKey]: today }, resolve); }
@@ -374,7 +376,7 @@ async function openModal(autoGenerate = false): Promise<void> {
     // Layer 3 — UX decision: show advisory if needed, then proceed
     void showDlpAdvisory(advisory, resultsView).then(proceed => {
       if (!proceed) return;
-      void isPro().then(pro => runFlow(resultsView, usageBadge, text, platformInput, overlay, origin, pro));
+      void isPro().then(pro => runFlow(resultsView, usageBadge, text, platformInput, overlay, origin, pro, _modalOpenTime));
     });
   });
 
@@ -432,10 +434,10 @@ async function openModal(autoGenerate = false): Promise<void> {
             builderEl.classList.add('atenna-modal__builder--open');
             builderToggleEl.classList.add('atenna-modal__builder-toggle--open');
           },
-          () => runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro),
+          () => runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro, _modalOpenTime),
         );
       } else {
-        void runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro);
+        void runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro, _modalOpenTime);
       }
     }
   } else {
@@ -461,6 +463,7 @@ async function runFlow(
   overlay:       HTMLElement,
   origin:        PromptOrigin = 'manual',
   pro:           boolean = false,
+  openTime:      number = Date.now(),
 ): Promise<void> {
   renderLoading(container);
 
@@ -502,6 +505,7 @@ async function runFlow(
     if (!document.getElementById(OVERLAY_ID)) return;
 
     void trackEvent('prompt_generate_success', { input_length: userText.length, output_length: JSON.stringify(data).length, origin });
+    void trackEvent('modal_time_to_first_generate', { latency_ms: Date.now() - openTime, origin });
 
     // Save all 3 variants grouped under the user's original question
     void addGroupToHistory(userText, { direct: data.direct, structured: data.structured, technical: data.technical }, origin);

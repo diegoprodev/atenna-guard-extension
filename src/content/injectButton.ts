@@ -157,7 +157,10 @@ function showProtectionBanner(
   const ignoreBtn = document.createElement('button');
   ignoreBtn.className   = 'atenna-protection-banner__btn';
   ignoreBtn.textContent = 'Enviar original';
-  ignoreBtn.addEventListener('click', () => dismissProtectionBanner());
+  ignoreBtn.addEventListener('click', () => {
+    void trackEvent('dlp_banner_shown_but_ignored');
+    dismissProtectionBanner();
+  });
 
   actions.appendChild(protectBtn);
   actions.appendChild(ignoreBtn);

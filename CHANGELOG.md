@@ -4,6 +4,18 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [1.8.0] — 2026-05-29 — Analytics, Code Quality
+
+### Analytics
+- **`returning_user_detected`**: evento disparado quando usuário autenticado abre o modal e já tinha sessões anteriores (`atenna_last_open_date` presente) — distingue novos usuários de recorrentes
+- **`modal_time_to_first_generate`**: latency tracking do instante de abertura do modal até o primeiro `prompt_generate_success`; campo `latency_ms` na payload — identifica fricção no fluxo principal
+- **`dlp_banner_shown_but_ignored`**: disparado quando usuário clica "Enviar original" no banner de proteção DLP — mede taxa de rejeição da proteção automática
+
+### Code Quality
+- **settings.ts**: reduzido de 604 → 600 linhas (exato no limite); removido header comment redundante e blank lines desnecessários
+
+---
+
 ## [1.7.0] — 2026-05-29 — Fix E2E: T4–T8 all green
 
 ### Fixed

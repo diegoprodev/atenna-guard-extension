@@ -1,5 +1,3 @@
-// ─── Settings dashboard — extracted from modal.ts ────────────────────────────
-
 import { makeProgressBar, makeStatRow, makeSectionTitle, isDark, showToast, S_ROW, S_LABEL, S_VALUE } from './utils';
 import { renderUpgradeModal, renderPricingCards } from './plans-modal';
 import { openCheckout } from './network';
@@ -15,7 +13,6 @@ import { sk } from '../../core/scopedStorage';
 import { saveDisplayName } from '../../core/auth';
 import { setAutoBanner } from '../../content/injectButton';
 import { UploadWidget } from '../upload-widget';
-
 export function renderSettingsPage(
   session: { email: string; access_token?: string; display_name?: string },
   pro: boolean,
@@ -86,7 +83,6 @@ export function renderSettingsPage(
 
   const box = document.createElement('div');
   box.className = dark ? 'atenna-modal atenna-modal--dark atenna-settings' : 'atenna-modal atenna-settings';
-
   // ── Header ───────────────────────────────────────────────
   const header = document.createElement('div');
   header.className = 'atenna-settings__header';
