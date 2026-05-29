@@ -4,6 +4,38 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [1.7.0] — 2026-05-29 — Fix E2E: T4–T8 all green
+
+### Fixed
+- **Root cause**: `scripts/strip-localhost.mjs` removia `http://localhost/*` do `dist/manifest.json` a cada build (correto para Chrome Web Store), mas o pipeline `test:e2e` rodava contra esse build stripped — content script nunca era injetado nas páginas de fixture em `localhost:4200`
+- **Fix**: `scripts/add-localhost-e2e.mjs` restaura `http://localhost/*` e `http://127.0.0.1/*` no `dist/manifest.json` imediatamente antes do Playwright executar; `strip-localhost.mjs` é chamado novamente ao final para manter o manifest de produção limpo
+- **Pipeline atualizado**: `test:e2e` = `build → add-localhost → playwright → strip-localhost`
+- **T4–T8 + W1–W14**: 22 testes E2E passando, 1 skip (DIAG intencional), 0 falhas
+
+---
+
+## [1.6.0] — 2026-05-29 — FASE 7.9: God Object Refactoring (modal.ts)
+
+### Architecture
+- **modal.ts split completo**: arquivo de 3490 linhas dividido em 11 módulos focados sob `src/ui/modal/`; `modal.ts` reduzido a 3 linhas (barrel `export * from './modal/index'`)
+- **Módulos criados**:
+  - `modal/utils.ts` — constantes e helpers puros (~179 linhas)
+  - `modal/state.ts` — estado mutável compartilhado via `modalState` object (sem ciclos)
+  - `modal/network.ts` — fetch layer: `fetchPrompts`, `sendToBackground`, `openCheckout`, `syncPlanFromBff`
+  - `modal/plans-modal.ts` — UI de precificação: `renderPlansModal`, `renderUpgradeModal`, `renderPricingCards`
+  - `modal/settings.ts` — dashboard de configurações (~604 linhas)
+  - `modal/auth-views.ts` — formulários de login/signup/reset (~529 linhas)
+  - `modal/onboarding-views.ts` — onboarding, DLP advisory, pro welcome
+  - `modal/prompt-cards.ts` — rendering de cards de prompts
+  - `modal/prompt-states.ts` — estados empty/loading/success/limit
+  - `modal/upload-flow.ts` — fluxo de upload do badge
+  - `modal/core.ts` — orchestrador: `openModal`, `runFlow`, `toggleModal` (~534 linhas)
+  - `modal/index.ts` — barrel da API pública (11 linhas)
+- **Zero breaking changes**: importadores externos (`injectButton.ts`, `content.ts`, `popup.ts`) não foram alterados — estratégia barrel garante compatibilidade total
+- **272 testes unitários** preservados; build limpo; Architecture score ~75 → ~90
+
+---
+
 ## [1.5.0] — 2026-05-28 — FASE 7.8: Performance, Production Readiness & Code Quality
 
 ### Performance
