@@ -198,9 +198,9 @@ test('W6: eye button toggles password field visibility', async ({ context, exten
   await page.close();
 });
 
-// ─── W7: Fluxo de signup → tela de verificação de email ──────────────────────
+// ─── W7: Fluxo de signup → tela de sucesso de criação ──────────────────────
 
-test('W7: signup with valid data shows email verify screen with correct email', async ({ context, extensionId }) => {
+test('W7: signup with valid data shows signup success screen', async ({ context, extensionId }) => {
   const page = await openWelcomePage(context, extensionId);
   await page.click('#tab-signup');
 
@@ -210,26 +210,21 @@ test('W7: signup with valid data shows email verify screen with correct email', 
 
   await page.click('#signup-btn');
 
-  // Aguarda tela de verificação
-  await page.waitForSelector('#w-verify', { state: 'visible', timeout: 5000 });
+  // Aguarda tela de sucesso de signup
+  await page.waitForSelector('#w-signup-success', { state: 'visible', timeout: 5000 });
 
-  // Tela de verify deve mostrar o email correto
-  await expect(page.locator('#verify-email-val')).toHaveText('novo@atenna.ai');
-  await expect(page.locator('#w-title')).toHaveText('Verifique seu email');
+  // Tela deve mostrar mensagem de sucesso
+  await expect(page.locator('#w-title')).toHaveText('Conta criada! 🎉');
+  await expect(page.locator('#w-sub')).toHaveText('Agora faça login para começar.');
 
   // Formulário e tabs devem estar ocultos
   await expect(page.locator('#form-signup')).toBeHidden();
   await expect(page.locator('#w-tabs')).toBeHidden();
   await expect(page.locator('#w-google-btn')).toBeHidden();
 
-  // Botão "Abrir Gmail" existe e tem link correto
-  const gmailLink = page.locator('a.w-open-mail');
-  await expect(gmailLink).toBeVisible();
-  await expect(gmailLink).toHaveAttribute('href', 'https://mail.google.com/');
-
   // Botão "Voltar ao login" funciona
-  await page.click('#verify-back');
-  await expect(page.locator('#w-verify')).toBeHidden();
+  await page.click('#signup-success-back');
+  await expect(page.locator('#w-signup-success')).toBeHidden();
   await expect(page.locator('#form-login')).toBeVisible();
   await expect(page.locator('#w-tabs')).toBeVisible();
 

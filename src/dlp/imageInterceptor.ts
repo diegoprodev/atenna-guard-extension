@@ -2,12 +2,31 @@ import { getSession } from '../auth/sessionManager';
 
 const BFF_BASE = 'https://atennaplugin.maestro-n8n.site';
 const BANNER_ID = 'atenna-protection-banner';
+const CONSENT_FLAG_KEY = 'atenna_image_ocr_consent';
+const CONSENT_TOAST_ID = 'atenna-consent-toast';
 
 async function getToken(): Promise<string | null> {
   try {
     const session = await getSession();
     return session?.token ?? null;
   } catch { return null; }
+}
+
+function checkConsentFlag(): Promise<boolean> {
+  return new Promise(resolve => {
+    try {
+      chrome.storage.local.get(CONSENT_FLAG_KEY, (result) => {
+        const hasConsent = result[CONSENT_FLAG_KEY] === true;
+        resolve(hasConsent);
+      });
+    } catch { resolve(false); }
+  });
+}
+
+function setConsentFlag(): void {
+  try {
+    chrome.storage.local.set({ [CONSENT_FLAG_KEY]: true });
+  } catch { /* fail silently */ }
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -17,6 +36,23 @@ function fileToBase64(file: File): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+function showConsentToast(): void {
+  let toast = document.getElementById(CONSENT_TOAST_ID);
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = CONSENT_TOAST_ID;
+    toast.style.cssText = [
+      'position:fixed', 'bottom:80px', 'left:50%', 'transform:translateX(-50%)',
+      'background:#2563eb', 'color:#fff', 'padding:12px 16px', 'border-radius:8px',
+      'font-family:sans-serif', 'font-size:13px', 'z-index:2147483647',
+      'box-shadow:0 4px 12px rgba(0,0,0,.3)', 'max-width:480px', 'text-align:center',
+    ].join(';');
+    document.body.appendChild(toast);
+    setTimeout(() => toast?.remove(), 4000);
+  }
+  toast.textContent = 'Imagem será analisada para detectar dados sensíveis. Nenhum dado é armazenado.';
 }
 
 function showImageDlpBanner(advisory: string): void {
@@ -40,6 +76,14 @@ async function handleImageFile(file: File): Promise<void> {
   if (!file.type.startsWith('image/')) return;
   const token = await getToken();
   if (!token) return;
+
+  // Check consent and show toast on first image
+  const hasConsent = await checkConsentFlag();
+  if (!hasConsent) {
+    showConsentToast();
+    setConsentFlag();
+  }
+
   const base64 = await fileToBase64(file);
 
   const controller = new AbortController();

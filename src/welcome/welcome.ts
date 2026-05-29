@@ -65,9 +65,9 @@ async function checkExistingSession() {
 function switchTab(tab: Tab) {
   currentTab = tab;
   const isForgot = tab === 'forgot';
-  // Restore main content area and hide verify/success states
+  // Restore main content area and hide signup-success/success states
   $('w-main-content').style.display = '';
-  $('w-verify').style.display       = 'none';
+  $('w-signup-success').style.display       = 'none';
   $('w-success').style.display      = 'none';
   $('form-login').style.display   = tab === 'login'  ? '' : 'none';
   $('form-signup').style.display  = tab === 'signup' ? '' : 'none';
@@ -158,7 +158,7 @@ async function submitSignup() {
     setErr(result.error);
     return;
   }
-  showVerify(email);
+  showSignupSuccess(email);
 }
 
 // ── Forgot password ───────────────────────────────────────────────────────────
@@ -181,15 +181,14 @@ async function submitForgot() {
 }
 
 // ── states ────────────────────────────────────────────────────────────────────
-function showVerify(email: string) {
+function showSignupSuccess(email: string) {
   $('w-main-content').style.display = 'none';
   $('w-google-btn').style.display   = 'none';
   $('w-divider').style.display      = 'none';
   $('w-tabs').style.display         = 'none';
-  $('w-verify').style.display       = '';
-  $('verify-email-val').textContent  = email;
-  $('w-title').textContent = 'Verifique seu email';
-  $('w-sub').textContent   = 'Clique no link que enviamos para ativar sua conta.';
+  $('w-signup-success').style.display       = '';
+  $('w-title').textContent = 'Conta criada! 🎉';
+  $('w-sub').textContent   = 'Agora faça login para começar.';
 }
 
 function showSuccess(email: string) {
@@ -231,5 +230,5 @@ document.addEventListener('DOMContentLoaded', () => {
   $<HTMLInputElement>('forgot-email').addEventListener('keydown', e => { if (e.key === 'Enter') void submitForgot(); });
   $('back-to-login').addEventListener('click', () => switchTab('login'));
 
-  $('verify-back').addEventListener('click', () => switchTab('login'));
+  $('signup-success-back').addEventListener('click', () => switchTab('login'));
 });
