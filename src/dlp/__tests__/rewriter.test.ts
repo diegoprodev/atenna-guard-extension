@@ -6,7 +6,6 @@ describe('rewritePII — PLACA and PIS token mapping', () => {
   it('rewrites PLACA with correct token', () => {
     const text = 'Placa ABC1D23';
     const entities = scanPatterns(text);
-    console.log('PLACA entities:', entities);
     const result = rewritePII(text, entities);
     expect(result).toContain('[PLACA]');
     expect(result).not.toContain('ABC1D23');
@@ -16,7 +15,6 @@ describe('rewritePII — PLACA and PIS token mapping', () => {
     // PIS pattern expects: PIS [label] DDD.DDDDD.DD-D format
     const text = 'PIS 170.33259.50-4';
     const entities = scanPatterns(text);
-    console.log('PIS entities:', entities);
     const result = rewritePII(text, entities);
     expect(result).toContain('[PIS]');
     expect(result).not.toContain('170.33259.50-4');
