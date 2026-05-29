@@ -102,17 +102,17 @@ async function getUserId(): Promise<string> {
   });
 }
 
-export function getOrCreateSessionId(): string {
-  return new Promise(resolve => {
+export function getOrCreateSessionId(): Promise<string> {
+  return new Promise<string>(resolve => {
     try {
-      chrome.storage.session?.get(SESSION_ID_KEY, result => {
+      chrome.storage.session?.get(SESSION_ID_KEY, (result?: Record<string, unknown>) => {
         const id = (result?.[SESSION_ID_KEY] as string | undefined) || genSessionId();
         chrome.storage.session?.set({ [SESSION_ID_KEY]: id }, () => resolve(id));
       });
     } catch {
       resolve(genSessionId());
     }
-  }) as any;
+  });
 }
 
 export async function trackEvent(
@@ -121,7 +121,7 @@ export async function trackEvent(
 ): Promise<void> {
   try {
     const user_id = await getUserId();
-    const sessionId = getOrCreateSessionId() || genSessionId();
+    const sessionId = await getOrCreateSessionId();
     const plan = (await import('./planManager').then(m => m.isPro())) ? 'pro' : 'free';
 
     const payload: EventPayload = {
