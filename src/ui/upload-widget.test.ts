@@ -1,6 +1,69 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { UploadWidget } from './upload-widget';
 
+describe('UploadWidget - Privacy Notice', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('shows privacy notice during loading phase', () => {
+    const config = {
+      targetElement: container,
+      maxSize: { txt: 10 * 1024 * 1024 },
+      onReady: () => {},
+      onError: () => {},
+      onCancel: () => {},
+    };
+
+    const widget = new UploadWidget(config);
+
+    (widget as any).state = {
+      phase: 'loading',
+      file: new File(['test content'], 'test.txt'),
+    };
+
+    widget.render();
+
+    const privacyNotice = container.querySelector('.atenna-upw__privacy-notice');
+    expect(privacyNotice).not.toBeNull();
+    expect(privacyNotice!.textContent).toContain('dados são processados de forma segura');
+    expect(privacyNotice!.textContent).toContain('Nenhum arquivo é armazenado');
+  });
+
+  it('does not show privacy notice in ready phase', () => {
+    const config = {
+      targetElement: container,
+      maxSize: { txt: 10 * 1024 * 1024 },
+      onReady: () => {},
+      onError: () => {},
+      onCancel: () => {},
+    };
+
+    const widget = new UploadWidget(config);
+
+    (widget as any).state = {
+      phase: 'ready',
+      file: new File(['test content'], 'test.txt'),
+      dlpRisk: 'NONE',
+      findings: [],
+      extractedContent: 'test content',
+      isBinary: false,
+    };
+
+    widget.render();
+
+    const privacyNotice = container.querySelector('.atenna-upw__privacy-notice');
+    expect(privacyNotice).toBeNull();
+  });
+});
+
 describe('UploadWidget - XSS Protection', () => {
   let container: HTMLElement;
 

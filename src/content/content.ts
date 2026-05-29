@@ -4,6 +4,7 @@ import { toggleModal, openSettingsOverlay } from '../ui/modal';
 import { getSession } from '../auth/sessionManager';
 import { setStorageUser } from '../core/scopedStorage';
 import { attachImageInterceptor } from '../dlp/imageInterceptor';
+import { throttleLeadingEdge } from '../lib/throttle';
 
 self.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
   console.error('[Atenna] unhandledrejection:', event.reason);
@@ -87,9 +88,11 @@ async function init(): Promise<void> {
   if (authed) tryInject();
 
   // Re-inject on DOM changes (SPA navigation, conversation switch)
-  _domObserver = new MutationObserver(() => {
+  // Throttle callback to 150ms leading-edge to prevent excessive DOM operations
+  const throttledTryInject = throttleLeadingEdge(() => {
     if (_isAuthenticated) tryInject();
-  });
+  }, 150);
+  _domObserver = new MutationObserver(throttledTryInject);
   _domObserver.observe(document.body, { childList: true, subtree: true });
 
   // React to login / logout in another tab or popup

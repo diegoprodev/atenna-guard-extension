@@ -288,11 +288,11 @@ const PATTERNS: PatternDef[] = [
     pattern: /\b(?:passaporte|passport)[:\s.#]*[A-Z]{2}\d{6}\b|\b[A-Z]{2}\d{6}\b(?=\s*(?:passaporte|passport|validade|emiss[aã]o))/gi,
     confidence: 0.92,
   },
-  // Brazilian CEP
+  // Brazilian CEP — requires "CEP:" label for context
   {
     type: 'ADDRESS',
-    pattern: /\b\d{5}[-\s]?\d{3}\b/g,
-    confidence: 0.60,
+    pattern: /\bCEP\s*[:\s.]*\d{5}[-\s]?\d{3}\b/gi,
+    confidence: 0.85,
   },
   // CNJ process number — NNNNNNN-DD.AAAA.J.TR.OOOO
   {
@@ -312,13 +312,6 @@ const PATTERNS: PatternDef[] = [
     type: 'NAME',
     pattern: /\b(?:[A-ZÁÉÍÓÚÃÕÇÂÊÎÔÛÀÈÙÄËÏÖÜ]{2,}\s+){1,3}[A-ZÁÉÍÓÚÃÕÇÂÊÎÔÛÀÈÙÄËÏÖÜ]{2,}\b/g,
     confidence: 0.65,
-    validate: validateName,
-  },
-  // Brazilian full name — lowercase: "diego rodrigues da silva"
-  {
-    type: 'NAME',
-    pattern: /\b(?:[a-záéíóúãõçâêîôûàèùäëïöü]{2,}\s+){1,3}[a-záéíóúãõçâêîôûàèùäëïöü]{2,}\b/g,
-    confidence: 0.55,
     validate: validateName,
   },
 ];

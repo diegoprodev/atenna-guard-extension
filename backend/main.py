@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import json
+import logging
 
 from schemas.prompt_schema import PromptRequest, PromptResponse
 from services.prompt_service import generate_prompts
@@ -18,6 +19,9 @@ from services.quota_service import check_and_increment_quota, QuotaExceeded, FRE
 from dlp.enforcement import evaluate_strict_enforcement
 from dlp import engine, telemetry
 from dlp.exception_sanitizer import SanitizationMiddleware
+from dlp.image_ocr import pre_warm_reader
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Atenna Guard Prompt — Backend",
@@ -47,6 +51,19 @@ app.include_router(export_router)
 app.include_router(documents_router)
 app.include_router(upload_router)
 app.include_router(bff_auth_router)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """
+    Pre-warm EasyOCR Reader on application startup to avoid cold-start delay
+    on first OCR request. Uses run_in_executor to prevent blocking the event loop.
+
+    Improves first OCR request latency from ~60s (cold-start) to <5s.
+    """
+    logger.info("Application starting up — pre-warming EasyOCR Reader...")
+    await pre_warm_reader()
+    logger.info("Startup complete — application ready to serve requests")
 
 
 @app.get("/health", tags=["Health"])

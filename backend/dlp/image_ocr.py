@@ -3,10 +3,15 @@ import io
 import numpy as np
 import easyocr
 from PIL import Image
+import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Reader is stateful — loads neural net weights on first use.
 # Instantiate once at module level — do NOT recreate per request.
 _reader: easyocr.Reader | None = None
+_reader_initialized = False
 
 
 def _get_reader() -> easyocr.Reader:
@@ -15,6 +20,37 @@ def _get_reader() -> easyocr.Reader:
         # gpu=False: no CUDA required on VPS
         _reader = easyocr.Reader(["pt", "en"], gpu=False)
     return _reader
+
+
+async def pre_warm_reader():
+    """
+    Pre-initializes the EasyOCR Reader on application startup to avoid
+    cold-start delay on first OCR request. Runs in executor (background thread).
+    """
+    global _reader_initialized
+
+    def _init_in_thread():
+        """Initialize reader in thread to avoid blocking event loop."""
+        try:
+            logger.info("Starting EasyOCR Reader pre-warming...")
+            reader = _get_reader()
+            logger.info(f"EasyOCR Reader pre-warmed successfully. Model ready for language: ['pt', 'en']")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to pre-warm EasyOCR Reader: {e}")
+            return False
+
+    try:
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, _init_in_thread)
+        _reader_initialized = result
+        if result:
+            logger.info("EasyOCR Reader pre-warming completed successfully")
+        else:
+            logger.warning("EasyOCR Reader pre-warming failed, will initialize on first request")
+    except Exception as e:
+        logger.error(f"Error during EasyOCR Reader pre-warming: {e}")
+        _reader_initialized = False
 
 
 def extract_text_from_image(base64_image: str) -> str:

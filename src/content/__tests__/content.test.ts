@@ -201,3 +201,54 @@ describe('content.ts — TOGGLE_MODAL security', () => {
     expect(vi.mocked(toggleModal)).toHaveBeenCalled();
   });
 });
+
+describe('content.ts — MutationObserver throttle (150ms leading-edge)', () => {
+  let observerCallback: ((mutations: MutationRecord[]) => void) | null = null;
+  let capturedObserveOptions: MutationObserverInit | null = null;
+  let observedTarget: Node | null = null;
+
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    Object.keys(storage).forEach(k => delete storage[k]);
+    mockGetSession.mockClear();
+    observerCallback = null;
+    capturedObserveOptions = null;
+    observedTarget = null;
+
+    // Capture MutationObserver constructor and observe() calls
+    vi.stubGlobal('MutationObserver', class MockMutationObserver {
+      constructor(cb: (mutations: MutationRecord[]) => void) {
+        observerCallback = cb;
+      }
+      observe = (target: Node, options: MutationObserverInit) => {
+        observedTarget = target;
+        capturedObserveOptions = options;
+      };
+      disconnect = vi.fn();
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('MutationObserver observes document.body only (not document.documentElement)', async () => {
+    mockGetSession.mockResolvedValue(null);
+    await import('../content');
+
+    // Give init() time to run
+    await new Promise(r => setTimeout(r, 50));
+
+    // document.body should be the observed target
+    expect(observedTarget).toBe(document.body);
+    // document.documentElement should NOT be observed
+    expect(observedTarget).not.toBe(document.documentElement);
+  });
+
+  it.skip('MutationObserver callback is throttled with 150ms leading-edge', async () => {
+    // This test requires exporting tryInject or refactoring the content.ts module
+    // to allow testing the throttle behavior. Skipping for now as the throttle
+    // functionality is covered by the throttle.test.ts file.
+  });
+});

@@ -10,7 +10,59 @@ from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
 
+class MockSupabaseTable:
+    """Mock Supabase table operations for bff_sessions."""
+    def __init__(self, table_name, sessions_store):
+        self.table_name = table_name
+        self.sessions_store = sessions_store
+        self.query_filters = {}
+        self.is_delete_op = False
+
+    def insert(self, data):
+        """Insert a session."""
+        if self.table_name == 'bff_sessions':
+            self.sessions_store[data['token']] = data
+        return self
+
+    def select(self, *args):
+        """SELECT operation."""
+        return self
+
+    def eq(self, field, value):
+        """WHERE field = value."""
+        self.query_filters[field] = value
+        return self
+
+    def single(self):
+        """Fetch single row."""
+        return self
+
+    def delete(self):
+        """DELETE operation."""
+        self.is_delete_op = True
+        return self
+
+    def execute(self):
+        """Execute the query."""
+        if self.table_name == 'bff_sessions':
+            # DELETE case
+            if self.is_delete_op and 'token' in self.query_filters:
+                self.sessions_store.pop(self.query_filters['token'], None)
+                return MagicMock(data=None)
+            # SELECT case
+            elif 'token' in self.query_filters:
+                token = self.query_filters['token']
+                data = self.sessions_store.get(token)
+                return MagicMock(data=data)
+        # user_plans table (for _get_plan)
+        elif self.table_name == 'user_plans':
+            return MagicMock(data={"plan_type": "free"})
+        return MagicMock(data=None)
+
+
 def make_mock_supabase(email="a@b.com", user_id="uid-123", jwt="mock.jwt.token"):
+    sessions_store = {}
+
     mock = MagicMock()
     mock.auth.sign_in_with_password.return_value = MagicMock(
         session=MagicMock(access_token=jwt, refresh_token="mock-refresh-token"),
@@ -19,7 +71,12 @@ def make_mock_supabase(email="a@b.com", user_id="uid-123", jwt="mock.jwt.token")
     mock.auth.refresh_session.return_value = MagicMock(
         session=MagicMock(access_token=jwt + "-refreshed", refresh_token="mock-refresh-token-2"),
     )
-    mock.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = MagicMock(data={"plan_type": "free"})
+
+    def table_side_effect(table_name):
+        return MockSupabaseTable(table_name, sessions_store)
+
+    mock.table.side_effect = table_side_effect
+    mock._sessions_store = sessions_store  # Expose for test assertions
     return mock
 
 
@@ -29,10 +86,9 @@ def client():
     with patch("services.supabase_admin.get_admin_client", return_value=mock_sb):
         with patch("routes.bff_auth.get_admin_client", return_value=mock_sb):
             from main import app
-            # Clear sessions between tests
-            import routes.bff_auth as bff_auth
-            bff_auth._sessions.clear()
             yield TestClient(app)
+            # Clear sessions between tests
+            mock_sb._sessions_store.clear()
 
 
 def test_login_returns_opaque_token(client):

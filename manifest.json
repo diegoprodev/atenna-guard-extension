@@ -13,9 +13,7 @@
     "https://gemini.google.com/*",
     "https://www.perplexity.ai/*",
     "https://atennaplugin.maestro-n8n.site/*",
-    "https://kezbssjmgwtrunqeoyir.supabase.co/*",
-    "http://localhost/*",
-    "http://127.0.0.1/*"
+    "https://kezbssjmgwtrunqeoyir.supabase.co/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src https://atennaplugin.maestro-n8n.site https://kezbssjmgwtrunqeoyir.supabase.co; object-src 'none'; base-uri 'none'"
@@ -27,9 +25,7 @@
         "https://chatgpt.com/*",
         "https://claude.ai/*",
         "https://gemini.google.com/*",
-        "https://www.perplexity.ai/*",
-        "http://localhost/*",
-        "http://127.0.0.1/*"
+        "https://www.perplexity.ai/*"
       ],
       "js": ["content.js"],
       "css": ["styles.css", "modal.css"],

@@ -289,6 +289,18 @@ export class UploadWidget {
     this.container.innerHTML = '';
     this.container.className = 'atenna-upw';
 
+    // Privacy notice at the top (appears on all phases)
+    if (this.state.phase === 'loading') {
+      const privacyNotice = document.createElement('div');
+      privacyNotice.className = 'atenna-upw__privacy-notice';
+      privacyNotice.style.cssText = [
+        'font-size:12px', 'color:var(--at-text-muted,#888)', 'margin-bottom:12px',
+        'line-height:1.4', 'text-align:center',
+      ].join(';');
+      privacyNotice.textContent = 'Seus dados são processados de forma segura. Nenhum arquivo é armazenado em nossos servidores.';
+      this.container.appendChild(privacyNotice);
+    }
+
     if (this.state.phase === 'loading') this.renderLoading();
     else if (this.state.phase === 'quota') this.renderQuota();
     else if (this.state.phase === 'error') this.renderError();

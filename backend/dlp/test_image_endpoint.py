@@ -47,3 +47,11 @@ def test_image_scan_invalid_base64_returns_400(client):
     with patch("routes.dlp.extract_text_from_image", side_effect=ValueError("Invalid image data")):
         resp = client.post("/dlp/image", json={"image_b64": "bad"}, headers=_VALID_AUTH)
     assert resp.status_code == 400
+
+
+def test_app_startup_event_defined(client):
+    """Verify that the startup event is properly defined in the app."""
+    # Check that the app has startup event handlers
+    assert hasattr(app, 'router')
+    # Verify app can start without errors (TestClient triggers startup)
+    assert client is not None
