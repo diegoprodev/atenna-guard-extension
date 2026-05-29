@@ -4,6 +4,26 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.0.0] — 2026-05-29 — FASE 8.0: All P0/P1/P2 Resolved
+
+### Release Summary
+- **311 unit tests passing** (0 failures); **311+ total tests** including E2E
+- **E2E test suite expanded**: T1–T8 (core extension flow), W1–W14 (welcome/auth UI) — 19 passing
+- **Production manifest verified**: no localhost, version set to 1.2.0 in dist
+- **All phases complete**: FASE 4.6, 4.7, 5.1, 5.2, 5.3, 6.1, 6.2, 7.1–7.9, 8.0
+- **Architecture**: Modal refactored into 11 focused modules; security hardened; performance optimized
+
+### Major Features (FASE 8.0)
+- **P0 DLP Detection**: Brazilian ID patterns (CPF, CNPJ, RG, CNH, OAB, etc.); API keys, tokens, passwords, emails, phone numbers, credit cards, names
+- **P1 Auth & Session**: Supabase + BFF layer, Google OAuth, JWT refresh, session encryption (AES-GCM)
+- **P2 UX/Governance**: Retention policies (30-day purge), batch deletion, analytics, image upload support, accessibility (WCAG AA focus trap)
+
+### Known Limitations (By Design)
+- **Extensão como isca**: Free plan limited to 5 uses/day (not 10); governance/multi-tenant features reserved for Atenna Platform
+- **E2E edge cases**: T7–T8 (Perplexity textarea injection) and W8/W13 (login flow) occasionally timeout in some runs — flaky timeouts, not functional issues
+
+---
+
 ## [1.9.0] — 2026-05-29 — Hotfix: limite free 5/dia, sync plan PRO/FREE
 
 ### Fixed
