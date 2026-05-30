@@ -482,6 +482,7 @@ describe('DLP protection flow', () => {
     vi.mocked(bffClient.bffMe).mockResolvedValue({
       email: 'test@example.com',
       plan: 'free',
+      onboarding_seen: true,
     });
     vi.spyOn(planManager, 'syncPlanFromSupabase').mockResolvedValue(undefined);
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [{ plan: 'free' }] });
