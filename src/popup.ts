@@ -84,7 +84,17 @@ export async function initPopup(): Promise<void> {
     return;
   }
 
-  renderHome(container, me, tabInfo, tabId);
+  // Check if first-run onboarding has been seen
+  const onboardingStorage = await new Promise<Record<string, unknown>>(resolve => {
+    chrome.storage.local.get('atenna_onboarded', resolve);
+  });
+  const isOnboarded = onboardingStorage['atenna_onboarded'] === true;
+
+  if (!isOnboarded) {
+    renderOnboarding(container);
+  } else {
+    renderHome(container, me, tabInfo, tabId);
+  }
 }
 
 const EYE_OPEN  = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
@@ -123,11 +133,11 @@ function renderOnboarding(container: HTMLElement): void {
   wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px 20px;text-align:center;';
 
   wrap.innerHTML = `
-    <div style="width:56px;height:56px;border-radius:50%;background:rgba(34,197,94,0.15);display:flex;align-items:center;justify-content:center;">
+    <div class="ap-onboarding__slide" style="width:56px;height:56px;border-radius:50%;background:rgba(34,197,94,0.15);display:flex;align-items:center;justify-content:center;">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
     </div>
-    <h3 style="margin:0;font-size:16px;font-weight:700;color:#f0f0f0;">Você está protegido! 🛡️</h3>
-    <p style="margin:0;font-size:13px;color:#888;line-height:1.6;">
+    <h3 class="ap-onboarding__slide" style="margin:0;font-size:16px;font-weight:700;color:#f0f0f0;">Você está protegido! 🛡️</h3>
+    <p class="ap-onboarding__slide" style="margin:0;font-size:13px;color:#888;line-height:1.6;">
       Abra uma das plataformas abaixo.<br/>
       O badge Atenna aparecerá automaticamente no campo de texto.
     </p>
@@ -157,12 +167,23 @@ function renderOnboarding(container: HTMLElement): void {
         <span style="margin-left:auto;color:#555;font-size:11px;">perplexity.ai</span>
       </a>
     </div>
-    <p style="margin:0;font-size:11px;color:#555;">
-      Ao abrir a plataforma, o badge <strong style="color:#22c55e">⚡ Atenna</strong> aparece no canto do campo de chat.
-    </p>
+    <button id="ap-onboarding-cta" style="padding:10px 20px;border-radius:8px;background:#22c55e;border:none;color:#000;font-weight:600;cursor:pointer;">Continuar</button>
   `;
 
   container.appendChild(wrap);
+
+  // Mark onboarding as seen when CTA is clicked
+  const ctaBtn = wrap.querySelector('#ap-onboarding-cta') as HTMLButtonElement;
+  if (ctaBtn) {
+    ctaBtn.addEventListener('click', async () => {
+      await new Promise<void>(resolve => {
+        chrome.storage.local.set({ atenna_onboarded: true }, resolve);
+      });
+      // After marking as seen, reinit to show home
+      const [me, tabInfo, tabId] = await Promise.all([bffMe(), getActiveTabInfo(), getActiveTabId()]);
+      if (me) renderHome(container, me, tabInfo, tabId);
+    });
+  }
 
   // Close popup when user clicks any platform link
   ['ob-chatgpt', 'ob-claude', 'ob-gemini', 'ob-perplexity'].forEach(id => {

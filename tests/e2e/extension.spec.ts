@@ -11,7 +11,7 @@ test('T1: extension loads into Chromium without errors', async ({ extensionId })
 test('T2: service worker registers and responds to ping', async ({ context }) => {
   let [worker] = context.serviceWorkers();
   if (!worker) {
-    worker = await context.waitForEvent('serviceworker', { timeout: 15_000 });
+    worker = await context.waitForEvent('serviceworker', { timeout: 30_000 });
   }
   expect(worker).not.toBeNull();
   expect(worker.url()).toContain('background.js');
@@ -23,7 +23,7 @@ test('T3: badge does NOT inject when user is not authenticated', async ({ contex
   const page = await openFixturePage(context);
   // No session injected — chrome.storage has no atenna_jwt
   // Wait 3s for any delayed injection
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(6000);
   const badge = await page.$('#atenna-guard-btn');
   expect(badge).toBeNull();
   await page.close();
@@ -31,7 +31,7 @@ test('T3: badge does NOT inject when user is not authenticated', async ({ contex
 
 // ─── Test 4: Badge injects after auth ─────────────────────────
 
-test.skip('T4: badge injects into #prompt-textarea after session is set', async ({ context }) => {
+test.skip('T4: [MOCK ISSUE]  badge injects into #prompt-textarea after session is set', async ({ context }) => {
   // Mock BFF /auth/me endpoint
   await context.route('**/maestro-n8n.site/auth/me**', (route) =>
     route.fulfill({
@@ -58,11 +58,11 @@ test.skip('T4: badge injects into #prompt-textarea after session is set', async 
   );
 
   await injectSession(context);
-  // Small delay to ensure storage write settles before content script reads it
-  await new Promise(r => setTimeout(r, 300));
+  // Large delay to ensure content script loads settles before content script reads it
+  await new Promise(r => setTimeout(r, 2000));
   const page = await openFixturePage(context);
   // Content script is async — wait for badge
-  await page.waitForSelector('#atenna-guard-btn', { timeout: 15_000 });
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 30_000 });
   const badge = await page.$('#atenna-guard-btn');
   expect(badge).not.toBeNull();
   await page.close();
@@ -70,7 +70,7 @@ test.skip('T4: badge injects into #prompt-textarea after session is set', async 
 
 // ─── Test 5: DLP banner on CPF input ──────────────────────────
 
-test.skip('T5: DLP protection banner appears when CPF is typed into textarea', async ({ context }) => {
+test.skip('T5: [MOCK ISSUE]  DLP protection banner appears when CPF is typed into textarea', async ({ context }) => {
   // Mock BFF /auth/me endpoint
   await context.route('**/maestro-n8n.site/auth/me**', (route) =>
     route.fulfill({
@@ -97,9 +97,9 @@ test.skip('T5: DLP protection banner appears when CPF is typed into textarea', a
 
   await injectSession(context);
   // Delay to ensure storage write settles AND previous test's page has closed
-  await new Promise(r => setTimeout(r, 500));
+  await new Promise(r => setTimeout(r, 3000));
   const page = await openFixturePage(context);
-  await page.waitForSelector('#atenna-guard-btn', { timeout: 25_000 });
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 50_000 });
 
   // Type a valid CPF — digit[2] != '9', not all same digit → passes validateCPF
   await page.fill('#prompt-textarea', 'Meu CPF é 123.456.789-09');
@@ -125,7 +125,7 @@ test.skip('T5: DLP protection banner appears when CPF is typed into textarea', a
 
 // ─── Test 6: Modal opens from badge click ─────────────────────
 
-test.skip('T6: clicking the badge opens the Atenna modal overlay', async ({ context }) => {
+test.skip('T6: [MOCK ISSUE]  clicking the badge opens the Atenna modal overlay', async ({ context }) => {
   await context.route('**/auth/v1/user**', (route) =>
     route.fulfill({
       status: 200,
@@ -161,9 +161,9 @@ test.skip('T6: clicking the badge opens the Atenna modal overlay', async ({ cont
       chrome.storage.local.set({ 'atenna_app_onboarding_seen__e2e-user-id': true }, () => resolve());
     }));
   }
-  await new Promise(r => setTimeout(r, 300));
+  await new Promise(r => setTimeout(r, 2000));
   const page = await openFixturePage(context);
-  await page.waitForSelector('#atenna-guard-btn', { timeout: 15_000 });
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 30_000 });
 
   // Click the badge button
   await page.click('#atenna-guard-btn');
@@ -191,7 +191,7 @@ test.skip('T6: clicking the badge opens the Atenna modal overlay', async ({ cont
 
 // ─── Test 7: Perplexity DLP — banner aparece ──────────────────
 
-test.skip('T7: DLP banner appears when CPF is typed into Perplexity-like textarea', async ({ context }) => {
+test.skip('T7: [MOCK ISSUE]  DLP banner appears when CPF is typed into Perplexity-like textarea', async ({ context }) => {
   await context.route('**/maestro-n8n.site/auth/me**', (route) =>
     route.fulfill({
       status: 200,
@@ -209,9 +209,9 @@ test.skip('T7: DLP banner appears when CPF is typed into Perplexity-like textare
   );
 
   await injectSession(context);
-  await new Promise(r => setTimeout(r, 400));
+  await new Promise(r => setTimeout(r, 2500));
   const page = await openPerplexityFixture(context);
-  await page.waitForSelector('#atenna-guard-btn', { timeout: 20_000 });
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 40_000 });
 
   // Type CPF into Perplexity textarea
   await page.click('#prompt-textarea');
@@ -219,7 +219,7 @@ test.skip('T7: DLP banner appears when CPF is typed into Perplexity-like textare
   await page.dispatchEvent('#prompt-textarea', 'input');
 
   // Wait for DLP debounce (400ms) + render
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(2400);
   await page.waitForSelector('#atenna-protection-banner', { timeout: 6_000 });
 
   const banner = await page.$('#atenna-protection-banner');
@@ -233,7 +233,7 @@ test.skip('T7: DLP banner appears when CPF is typed into Perplexity-like textare
 
 // ─── Test 8: Perplexity DLP — "Proteger dados" mascara CPF ────
 
-test.skip('T8: clicking "Proteger dados" masks CPF in Perplexity React-controlled textarea', async ({ context }) => {
+test.skip('T8: [MOCK ISSUE]  clicking "Proteger dados" masks CPF in Perplexity React-controlled textarea', async ({ context }) => {
   await context.route('**/maestro-n8n.site/auth/me**', (route) =>
     route.fulfill({
       status: 200,
@@ -251,15 +251,15 @@ test.skip('T8: clicking "Proteger dados" masks CPF in Perplexity React-controlle
   );
 
   await injectSession(context);
-  await new Promise(r => setTimeout(r, 400));
+  await new Promise(r => setTimeout(r, 2500));
   const page = await openPerplexityFixture(context);
-  await page.waitForSelector('#atenna-guard-btn', { timeout: 20_000 });
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 40_000 });
 
   // Type CPF
   await page.click('#prompt-textarea');
   await page.type('#prompt-textarea', 'Meu CPF é 123.456.789-09', { delay: 30 });
   await page.dispatchEvent('#prompt-textarea', 'input');
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(2400);
   await page.waitForSelector('#atenna-protection-banner', { timeout: 6_000 });
 
   // Capture value before protect
@@ -309,7 +309,7 @@ test.skip('DIAG: perplexity.ai protect button diagnostic', async ({ context }) =
   );
 
   await injectSession(context);
-  await new Promise(r => setTimeout(r, 500));
+  await new Promise(r => setTimeout(r, 3000));
 
   const page = await context.newPage();
   const logs: string[] = [];

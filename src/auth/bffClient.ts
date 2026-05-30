@@ -9,6 +9,7 @@ interface MeResponse {
   email: string;
   plan: string;
   expires_at: number;
+  onboarding_seen?: boolean;
 }
 
 async function bffRefresh(token: string): Promise<boolean> {
