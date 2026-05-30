@@ -120,12 +120,12 @@ export async function openFixturePage(
 ): Promise<import('@playwright/test').Page> {
   const page = await context.newPage();
 
-  // Mock the BFF /me endpoint so openModal() doesn't redirect to login
-  await page.route('**/me', (route) =>
+  // Mock the BFF /auth/me endpoint so openModal() doesn't redirect to login
+  await page.route('**/auth/me', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ email: 'e2e@atenna.ai', plan: 'free' }),
+      body: JSON.stringify({ email: 'e2e@atenna.ai', plan: 'free', onboarding_seen: true }),
     })
   );
 
@@ -161,11 +161,11 @@ export async function openPerplexityFixture(
   context: BrowserContext,
 ): Promise<import('@playwright/test').Page> {
   const page = await context.newPage();
-  await page.route('**/me', (route) =>
+  await page.route('**/auth/me', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ email: 'e2e@atenna.ai', plan: 'free' }),
+      body: JSON.stringify({ email: 'e2e@atenna.ai', plan: 'free', onboarding_seen: true }),
     })
   );
   await page.route('**/generate-prompts', (route) =>

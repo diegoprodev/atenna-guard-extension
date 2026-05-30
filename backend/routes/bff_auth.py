@@ -323,8 +323,8 @@ async def usage(creds: HTTPAuthorizationCredentials = Depends(_bearer)):
 async def reset_password(req: ResetRequest):
     try:
         get_admin_client().auth.reset_password_email(req.email)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"reset_password_email failed for {req.email}: {e}")
     return {"ok": True}
 
 

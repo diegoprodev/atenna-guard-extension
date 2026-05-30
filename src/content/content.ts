@@ -136,6 +136,10 @@ try {
         tryInject();
       }
     }
+    if (msg?.type === 'OPEN_LOGIN_MODAL') {
+      // User clicked extension icon while logged out — open login modal in center
+      void toggleModal();
+    }
     if (msg?.type === 'OPEN_SETTINGS') {
       void openSettingsOverlay();
     }

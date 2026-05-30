@@ -76,7 +76,11 @@ export async function initPopup(): Promise<void> {
   const [me, tabInfo, tabId] = await Promise.all([bffMe(), getActiveTabInfo(), getActiveTabId()]);
 
   if (!me) {
-    renderLogin(container, tabId, tabInfo?.supported ?? false);
+    // User is not logged in — close popup and open login modal in active tab
+    if (tabId) {
+      chrome.tabs.sendMessage(tabId, { type: 'OPEN_LOGIN_MODAL' }, () => void chrome.runtime.lastError);
+    }
+    window.close();
     return;
   }
 
@@ -348,66 +352,6 @@ function renderLogin(container: HTMLElement, tabId: number | null, tabSupported 
   });
 }
 
-function renderFirstRunOnboarding(
-  container: HTMLElement,
-  onDone: () => void,
-): void {
-  container.innerHTML = '';
-
-  const slides = [
-    { icon: '🛡️', title: 'Seus dados ficam no seu dispositivo', body: 'O DLP escaneia localmente antes de qualquer envio. Nenhuma informação sensível sai do Chrome.' },
-    { icon: '✨', title: 'Prompts mais eficazes', body: 'A IA transforma seu rascunho em 3 versões profissionais: direta, estruturada e técnica.' },
-    { icon: '👤', title: 'Ativo em 4 plataformas', body: 'O badge Atenna aparece automaticamente no ChatGPT, Claude.ai, Gemini e Perplexity.' },
-  ];
-
-  const wrap = document.createElement('div');
-  wrap.className = 'ap-root ap-root--login';
-  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px 20px;text-align:center;';
-
-  const slideList = document.createElement('div');
-  slideList.style.cssText = 'display:flex;flex-direction:column;gap:12px;width:100%;';
-
-  slides.forEach(({ icon, title, body }) => {
-    const slide = document.createElement('div');
-    slide.className = 'ap-onboarding__slide';
-    slide.style.cssText = 'padding:12px 14px;border-radius:8px;background:#1a1a1a;border:1px solid #2a2a2a;text-align:left;';
-
-    const header = document.createElement('div');
-    header.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:4px;';
-
-    const iconEl = document.createElement('span');
-    iconEl.style.cssText = 'font-size:18px;line-height:1;';
-    iconEl.textContent = icon;
-
-    const titleEl = document.createElement('strong');
-    titleEl.style.cssText = 'font-size:13px;color:#f0f0f0;font-family:inherit;';
-    titleEl.textContent = title;
-
-    header.appendChild(iconEl);
-    header.appendChild(titleEl);
-
-    const bodyEl = document.createElement('p');
-    bodyEl.style.cssText = 'margin:0;font-size:12px;color:#888;line-height:1.5;font-family:inherit;';
-    bodyEl.textContent = body;
-
-    slide.appendChild(header);
-    slide.appendChild(bodyEl);
-    slideList.appendChild(slide);
-  });
-
-  const cta = document.createElement('button');
-  cta.id = 'ap-onboarding-cta';
-  cta.className = 'ap-btn ap-btn--primary';
-  cta.style.cssText = 'width:100%;margin-top:4px;';
-  cta.textContent = 'Entendi, começar →';
-  cta.addEventListener('click', () => {
-    void markOnboarded().then(onDone);
-  });
-
-  wrap.appendChild(slideList);
-  wrap.appendChild(cta);
-  container.appendChild(wrap);
-}
 
 function renderHome(
   container: HTMLElement,
