@@ -243,6 +243,52 @@ async def me(creds: HTTPAuthorizationCredentials = Depends(_bearer)):
         "expires_at": session["expires_at"],
     }
 
+@router.get("/usage")
+async def usage(creds: HTTPAuthorizationCredentials = Depends(_bearer)):
+    """Return usage stats for authenticated user (today, monthly, total, DLP counts)."""
+    token = creds.credentials
+    if token.count(".") == 2:
+        raise HTTPException(status_code=401, detail="Raw JWT not accepted")
+    try:
+        session = resolve_token(token)
+    except HTTPException:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    user_id = session["user_id"]
+
+    try:
+        client = get_admin_client()
+        from datetime import datetime, timedelta, timezone
+
+        # DLP events: protected_count = records with was_rewritten=true, scans_total = all dlp_events
+        dlp_data = client.table("dlp_events").select("was_rewritten").eq("user_id", user_id).execute()
+        dlp_events = dlp_data.data or []
+        protected_count = sum(1 for e in dlp_events if e.get("was_rewritten"))
+        scans_total = len(dlp_events)
+
+        # Usage: today, monthly, total from telemetry_persistence
+        now = datetime.now(timezone.utc)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        telemetry_data = client.table("telemetry_persistence").select("created_at, prompt_type").eq("user_id", user_id).execute()
+        telemetry = telemetry_data.data or []
+
+        today = sum(1 for t in telemetry if datetime.fromisoformat(t["created_at"].replace("Z", "+00:00")) >= today_start)
+        monthly = sum(1 for t in telemetry if datetime.fromisoformat(t["created_at"].replace("Z", "+00:00")) >= month_start)
+        total = len(telemetry)
+
+        return {
+            "today": today,
+            "monthly": monthly,
+            "total": total,
+            "protected_count": protected_count,
+            "scans_total": scans_total,
+        }
+    except Exception as e:
+        logger.warning(f"usage endpoint error for user {user_id}: {e}")
+        # Return safe defaults if query fails
+        return {"today": 0, "monthly": 0, "total": 0, "protected_count": 0, "scans_total": 0}
+
 @router.post("/reset-password")
 async def reset_password(req: ResetRequest):
     try:

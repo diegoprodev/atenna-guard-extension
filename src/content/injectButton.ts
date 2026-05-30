@@ -481,6 +481,12 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   window.addEventListener('scroll', update, { passive: true });
   window.addEventListener('resize', update, { passive: true });
 
+  // Re-position badge when page becomes visible (user switches back to tab)
+  // This ensures badge repositions even if login happened in another tab
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) update();
+  });
+
   // Realtime DLP scan — debounced 400ms after last keystroke
   let typingTimer: ReturnType<typeof setTimeout> | undefined;
   let scanTimer:   ReturnType<typeof setTimeout> | undefined;

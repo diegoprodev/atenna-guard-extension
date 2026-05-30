@@ -119,24 +119,15 @@ async function openModal(autoGenerate = false): Promise<void> {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   const cleanupFocusTrap = trapFocus(overlay, close);
 
-  // Track daily return (async — non-blocking)
-  const today = new Date().toISOString().split('T')[0];
-  const lastOpenKey = sk('atenna_last_open_date');
-  const lastOpen = await new Promise<string | null>(resolve => {
-    try { chrome.storage.local.get(lastOpenKey, r => resolve(r[lastOpenKey] as string | null)); }
-    catch { resolve(null); }
-  });
-  if (lastOpen) {
-    void trackEvent('returning_user_detected');
-    if (lastOpen !== today) void trackEvent('daily_return');
-  }
-  await new Promise(resolve => {
-    try { chrome.storage.local.set({ [lastOpenKey]: today }, resolve); }
-    catch { resolve(undefined); }
-  });
+  // Daily return tracking moved to server-side (bffMe endpoint will handle this)
 
   // ── Auth Gate: Check session FIRST ───────────────────
-  const me = await bffMe();
+  let me: Awaited<ReturnType<typeof bffMe>> | null = null;
+  try {
+    me = await bffMe();
+  } catch (e) {
+    console.warn('[Atenna] bffMe error:', e);
+  }
 
   if (!me) {
     const logoUrl = getLogoUrl();
@@ -162,39 +153,16 @@ async function openModal(autoGenerate = false): Promise<void> {
       else if (view === 'onboarding') renderPreLoginOnboarding(loginView, switchAuthView);
     };
 
-    // First-ever click → show onboarding. Subsequent → go straight to login.
-    const seen = await new Promise<boolean>(resolve => {
-      try { chrome.storage.local.get('atenna_onboarding_seen', r => resolve(!!r['atenna_onboarding_seen'])); }
-      catch { resolve(true); }
-    });
-    switchAuthView(seen ? 'login' : 'onboarding');
+    // Always show login directly — no confusing onboarding modal
+    switchAuthView('login');
 
     modal.querySelector('.atenna-modal__close')!.addEventListener('click', close);
     return;
   }
 
-  // ── Session exists: sync plan + check welcome ──────────
-  const { upgradedToPro } = await syncPlanFromBff(me);
-  const showWelcome = upgradedToPro || await consumeProWelcome();
-  if (upgradedToPro) await consumeProWelcome(); // always clear flag, even when upgradedToPro triggered first
-  if (showWelcome) {
-    close(); // remove empty modal overlay before showing welcome
-    showProWelcomeOverlay(me, () => openModal(autoGenerate));
-    return;
-  }
-
-  const appOnbKey = sk('atenna_app_onboarding_seen');
-  const appOnboardingSeen = await new Promise<boolean>(resolve => {
-    try { chrome.storage.local.get(appOnbKey, r => resolve(!!r[appOnbKey])); }
-    catch { resolve(true); }
-  });
-
-  if (!appOnboardingSeen) {
-    chrome.storage.local.set({ [appOnbKey]: true });
-    renderPostLoginOnboarding(modal, close);
-    modal.querySelector('.atenna-modal__close')?.addEventListener('click', close);
-    return;
-  }
+  // ── Session exists: sync plan ──────────
+  await syncPlanFromBff(me);
+  // All welcome/onboarding flags moved to server-side — go straight to prompt generator
 
   const platformInput = getCurrentInput();
   const userText      = platformInput ? getInputText(platformInput).trim() : '';
