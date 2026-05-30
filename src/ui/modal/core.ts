@@ -161,8 +161,23 @@ async function openModal(autoGenerate = false): Promise<void> {
   }
 
   // ── Session exists: sync plan ──────────
-  await syncPlanFromBff(me);
-  // All welcome/onboarding flags moved to server-side — go straight to prompt generator
+  const { upgradedToPro } = await syncPlanFromBff(me);
+  const showWelcome = upgradedToPro || await consumeProWelcome();
+  if (upgradedToPro) await consumeProWelcome(); // always clear flag
+  if (showWelcome) {
+    close();
+    showProWelcomeOverlay(me, () => openModal(autoGenerate));
+    return;
+  }
+
+  // ── Professional post-login onboarding (server-driven flag) ──────
+  // Check if user has seen onboarding — flag stored in Supabase user profile
+  const hasSeenOnboarding = me.onboarding_seen === true; // server returns this
+  if (!hasSeenOnboarding) {
+    renderPostLoginOnboarding(modal, close);
+    modal.querySelector('.atenna-modal__close')?.addEventListener('click', close);
+    return;
+  }
 
   const platformInput = getCurrentInput();
   const userText      = platformInput ? getInputText(platformInput).trim() : '';

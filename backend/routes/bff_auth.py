@@ -232,16 +232,46 @@ async def me(creds: HTTPAuthorizationCredentials = Depends(_bearer)):
             detail="Raw JWT not accepted — authenticate via POST /auth/login",
         )
     session = resolve_token(token)
-    # Always re-fetch plan so upgrades/downgrades are reflected immediately.
-    # _get_plan() is cheap (single SELECT) and prevents stale FREE display for PRO users.
     current_plan = _get_plan(session["user_id"])
     session["plan"] = current_plan
+
+    # Fetch onboarding_seen flag from user profile (Supabase)
+    onboarding_seen = False
+    try:
+        client = get_admin_client()
+        user_data = client.table("profiles").select("onboarding_seen").eq("id", session["user_id"]).single().execute()
+        if user_data.data:
+            onboarding_seen = user_data.data.get("onboarding_seen", False)
+    except Exception:
+        onboarding_seen = False
+
     return {
         "user_id": session["user_id"],
         "email": session["email"],
         "plan": current_plan,
         "expires_at": session["expires_at"],
+        "onboarding_seen": onboarding_seen,
     }
+
+@router.post("/mark-onboarding-seen")
+async def mark_onboarding_seen(creds: HTTPAuthorizationCredentials = Depends(_bearer)):
+    """Mark onboarding as seen for current user — server-side flag."""
+    token = creds.credentials
+    if token.count(".") == 2:
+        raise HTTPException(status_code=401, detail="Raw JWT not accepted")
+    try:
+        session = resolve_token(token)
+    except HTTPException:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    user_id = session["user_id"]
+    try:
+        client = get_admin_client()
+        client.table("profiles").update({"onboarding_seen": True}).eq("id", user_id).execute()
+        return {"ok": True}
+    except Exception as e:
+        logger.warning(f"mark_onboarding_seen error for {user_id}: {e}")
+        return {"ok": False}
 
 @router.get("/usage")
 async def usage(creds: HTTPAuthorizationCredentials = Depends(_bearer)):

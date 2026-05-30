@@ -144,6 +144,27 @@ export function renderPostLoginOnboarding(modal: HTMLElement, close: () => void)
   let currentStep = 0;
   const total = ONB_STEPS.length;
 
+  // Mark onboarding as seen on server when user finishes/skips
+  async function markOnboardingSeen() {
+    try {
+      const { getActiveSession } = await import('../../core/auth');
+      const session = await getActiveSession();
+      if (session?.access_token) {
+        await fetch('https://atennaplugin.maestro-n8n.site/auth/mark-onboarding-seen', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        });
+      }
+    } catch {
+      // Silent fail — don't block user if server mark fails
+    }
+  }
+
+  async function closeWithMark() {
+    await markOnboardingSeen();
+    close();
+  }
+
   function render() {
     const step = ONB_STEPS[currentStep];
     const isFirst = currentStep === 0;
@@ -177,10 +198,10 @@ export function renderPostLoginOnboarding(modal: HTMLElement, close: () => void)
       </div>
     `;
 
-    modal.querySelector('.atenna-modal__close')!.addEventListener('click', close);
-    modal.querySelector('.atenna-onb-wizard__btn--skip')!.addEventListener('click', close);
+    modal.querySelector('.atenna-modal__close')!.addEventListener('click', closeWithMark);
+    modal.querySelector('.atenna-onb-wizard__btn--skip')!.addEventListener('click', closeWithMark);
     modal.querySelector('.atenna-onb-wizard__btn--next')!.addEventListener('click', () => {
-      if (isLast) { close(); return; }
+      if (isLast) { void closeWithMark(); return; }
       currentStep++;
       render();
     });
