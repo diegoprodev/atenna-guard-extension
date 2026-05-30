@@ -69,18 +69,6 @@ export function replaceSkeleton(container: HTMLElement, content: HTMLElement): v
   container.appendChild(content);
 }
 
-async function isOnboarded(): Promise<boolean> {
-  return new Promise(resolve => {
-    chrome.storage.local.get('atenna_onboarded', r => resolve(!!r['atenna_onboarded']));
-  });
-}
-
-async function markOnboarded(): Promise<void> {
-  return new Promise(resolve => {
-    chrome.storage.local.set({ atenna_onboarded: true }, resolve);
-  });
-}
-
 export async function initPopup(): Promise<void> {
   const container = document.getElementById('atenna-popup')!;
   renderSkeleton(container);
@@ -89,12 +77,6 @@ export async function initPopup(): Promise<void> {
 
   if (!me) {
     renderLogin(container, tabId, tabInfo?.supported ?? false);
-    return;
-  }
-
-  const onboarded = await isOnboarded();
-  if (!onboarded) {
-    renderFirstRunOnboarding(container, () => renderHome(container, me, tabInfo, tabId));
     return;
   }
 

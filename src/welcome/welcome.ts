@@ -196,7 +196,6 @@ function showSuccess(email: string) {
   $('w-google-btn').style.display   = 'none';
   $('w-divider').style.display      = 'none';
   $('w-tabs').style.display         = 'none';
-  $('w-verify').style.display       = 'none';
   $('w-success').style.display      = '';
   $('w-title').textContent = 'Proteção ativada! 🛡️';
   $('w-sub').textContent   = email ? `Logado como ${email}` : 'Sua extensão está pronta.';
