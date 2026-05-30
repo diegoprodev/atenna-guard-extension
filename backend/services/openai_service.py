@@ -1,8 +1,8 @@
-"""OpenAI Service — gpt-4.1-nano via Cloudflare AI Gateway"""
+"""OpenAI Service — gpt-4.1-nano via Cloudflare AI Gateway (OpenAI SDK)"""
 import os
 import json
 import logging
-import httpx
+from openai import AsyncOpenAI, RateLimitError, APITimeoutError, AuthenticationError, APIStatusError
 from dotenv import load_dotenv
 from security.outbound import assert_safe_llm_url
 from security.input_sanitizer import sanitize_input, ThreatLevel
@@ -14,12 +14,12 @@ logger = logging.getLogger(__name__)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 CF_AIG_TOKEN   = os.getenv("CF_AIG_TOKEN", "")
 
-CF_GATEWAY_OPENAI = (
+CF_GATEWAY_OPENAI_BASE = (
     "https://gateway.ai.cloudflare.com/v1"
     "/e6d552f924497f01ac4a986ef8f8c342"
-    "/atenna-safe-plugin/openai/chat/completions"
+    "/atenna-safe-plugin/openai"
 )
-OPENAI_DIRECT = "https://api.openai.com/v1/chat/completions"
+OPENAI_DIRECT_BASE = "https://api.openai.com/v1"
 
 MODEL = "gpt-4.1-nano"
 
@@ -55,20 +55,8 @@ Não inclua markdown, explicações ou nada além do JSON.\
 """
 
 
-def _build_headers(user_id: str = "") -> dict:
-    headers = {
-        "Authorization": f"Bearer {OPENAI_API_KEY}",
-        "Content-Type":  "application/json",
-    }
-    if CF_AIG_TOKEN:
-        headers["cf-aig-authorization"] = f"Bearer {CF_AIG_TOKEN}"
-    if user_id:
-        headers["cf-aig-metadata"] = json.dumps({"user_id": user_id})
-    return headers
-
-
-def _get_url() -> str:
-    return CF_GATEWAY_OPENAI if CF_AIG_TOKEN else OPENAI_DIRECT
+def _get_base_url() -> str:
+    return CF_GATEWAY_OPENAI_BASE if CF_AIG_TOKEN else OPENAI_DIRECT_BASE
 
 
 async def generate_prompts_openai(input_text: str, user_id: str = "") -> dict | None:
@@ -85,33 +73,43 @@ async def generate_prompts_openai(input_text: str, user_id: str = "") -> dict | 
     system_prompt = _SYSTEM_PROMPT_TEMPLATE.format(canary=canary)
     safe_input = f"<user_input>\n{san.normalized_text}\n</user_input>"
 
-    url = _get_url()
-    # Validate the ACTUAL URL being called, not just the fallback
-    assert_safe_llm_url(url)
+    base_url = _get_base_url()
+    # Validate the ACTUAL base URL being called
+    assert_safe_llm_url(base_url)
 
     via = "CF Gateway" if CF_AIG_TOKEN else "direto"
     print(f"[Atenna] OpenAI ({MODEL}) via {via}")
 
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(
-                url,
-                headers=_build_headers(user_id),
-                json={
-                    "model": MODEL,
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user",   "content": safe_input},
-                    ],
-                    "temperature": 0.7,
-                    "max_tokens": 2000,
-                },
-            )
-        if resp.status_code != 200:
-            logger.warning("openai: status=%s", resp.status_code)
-            return None
+    extra_headers: dict = {}
+    if CF_AIG_TOKEN:
+        extra_headers["cf-aig-authorization"] = f"Bearer {CF_AIG_TOKEN}"
+    if user_id:
+        extra_headers["cf-aig-metadata"] = json.dumps({"user_id": user_id})
 
-        content = resp.json()["choices"][0]["message"]["content"].strip()
+    client = AsyncOpenAI(
+        api_key=OPENAI_API_KEY,
+        base_url=base_url,
+        default_headers=extra_headers if extra_headers else None,
+        max_retries=2,
+        timeout=15.0,
+    )
+
+    try:
+        response = await client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": safe_input},
+            ],
+            temperature=0.7,
+            max_tokens=2000,
+        )
+
+        if response.usage:
+            print(f"[Atenna] OpenAI tokens used: {response.usage.total_tokens}")
+
+        content = response.choices[0].message.content or ""
+        content = content.strip()
 
         validation = validate_output(content, canary)
         if validation.threat != OutputThreat.NONE:
@@ -139,8 +137,17 @@ async def generate_prompts_openai(input_text: str, user_id: str = "") -> dict | 
         print(f"[Atenna] OpenAI OK via {via} ({len(raw)} chars)")
         return result
 
-    except httpx.TimeoutException:
+    except RateLimitError:
+        print("[Atenna] OpenAI rate limit atingido")
+        return None
+    except APITimeoutError:
         print("[Atenna] OpenAI timeout")
+        return None
+    except AuthenticationError:
+        logger.error("openai: autenticação falhou — verifique OPENAI_API_KEY")
+        return None
+    except APIStatusError as exc:
+        logger.warning("openai: status=%s body=%s", exc.status_code, exc.message)
         return None
     except Exception as exc:
         logger.warning("openai: generate failed: %s", exc)
