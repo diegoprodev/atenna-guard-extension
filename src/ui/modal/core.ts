@@ -65,7 +65,12 @@ export function toggleModal(): Promise<void> | void {
 export function generateFromBadge(): Promise<void> | void {
   const existing = document.getElementById(OVERLAY_ID);
   if (existing) { clearMsgInterval(); existing.remove(); return; }
-  return openModal(true);
+  try {
+    const result = openModal(true);
+    return result;
+  } catch (e) {
+    throw e;
+  }
 }
 
 export async function openSettingsOverlay(): Promise<void> {
@@ -486,7 +491,9 @@ async function runFlow(
 
     await renderSuccess(container);
 
-    if (!document.getElementById(OVERLAY_ID)) return;
+    if (!document.getElementById(OVERLAY_ID)) {
+      return;
+    }
 
     void trackEvent('prompt_generate_success', { input_length: userText.length, output_length: JSON.stringify(data).length, origin });
     void trackEvent('modal_time_to_first_generate', { latency_ms: Date.now() - openTime, origin });

@@ -149,7 +149,11 @@ export function renderSuccess(container: HTMLElement): Promise<void> {
   wrap.appendChild(msg);
   container.appendChild(wrap);
 
-  return new Promise(resolve => setTimeout(resolve, SUCCESS_MS));
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve();
+    }, SUCCESS_MS);
+  });
 }
 
 // ─── Render: limit reached ─────────────────────────────────
