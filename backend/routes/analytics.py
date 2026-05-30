@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Any, Optional
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from middleware.auth import require_auth
 from pydantic import BaseModel
 
 router = APIRouter(tags=["Analytics"])
@@ -30,16 +31,17 @@ class AnalyticsEvent(BaseModel):
 
 
 @router.post("/track")
-async def track_event(payload: dict[str, Any]):
+async def track_event(payload: dict[str, Any], _user: dict = Depends(require_auth)):
     """
     Recebe eventos de uso da extensão e grava em Supabase (com fallback para JSONL).
     Frontend envia: { event, user_id, timestamp, session_id, extension_version, plan, ...opcional }
+    user_id é SEMPRE derivado do token autenticado — payload["user_id"] é ignorado por segurança.
     """
     log_dir = Path(__file__).parent.parent / "data"
     log_dir.mkdir(exist_ok=True)
 
     event_name = payload.get("event", "unknown")
-    user_id = payload.get("user_id", "anonymous")
+    user_id = _user.get("user_id", "anonymous")  # ← FORÇA user_id do token autenticado
     session_id = payload.get("session_id", "")
     timestamp = payload.get("timestamp", int(datetime.utcnow().timestamp() * 1000))
     extension_version = payload.get("extension_version", "unknown")

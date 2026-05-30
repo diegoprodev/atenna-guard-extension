@@ -336,7 +336,12 @@ async def create_checkout(body: CheckoutBody = CheckoutBody(), _user: dict = Dep
 @router.post("/webhook/asaas", include_in_schema=False)
 async def asaas_webhook(request: Request):
     incoming = request.headers.get("asaas-access-token", "")
-    if WEBHOOK_TOKEN and not hmac.compare_digest(incoming, WEBHOOK_TOKEN):
+    # Fail-secure: se ASAAS_WEBHOOK_TOKEN não estiver configurado, rejeitar TUDO
+    if not WEBHOOK_TOKEN:
+        logger.critical("ASAAS_WEBHOOK_TOKEN not configured — rejecting webhook (fail-secure)")
+        raise HTTPException(503, "Webhook token not configured")
+    if not hmac.compare_digest(incoming, WEBHOOK_TOKEN):
+        logger.warning(f"Webhook auth failed — invalid token (len={len(incoming)})")
         raise HTTPException(403, "Forbidden")
 
     try:
@@ -485,8 +490,13 @@ async def admin_plan_list(
     plan_type: str | None = None, expiring_days: int = 0,
     limit: int = 100, offset: int = 0, _user: dict = Depends(require_auth),
 ):
-    if _user.get("email") not in {"devdiegopro@gmail.com"}:
+    # Admin emails from env var — never hardcode in source
+    admin_emails = set(e.strip() for e in os.getenv("ADMIN_EMAILS", "devdiegopro@gmail.com").split(",") if e.strip())
+    requester_email = _user.get("email", "")
+    if requester_email not in admin_emails:
+        logger.warning(f"Admin access denied: {requester_email} → /admin/plans")
         raise HTTPException(403, "Acesso restrito.")
+    logger.info(f"Admin access granted: {requester_email} → /admin/plans")
 
     sb = _supabase()
     if not sb:

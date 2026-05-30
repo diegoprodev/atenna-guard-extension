@@ -32,7 +32,7 @@ class OutputValidationResult:
 
 
 def generate_canary() -> str:
-    return secrets.token_hex(8)
+    return secrets.token_hex(16)  # 128 bits — cryptographic minimum
 
 
 def validate_output(output: str, canary: str) -> OutputValidationResult:
@@ -42,7 +42,7 @@ def validate_output(output: str, canary: str) -> OutputValidationResult:
     if len(output) > MAX_OUTPUT_CHARS:
         return OutputValidationResult(threat=OutputThreat.OVERSIZED, safe_output=None)
 
-    if canary and canary in output:
+    if canary in output:
         return OutputValidationResult(threat=OutputThreat.PROMPT_LEAK, safe_output=None)
 
     for fingerprint in _SYSTEM_PROMPT_FINGERPRINTS:

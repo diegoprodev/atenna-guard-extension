@@ -86,8 +86,8 @@ async def generate_prompts_openai(input_text: str, user_id: str = "") -> dict | 
     safe_input = f"<user_input>\n{san.normalized_text}\n</user_input>"
 
     url = _get_url()
-    # assert_safe_llm_url checks the underlying provider host, not CF proxy
-    assert_safe_llm_url(OPENAI_DIRECT)
+    # Validate the ACTUAL URL being called, not just the fallback
+    assert_safe_llm_url(url)
 
     via = "CF Gateway" if CF_AIG_TOKEN else "direto"
     print(f"[Atenna] OpenAI ({MODEL}) via {via}")

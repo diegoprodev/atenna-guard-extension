@@ -16,6 +16,7 @@ ALLOWED_LLM_HOSTS: frozenset[str] = frozenset({
     "generativelanguage.googleapis.com",  # Gemini
     "api.openai.com",                     # OpenAI / gpt-4.1-nano
     "api.anthropic.com",                  # Anthropic (futuro)
+    "gateway.ai.cloudflare.com",          # Cloudflare AI Gateway (proxy)
 })
 
 
