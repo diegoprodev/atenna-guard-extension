@@ -21,6 +21,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from supabase import create_client
 from middleware.auth import require_auth
+try:
+    from security.monitor import log_security_event
+except ImportError:
+    def log_security_event(*a, **kw): pass
+
 
 from routes.lifecycle_emails import send_pro_welcome as _send_pro_welcome_email
 logger = logging.getLogger(__name__)
@@ -339,9 +344,11 @@ async def asaas_webhook(request: Request):
     # Fail-secure: se ASAAS_WEBHOOK_TOKEN não estiver configurado, rejeitar TUDO
     if not WEBHOOK_TOKEN:
         logger.critical("ASAAS_WEBHOOK_TOKEN not configured — rejecting webhook (fail-secure)")
+        log_security_event("webhook_token_missing", {"action": "rejected_fail_secure"}, severity="CRITICAL")
         raise HTTPException(503, "Webhook token not configured")
     if not hmac.compare_digest(incoming, WEBHOOK_TOKEN):
-        logger.warning(f"Webhook auth failed — invalid token (len={len(incoming)})")
+        logger.warning(f"Webhook auth failed — invalid token")
+        log_security_event("webhook_auth_failed", {"token_len": len(incoming)}, severity="CRITICAL")
         raise HTTPException(403, "Forbidden")
 
     try:
@@ -494,9 +501,9 @@ async def admin_plan_list(
     admin_emails = set(e.strip() for e in os.getenv("ADMIN_EMAILS", "devdiegopro@gmail.com").split(",") if e.strip())
     requester_email = _user.get("email", "")
     if requester_email not in admin_emails:
-        logger.warning(f"Admin access denied: {requester_email} → /admin/plans")
+        log_security_event("admin_access_denied", {"endpoint": "/admin/plans"}, user_id=requester_email, severity="CRITICAL")
         raise HTTPException(403, "Acesso restrito.")
-    logger.info(f"Admin access granted: {requester_email} → /admin/plans")
+    log_security_event("admin_access_granted", {"endpoint": "/admin/plans"}, user_id=requester_email, severity="CRITICAL")
 
     sb = _supabase()
     if not sb:

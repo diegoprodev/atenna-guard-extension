@@ -31,6 +31,12 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from services.supabase_admin import get_admin_client
+try:
+    from security.monitor import log_security_event, record_auth_failure
+except ImportError:
+    def log_security_event(*a, **kw): pass
+    def record_auth_failure(*a, **kw): return False
+
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +61,7 @@ def _check_table() -> bool:
         _table_ok = False
         logger.warning("bff_sessions table not found — using in-memory fallback. "
                        "Run the migration SQL in Supabase dashboard to enable persistent sessions.")
+        log_security_event("bff_sessions_fallback", {"reason": "table_missing"}, severity="CRITICAL")
     return _table_ok
 
 # Rate limiting for login endpoint — 5 attempts per email per minute
@@ -169,14 +176,17 @@ def _get_plan(user_id: str) -> str:
 async def login(req: LoginRequest):
     # Rate limiting check — 5 attempts per email per minute
     if not _check_login_rate_limit(req.email):
+        log_security_event("login_rate_limited", {"email": req.email[:30]}, severity="MEDIUM")
         raise HTTPException(429, "Too many login attempts. Please try again later.")
 
     try:
         client = get_admin_client()
         r = client.auth.sign_in_with_password({"email": req.email, "password": req.password})
     except Exception:
+        record_auth_failure(ip="server", user_id=req.email)
         raise HTTPException(401, "Invalid credentials")
     if not r or not r.session:
+        record_auth_failure(ip="server", user_id=req.email)
         raise HTTPException(401, "Authentication failed")
     jwt = r.session.access_token
     refresh_tok = r.session.refresh_token

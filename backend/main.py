@@ -33,6 +33,7 @@ from routes.admin import router as admin_router
 from routes.checkout import router as checkout_router
 from routes.export_protected import router as export_protected_router
 from routes.bff_auth import router as bff_auth_router
+from routes.admin_security import router as admin_security_router
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from routes.renewal import run_renewal_check, run_renewal_urgent
@@ -94,6 +95,7 @@ app.include_router(admin_router)
 app.include_router(checkout_router)
 app.include_router(export_protected_router)
 app.include_router(bff_auth_router)
+app.include_router(admin_security_router)
 
 
 @app.get("/health", tags=["Health"])
