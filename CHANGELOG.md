@@ -4,6 +4,32 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.1.0] — 2026-05-30 — Chrome Web Store Privacy Compliance & Documentation
+
+### Features
+- **Chrome Web Store privacy compliance**: Full Purple Nickel resolution — PP now includes all required sections (data collection, processing, storage, sharing)
+- **AI provider transparency**: Explicit disclosure of IA processing (ChatGPT, Gemini, Claude, Perplexity)
+- **User data rights**: Sections 14.1 (how to exercise LGPD rights) + 17 (consent management) added
+- **Integration documentation**: Presidio DLP engine extraction for Atenna AI backend (11 BR recognizers, 6000+ LOC)
+- **Strategic narratives**: Carousel narrative for extension marketing + integration guides
+
+### Fixed
+- **Privacy policy email**: Updated from arckosia@gmail.com → contato@arckosia.com.br
+- **Removed vigência dates**: PP now evergreen (no expiration dates)
+
+### Documentation
+- `LOVABLE_FINAL_PROMPT.md`: Chrome Web Store listing privacy update instructions
+- `PRESIDIO_ENGINE_COMPLETE.py`: Consolidated DLP analyzer + engine for backend integration
+- `PRESIDIO_INTEGRATION_GUIDE.md`: 30-minute integration guide for Atenna AI
+- `NARRATIVA_EXTENSAO_CARROSSEL.md`: Strategic positioning for UI carousel
+
+### Quality
+- **LGPD compliant**: All 5 user rights documented (access, correction, deletion, portability, revoke)
+- **GDPR ready**: Standard Contractual Clauses documented for international transfers
+- **Chrome-certified**: All 4 data privacy sections present (collection, processing, storage, sharing)
+
+---
+
 ## [2.0.1] — 2026-05-30 — Auth UX Polish & Server-Driven Onboarding
 
 ### Features
