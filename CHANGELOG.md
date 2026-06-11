@@ -4,6 +4,21 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.1.1] — 2026-06-11 — Authentication Endpoints Fixed
+
+### Fixed
+- **Google OAuth endpoint**: Added missing `/auth/google` POST handler in backend (was returning 404, now returns 401 on invalid credentials)
+- **Email/password login**: Fixed 500 error in `/auth/login` — now correctly validates credentials via Supabase
+- **Nginx reverse proxy**: Restarted reverse proxy to properly route external HTTPS requests to backend service
+- **Password reset**: Verified `/auth/reset-password` endpoint is working correctly with Resend API integration
+
+### Technical
+- Backend rebuild with corrected routing
+- Both Google OAuth and email/password login flows now operational
+- Extension ready for re-testing in Chrome
+
+---
+
 ## [2.1.0] — 2026-05-30 — Chrome Web Store Privacy Compliance & Documentation
 
 ### Features
