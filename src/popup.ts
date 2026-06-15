@@ -76,7 +76,13 @@ export async function initPopup(): Promise<void> {
   const [me, tabInfo, tabId] = await Promise.all([bffMe(), getActiveTabInfo(), getActiveTabId()]);
 
   if (!me) {
-    // User is not logged in — close popup and open login modal in active tab
+    // User is not logged in
+    if (!tabInfo?.supported) {
+      // Not on a supported site — show friendly message
+      renderUnsupportedSiteMessage(container);
+      return;
+    }
+    // On a supported site — open login modal in active tab
     if (tabId) {
       chrome.tabs.sendMessage(tabId, { type: 'OPEN_LOGIN_MODAL' }, () => void chrome.runtime.lastError);
     }
@@ -191,6 +197,51 @@ function renderOnboarding(container: HTMLElement): void {
       setTimeout(() => window.close(), 300);
     });
   });
+}
+
+function renderUnsupportedSiteMessage(container: HTMLElement): void {
+  container.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'ap-root ap-root--login';
+  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px 20px;text-align:center;';
+
+  const icon = document.createElement('div');
+  icon.style.cssText = 'font-size:40px';
+  icon.textContent = '🔒';
+
+  const title = document.createElement('h2');
+  title.className = 'ap-title';
+  title.style.cssText = 'margin:0;font-size:16px;color:#f0f0f0';
+  title.textContent = 'Site não suportado';
+
+  const desc = document.createElement('p');
+  desc.style.cssText = 'margin:0;font-size:13px;color:#999;line-height:1.5';
+  desc.innerHTML = 'A Atenna Safe Prompt funciona apenas em:<br/><br/><strong style="color:#ddd">• ChatGPT<br/>• Claude<br/>• Google Gemini<br/>• Perplexity</strong><br/><br/>Abra uma dessas plataformas para usar a extensão.';
+
+  const linksDiv = document.createElement('div');
+  linksDiv.style.cssText = 'display:flex;flex-direction:column;gap:8px;width:100%;margin-top:12px';
+
+  const links = [
+    { name: 'ChatGPT', url: 'https://chatgpt.com', emoji: '💬' },
+    { name: 'Claude', url: 'https://claude.ai', emoji: '✨' },
+    { name: 'Gemini', url: 'https://gemini.google.com', emoji: '🤖' },
+    { name: 'Perplexity', url: 'https://www.perplexity.ai', emoji: '🔍' },
+  ];
+
+  links.forEach(({ name, url, emoji }) => {
+    const btn = document.createElement('a');
+    btn.href = url;
+    btn.target = '_blank';
+    btn.rel = 'noopener noreferrer';
+    btn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:8px;background:#1a1a1a;border:1px solid #2a2a2a;text-decoration:none;color:#f0f0f0;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s';
+    btn.textContent = `${emoji} ${name}`;
+    btn.addEventListener('mouseover', () => btn.style.background = '#262626');
+    btn.addEventListener('mouseout', () => btn.style.background = '#1a1a1a');
+    linksDiv.appendChild(btn);
+  });
+
+  wrap.append(icon, title, desc, linksDiv);
+  container.appendChild(wrap);
 }
 
 function renderLogin(container: HTMLElement, tabId: number | null, tabSupported = false): void {
