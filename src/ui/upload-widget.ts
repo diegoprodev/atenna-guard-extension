@@ -1,6 +1,7 @@
 import { trackEvent } from '../core/analytics';
 import { isPro } from '../core/planManager';
 import { getSession } from '../auth/sessionManager';
+import { BFF_BASE } from '../config';
 
 import { sk } from '../core/scopedStorage';
 
@@ -248,7 +249,7 @@ export class UploadWidget {
     return c;
   }
 
-  private get backendUrl(): string { return 'https://atennaplugin.maestro-n8n.site'; }
+  private get backendUrl(): string { return BFF_BASE; }
 
   private async getAuthToken(): Promise<string | null> {
     // BFF session (new auth system) — returns opaque token accepted by all backend routes

@@ -32,7 +32,7 @@ function mockSupabaseAuth(context: import('@playwright/test').BrowserContext, pl
       route.fulfill({ status: 200, contentType: 'application/json',
         body: JSON.stringify([{ display_name: 'Stress User' }]) })
     ),
-    context.route('**/maestro-n8n.site/auth/me**', route =>
+    context.route('**/api.atennaia.com.br/auth/me**', route =>
       route.fulfill({ status: 200, contentType: 'application/json',
         body: JSON.stringify({ user_id: 'stress-user-id', email: 'stress@atenna.ai', plan, expires_at: 9999999999 }) })
     ),

@@ -1,14 +1,35 @@
 import sharp from 'sharp';
-import { mkdirSync } from 'fs';
+import { mkdirSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, '..');
-const srcLogo = 'C:\\Users\\dgapc\\Downloads\\atenna-logo.webp';
+
+// Logo fonte versionado no repo. Override opcional via ATENNA_LOGO_SRC.
+const srcLogo = process.env.ATENNA_LOGO_SRC
+  ? resolve(process.env.ATENNA_LOGO_SRC)
+  : resolve(projectRoot, 'assets/brand/atenna-logo.webp');
 
 const sizes = [16, 32, 48, 128];
-mkdirSync(resolve(projectRoot, 'public/icons'), { recursive: true });
+const iconsDir = resolve(projectRoot, 'public/icons');
+mkdirSync(iconsDir, { recursive: true });
+
+// Se o logo fonte não existe mas os ícones já estão versionados, o build segue.
+if (!existsSync(srcLogo)) {
+  const haveAllIcons = sizes.every((s) => existsSync(resolve(iconsDir, `icon${s}.png`)));
+  if (haveAllIcons) {
+    console.warn(
+      `[generate-icons] logo fonte não encontrado (${srcLogo}); usando ícones já versionados em public/icons/.`,
+    );
+    process.exit(0);
+  }
+  console.error(
+    `[generate-icons] ERRO: logo fonte ausente (${srcLogo}) e ícones não versionados. ` +
+      `Coloque o .webp em assets/brand/ ou defina ATENNA_LOGO_SRC.`,
+  );
+  process.exit(1);
+}
 
 for (const size of sizes) {
   // Use 85% of the canvas so the owl has a small margin

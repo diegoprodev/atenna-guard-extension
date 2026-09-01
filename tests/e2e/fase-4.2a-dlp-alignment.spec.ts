@@ -18,7 +18,7 @@
 
 import { test, expect } from '@playwright/test';
 
-const BACKEND_URL = 'https://atennaplugin.maestro-n8n.site';
+const BACKEND_URL = 'https://api.atennaia.com.br';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

@@ -1,8 +1,7 @@
 import { getSession, setSession, clearSession, Session } from './sessionManager';
 import { withRefreshLock } from './refreshLock';
 import { AppError, E } from '../core/errors';
-
-const BFF_BASE = 'https://atennaplugin.maestro-n8n.site';
+import { BFF_BASE, SUPABASE_PROJECT_REF } from '../config';
 
 interface MeResponse {
   user_id: string;
@@ -139,8 +138,6 @@ export async function bffResetPassword(email: string): Promise<void> {
     body: JSON.stringify({ email }),
   }).catch(() => {});
 }
-
-const SUPABASE_PROJECT_REF = 'kezbssjmgwtrunqeoyir';
 
 export async function bffGoogleLogin(): Promise<Session> {
   const redirectUri = `https://${chrome.runtime.id}.chromiumapp.org/`;

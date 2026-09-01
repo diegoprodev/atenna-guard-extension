@@ -13,7 +13,7 @@ import { test, expect } from '@playwright/test';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const BACKEND = 'https://atennaplugin.maestro-n8n.site';
+const BACKEND = 'https://api.atennaia.com.br';
 
 function makeQuotaExceededResponse() {
   return {

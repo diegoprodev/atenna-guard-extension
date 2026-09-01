@@ -1,6 +1,5 @@
 import { getSession } from '../auth/sessionManager';
-
-const BFF_BASE = 'https://atennaplugin.maestro-n8n.site';
+import { BFF_BASE } from '../config';
 const BANNER_ID = 'atenna-protection-banner';
 const CONSENT_FLAG_KEY = 'atenna_image_ocr_consent';
 const CONSENT_TOAST_ID = 'atenna-consent-toast';

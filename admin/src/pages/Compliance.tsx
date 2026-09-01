@@ -6,6 +6,7 @@ import {
   ComplianceEventRow,
 } from '../api/admin';
 import { MetricCard } from '../components/MetricCard';
+import { API_BASE as BASE } from '../config';
 
 const RISK_LABELS: Record<string, string> = {
   HIGH: 'Alto', MEDIUM: 'Médio', LOW: 'Baixo', NONE: 'Nenhum', UNKNOWN: 'Desconhecido',
@@ -23,8 +24,6 @@ function fmtDate(iso: string) {
     });
   } catch { return iso; }
 }
-
-const BASE = 'https://atennaplugin.maestro-n8n.site';
 
 export function Compliance({ token }: { token: string }) {
   const [days, setDays] = useState(30);

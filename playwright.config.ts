@@ -31,7 +31,7 @@ export default defineConfig({
       name: 'api',
       testMatch: /tests\/e2e\/(fase-5\.1|fase-4\.2a).*\.spec\.ts/,
       use: {
-        baseURL: 'https://atennaplugin.maestro-n8n.site',
+        baseURL: 'https://api.atennaia.com.br',
       },
     },
   ],

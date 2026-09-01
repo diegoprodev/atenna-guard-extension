@@ -4,6 +4,36 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.2.0] — 2026-09-01 — Recuperação de produção + migração de domínio
+
+### Crítico
+- **Produção estava fora do ar há ~4 semanas.** O domínio `atennaplugin.maestro-n8n.site`
+  deixou de existir (NXDOMAIN) e o certificado Let's Encrypt expirou em 04/08/2026. Como a
+  extensão publicada aponta o BFF por URL hardcoded, todo login/geração/checkout/DLP falhava.
+
+### Fixed
+- **Novo domínio do BFF: `https://api.atennaia.com.br`** (Cloudflare proxied → VPS `157.90.246.156`).
+- **Certificado:** trocado Let's Encrypt (expirava a cada 90d, renovação quebrada) por
+  **Cloudflare Origin Certificate** (validade até 2041, sem renovação). certbot removido.
+- **nginx:** `server_name` novo, `default_server` retornando 444 para acessos diretos ao IP,
+  restauração de IP real do visitante via cabeçalhos Cloudflare, HSTS `includeSubDomains`.
+- **Segurança (S3):** removido o listener morto de magic-link em `background.ts` que gravava um
+  JWT bruto do Supabase como token de sessão (rejeitado por `require_auth` na chamada seguinte).
+- **Build:** `scripts/generate-icons.mjs` não quebra mais quando o `.webp` do logo não está
+  presente — usa os ícones já versionados em `public/icons/`.
+
+### Changed
+- **`src/config.ts`** (novo) — fonte única da verdade para a URL do BFF e o project ref do
+  Supabase. Todos os ~20 pontos que tinham a URL hardcoded agora importam daqui.
+- **`admin/src/config.ts`** (novo) — idem para o painel admin.
+- IP da VPS deixou de ser exposto (fica atrás do Cloudflare).
+
+### Notas de release
+- Requer **nova submissão à Chrome Web Store** (mudança em `host_permissions` e
+  `content_security_policy.connect-src`). Usuários atuais só voltam a funcionar após o update.
+
+---
+
 ## [2.1.1] — 2026-06-11 — Authentication Endpoints Fixed
 
 ### Fixed

@@ -1,4 +1,4 @@
-const BASE = 'https://atennaplugin.maestro-n8n.site';
+import { API_BASE as BASE } from '../config';
 
 function headers(token: string) {
   return {
@@ -55,7 +55,7 @@ export const api = {
   editUser: (t: string, id: string, patch: { email?: string; role?: string; plan_type?: string }) =>
     put('/admin/users/' + id, t, { ...patch, confirmed: true }),
   deleteUser: (t: string, id: string) =>
-    fetch(`https://atennaplugin.maestro-n8n.site/admin/users/${id}`, {
+    fetch(`${BASE}/admin/users/${id}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
       body: JSON.stringify({ confirmed: true }),
@@ -78,7 +78,7 @@ export const api = {
   assignPlan: (t: string, payload: { user_id: string; plan_type: string; billing_period: string; status: string; notes: string }) =>
     post('/admin/plans/assign', t, { ...payload, confirmed: true }),
   updatePlanStatus: (t: string, user_id: string, status: string, notes = '') =>
-    fetch(`https://atennaplugin.maestro-n8n.site/admin/plans/${user_id}/status`, {
+    fetch(`${BASE}/admin/plans/${user_id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
       body: JSON.stringify({ status, notes, confirmed: true }),
