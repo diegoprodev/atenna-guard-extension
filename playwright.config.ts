@@ -34,5 +34,13 @@ export default defineConfig({
         baseURL: 'https://api.atennaia.com.br',
       },
     },
+    {
+      // Extensão (welcome.html) contra o backend REAL — sem mocks. Cria usuários
+      // de teste no Supabase (prefixo e2e-welcome-*). Rodar sob demanda:
+      //   npx playwright test --project=welcome-real
+      name: 'welcome-real',
+      testMatch: /tests\/e2e\/welcome-real-backend\.spec\.ts/,
+      use: {},
+    },
   ],
 });
