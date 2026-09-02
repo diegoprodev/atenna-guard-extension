@@ -155,27 +155,13 @@ def render_magic_link(magic_url: str, email: str) -> str:
     return _base(content, preheader=f"Seu link de acesso ao {PRODUCT_NAME}")
 
 
-def render_invite_checkout(email: str, plan_key: str) -> str:
-    """T4 — Convite para usuário criado via checkout (pagou sem ter conta)."""
-    plan_label = "Anual" if plan_key == "yearly" else "Mensal"
-    content = f"""
-<div class="icon-wrap"><div class="icon">🎉</div></div>
-<div style="text-align:center"><span class="badge">✦ Plano Pro {plan_label} ativado</span></div>
-<h1>Sua conta Pro foi criada!</h1>
-<p>Seu pagamento foi confirmado e criamos sua conta <strong>{PRODUCT_NAME}</strong> com o plano <span class="highlight">Pro {plan_label}</span> já ativo.</p>
-<p>Defina sua senha para acessar a plataforma e começar a usar a extensão:</p>
-<div class="btn-wrap">
-  <a href="{SITE_URL}" class="btn">Definir minha senha →</a>
-</div>
-<hr class="divider">
-<div class="features">
-  <div class="feature"><div class="feature-icon">✓</div><div class="feature-text"><strong>Mascaramento LGPD</strong> — proteja CPF, email, telefone e outros dados sensíveis</div></div>
-  <div class="feature"><div class="feature-icon">✓</div><div class="feature-text"><strong>Geração de prompts</strong> — 3 versões otimizadas por IA</div></div>
-  <div class="feature"><div class="feature-icon">✓</div><div class="feature-text"><strong>ChatGPT, Claude, Gemini e Perplexity</strong> — funciona onde você já trabalha</div></div>
-  <div class="feature"><div class="feature-icon">✓</div><div class="feature-text"><strong>Sem limite diário</strong> — use quantas vezes quiser</div></div>
-</div>
-"""
-    return _base(content, preheader=f"Sua conta Pro foi criada — bem-vindo ao {PRODUCT_NAME}")
+# (render_invite_checkout removido — era código morto, nunca chamado, e o botão
+#  "Definir minha senha" apontava para SITE_URL, que dá 404. O usuário que paga
+#  pela landing sem conta recebe o e-mail de convite do próprio Supabase
+#  — invite_user_by_email() em checkout._find_or_create_supabase_user — que já
+#  traz o link para definir a senha. Se um dia quisermos esse e-mail com a nossa
+#  identidade, ele precisa receber um reset_url real, gerado via
+#  admin.generate_link(type="recovery") no _promote_to_pro quando is_new.)
 
 
 def render_welcome(email: str) -> str:
