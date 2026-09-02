@@ -243,45 +243,32 @@ async def create_checkout(body: CheckoutBody = CheckoutBody(), _user: dict = Dep
     try:
         async with httpx.AsyncClient(timeout=20) as client:
             if is_pix:
-                # PIX: pagamento único anual (avista) via Checkout DETACHED
-                payload = {
-                    "billingTypes": ["PIX"],
-                    "chargeTypes": ["DETACHED"],
-                    "minutesToExpire": 1440,  # 24h para o cliente pagar
-                    "callback": {
+                # PIX: pagamento único anual via paymentLink DETACHED.
+                # (A API /checkouts exige cpfCnpj/telefone/endereço upfront — que a
+                #  extensão não coleta. O paymentLink deixa o Asaas coletar isso.)
+                resp = await client.post(
+                    f"{ASAAS_BASE}/paymentLinks",
+                    json={
+                        "name":              plan["name"],
+                        "description":       "Acesso completo ao Atenna Pro por 12 meses — pagamento único via PIX.",
+                        "value":             plan["price"],
+                        "billingType":       "PIX",
+                        "chargeType":        "DETACHED",
+                        "dueDateLimitDays":  3,
+                        "externalReference": user_id,
+                        "notificationEnabled": True,
                         "successUrl": f"{VPS_BASE}/checkout/success",
                         "cancelUrl":  f"{VPS_BASE}/checkout/canceled",
-                        "expiredUrl": f"{VPS_BASE}/checkout/expired",
                     },
-                    "items": [
-                        {
-                            "name": plan["name"],
-                            "description": "Acesso completo ao Atenna Pro por 12 meses. Pagamento único à vista via PIX.",
-                            "quantity": 1,
-                            "value": plan["price"],
-                        }
-                    ],
-                    "customerData": {
-                        "email": email,
-                        "name":  name,
-                    } if email else None,
-                }
-                # Remove customerData if empty
-                if not payload.get("customerData", {}).get("email"):
-                    payload.pop("customerData", None)
-
-                resp = await client.post(
-                    f"{ASAAS_BASE}/checkouts",
-                    json={k: v for k, v in payload.items() if v is not None},
                     headers=_asaas_headers(),
                 )
                 if resp.status_code not in (200, 201):
-                    logger.error(f"Asaas PIX checkout error {resp.status_code}: {resp.text[:300]}")
-                    raise HTTPException(502, "Erro ao criar checkout PIX.")
+                    logger.error(f"Asaas PIX paymentLink error {resp.status_code}: {resp.text[:300]}")
+                    raise HTTPException(502, "Erro ao criar link de pagamento PIX.")
 
-                checkout_data = resp.json()
-                sub_id       = checkout_data.get("id", "")
-                payment_link = checkout_data.get("url", "")
+                link         = resp.json()
+                sub_id       = link.get("id", "")
+                payment_link = link.get("url", "")
 
             else:
                 # Cartão: assinatura recorrente via paymentLinks
