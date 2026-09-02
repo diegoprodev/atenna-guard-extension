@@ -8,6 +8,11 @@ x-environment: &default-environment
   REDIS_URL: redis://redis:6379/0
   ENABLE_OPEN_USER_REGISTRATION: ${ENABLE_OPEN_USER_REGISTRATION}
   GLITCHTIP_MAX_EVENT_LIFE_DAYS: ${GLITCHTIP_MAX_EVENT_LIFE_DAYS}
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+
+# GlitchTip 6.2.6 — NÃO usar a tag `v4.2`: naquele build o handler
+# `/api/<id>/envelope/` é um stub sem corpo (retorna HTTP 200 e descarta o
+# evento), então nada era ingerido. Ver README "Armadilhas".
 
 services:
   postgres:
@@ -22,25 +27,36 @@ services:
     restart: unless-stopped
     networks: [ gt ]
   web:
-    image: glitchtip/glitchtip:v4.2
-    depends_on: [ postgres, redis ]
+    image: glitchtip/glitchtip:6.2.6
+    depends_on: [ postgres, redis, gt-patches ]
     environment:
       <<: *default-environment
       PORT: "8080"
     restart: unless-stopped
     networks: [ gt, atenna-backend_atenna ]
   worker:
-    image: glitchtip/glitchtip:v4.2
+    image: glitchtip/glitchtip:6.2.6
     command: ./bin/run-celery-with-beat.sh
     depends_on: [ postgres, redis ]
     environment: *default-environment
     restart: unless-stopped
     networks: [ gt ]
   migrate:
-    image: glitchtip/glitchtip:v4.2
+    image: glitchtip/glitchtip:6.2.6
     depends_on: [ postgres ]
     command: "./manage.py migrate"
     environment: *default-environment
+    networks: [ gt ]
+    restart: on-failure
+  # Reaplica patches de SQL (idempotentes) a cada `up`, depois do migrate.
+  # Hoje só corrige get_project_auth_info() (tipo de coluna errado no 6.2.6).
+  gt-patches:
+    image: postgres:17-alpine
+    depends_on: [ postgres, migrate ]
+    entrypoint: [ "sh", "-c", "for f in /patches/*.sql; do echo \"applying $$f\"; psql \"$$DATABASE_URL\" -v ON_ERROR_STOP=1 -f \"$$f\"; done" ]
+    environment:
+      DATABASE_URL: postgres://postgres:${PG_PW}@postgres:5432/postgres
+    volumes: [ "./patches:/patches:ro" ]
     networks: [ gt ]
     restart: on-failure
 
