@@ -5,12 +5,14 @@
  * All operations require authentication and follow LGPD Art. 17 (right to be forgotten).
  */
 
+import { BFF_BASE } from '../config';
+
 interface Session {
   email: string;
   access_token: string;
 }
 
-const BACKEND = 'https://atennaplugin.maestro-n8n.site';
+const BACKEND = BFF_BASE;
 
 function safeText(s: string): string {
   return s

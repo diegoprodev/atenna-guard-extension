@@ -10,6 +10,7 @@ import { renderPrivacyDataSection } from '../privacy-data';
 import { trackEvent } from '../../core/analytics';
 import { getFlag } from '../../core/featureFlags';
 import { sk } from '../../core/scopedStorage';
+import { BFF_BASE } from '../../config';
 import { saveDisplayName } from '../../core/auth';
 import { setAutoBanner } from '../../content/injectButton';
 import { UploadWidget } from '../upload-widget';
@@ -466,7 +467,7 @@ export function renderSettingsPage(
       const privacyLink = document.createElement('div');
       privacyLink.style.cssText = 'margin-top: 16px; text-align: center;';
       const privacyAnchor = document.createElement('a');
-      privacyAnchor.href = 'https://atennaplugin.maestro-n8n.site/privacy';
+      privacyAnchor.href = `${BFF_BASE}/privacy`;
       privacyAnchor.target = '_blank';
       privacyAnchor.rel = 'noopener noreferrer';
       privacyAnchor.textContent = 'Política de Privacidade';
@@ -539,7 +540,7 @@ export function renderSettingsPage(
         try {
           const { getSession: _gs } = await import('../../auth/sessionManager');
           const _bff = await _gs();
-          const resp = await fetch('https://atennaplugin.maestro-n8n.site/report-problem', {
+          const resp = await fetch(`${BFF_BASE}/report-problem`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${_bff?.token ?? ''}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({

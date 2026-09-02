@@ -2,28 +2,53 @@ node_modules/
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 venv/
 .venv/
 dist/
+
+# Segredos — NUNCA versionar
 .env
 .env.*
 .env.local
 backend/.env
+backend/.env.asaas
 **/backend/.env
 **/.env
+# ...mas os templates .example são versionados
+!.env.example
+!*.env.example
+!backend/.env.example
+!backend/.env.asaas.example
+
+# Certificados de origem (Cloudflare) — só nos servidores
+backend/nginx/certs/*
+!backend/nginx/certs/.gitignore
+
+# Volume de dados de runtime do backend
+backend/data/
+
 .DS_Store
 Thumbs.db
 *.log
 coverage/
+.pytest_cache/
+htmlcov/
+.ruff_cache/
+.mypy_cache/
 
 # Claude Code permission history — may contain command logs with secrets
 .claude/settings.json
+.claude/settings.local.json
 
 # Temp/build artifacts never for git
 dist-*.zip
 *.zip
 check_*.py
 C[0-9]*.py
+*_tmp.py
+doc_parser_*.py
+debug_*.py
 tests/e2e/perplexity-debug.spec.ts
 test-results/
 playwright-report/data/

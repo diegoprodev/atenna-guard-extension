@@ -1,25 +1,38 @@
 """
-FASE 4.5 — Intelligent PDF Parser
-- Detecção automática: nativo vs imagens
-- Texto nativo: pdfplumber (rápido, local)
-- Com imagens: Gemini Vision OCR (automático, barato)
-- Fallback: graceful degradation com texto nativo
+FASE 4.6 — Hybrid Intelligent PDF Parser
+Pipeline enterprise:
+  1. PyMuPDF extrai texto nativo de TODAS as paginas em <5s
+  2. Identifica paginas "pobres" em texto (< TEXT_THRESHOLD chars)
+  3. Gemini OCR apenas nas paginas pobres (scanned, images, low-density)
+  4. Merge: texto nativo + OCR seletivo
+  5. DLP roda no texto final (sempre, no routes/protect.py)
+
+Resultado: 5-15s para 99% dos PDFs nativos; 15-40s para docs mistos/scanned.
 """
 from __future__ import annotations
 
 import asyncio
+import base64
 import gc
 import io
 import os
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 
 from document.limits import (
     MAX_CHARS_EXTRACTED,
-    MAX_EXTRACTION_TIME_S,
     MAX_PAGES,
     DocumentErrorCode,
 )
+
+# Paginas com menos de N chars sao candidatas ao OCR seletivo
+TEXT_THRESHOLD = 100
+
+# Maximo de paginas pobres por chamada Gemini (evita payloads gigantes)
+MAX_OCR_PAGES_PER_CALL = 30
+
+# DPI para renderizacao das imagens OCR
+OCR_DPI = 150
 
 
 @dataclass(frozen=True)
@@ -30,118 +43,177 @@ class PdfParseResultV2:
     truncated: bool
     has_images: bool
     has_tables: bool
-    extraction_method: str  # "native", "vision", "hybrid", "fallback", "timeout", "none"
+    extraction_method: str  # "native" | "hybrid" | "vision" | "fallback" | "timeout" | "none"
     error_code: Optional[str]
     error_message: Optional[str]
+    gemini_masked: bool = False
+    gemini_entities: Optional[List[dict]] = None
 
 
-def _analyze_pdf_pages(pdf_bytes: bytes) -> dict:
-    """
-    Análise prévia: detectar se PDF tem imagens/tabelas.
-    Retorna: {
-        'total_pages': int,
-        'has_images': bool,
-        'has_tables': bool,
-        'text_density': float (0.0-1.0),
-    }
-    """
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _page_to_png_bytes(page, dpi: int = OCR_DPI) -> bytes:
+    import fitz
+    mat = fitz.Matrix(dpi / 72, dpi / 72)  # escala uniforme X e Y
+    pix = page.get_pixmap(matrix=mat, alpha=False)
+    return pix.tobytes("png")
+
+
+# ── Stage 1: Extracao nativa PyMuPDF ─────────────────────────────────────────
+
+def _extract_native_pymupdf(pdf_bytes: bytes) -> dict:
     try:
-        import pdfplumber
+        import fitz  # PyMuPDF
     except ImportError:
-        return {"error": "pdfplumber not installed"}
+        return {"error": "PyMuPDF not installed", "texts": {}, "total_pages": 0, "has_images": False}
 
-    pdf_io = io.BytesIO(pdf_bytes)
-    with pdfplumber.open(pdf_io) as pdf:
-        total_pages = len(pdf.pages)
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    except Exception as e:
+        return {"error": str(e), "texts": {}, "total_pages": 0, "has_images": False}
 
-        # Analisar primeiras 3 páginas
-        sample_pages = min(3, total_pages)
-        total_text = 0
-        has_images = False
-        has_tables = False
+    total = len(doc)
+    texts = {}
+    has_images = False
+    pages_to_process = min(total, MAX_PAGES)
 
-        for i in range(sample_pages):
-            page = pdf.pages[i]
-            text = page.extract_text() or ""
-            total_text += len(text)
+    # pages_with_drawings: indices de paginas com graficos vetoriais + pouco texto
+    # (graficos de barras, pizza, linhas — text labels sao poucos, visual e denso)
+    pages_with_drawings: list = []
 
-            if page.images:
+    for idx in range(pages_to_process):
+        try:
+            page = doc[idx]
+            text = page.get_text("text")
+            texts[idx] = text or ""
+            if not has_images and page.get_images():
                 has_images = True
-            if page.extract_tables():
-                has_tables = True
+            # Detecta graficos vetoriais: muitos drawings + pouco texto = candidato a OCR
+            if len((text or "").strip()) < TEXT_THRESHOLD:
+                drawings = page.get_drawings()
+                if len(drawings) >= 5:  # 5+ elementos vetoriais = provavelmente grafico
+                    pages_with_drawings.append(idx)
+                    if not has_images:
+                        has_images = True  # trata como "visual" para ativar OCR seletivo
+        except Exception:
+            texts[idx] = ""
 
-        avg_text_per_page = total_text / sample_pages if sample_pages > 0 else 0
-        text_density = min(1.0, avg_text_per_page / 1000)  # Normalize
+    doc.close()
+    gc.collect()
 
-        return {
-            'total_pages': total_pages,
-            'has_images': has_images,
-            'has_tables': has_tables,
-            'text_density': text_density,
-        }
-
-
-def _format_table_as_text(table: list) -> str:
-    """Convert table to markdown-ish text."""
-    lines = []
-    for row in table:
-        lines.append(" | ".join(str(cell or "") for cell in row))
-    return "\n".join(lines)
+    total_chars = sum(len(t) for t in texts.values())
+    print(
+        f"[PYMUPDF] {pages_to_process}/{total} pages, "
+        f"{total_chars} chars, has_images={has_images}, "
+        f"drawing_pages={len(pages_with_drawings)}"
+    )
+    return {
+        "texts": texts,
+        "total_pages": total,
+        "pages_processed": pages_to_process,
+        "has_images": has_images,
+    }
 
 
-def _extract_native_text(file_bytes: bytes) -> str:
-    """Extrai texto nativo + tabelas usando pdfplumber."""
+# ── Stage 2: Identifica paginas pobres ───────────────────────────────────────
+
+def _find_poor_pages(texts: dict, threshold: int = TEXT_THRESHOLD) -> List[int]:
+    return [idx for idx, t in texts.items() if len(t.strip()) < threshold]
+
+
+# ── Stage 3: OCR seletivo nas paginas pobres ─────────────────────────────────
+
+async def _ocr_pages_with_gemini(pdf_bytes: bytes, page_indices: List[int]) -> dict:
+    if not page_indices:
+        return {}
+
     try:
-        import pdfplumber
-    except ImportError:
-        return ""
+        import fitz
+        import google.generativeai as genai
+    except ImportError as e:
+        print(f"[OCR-SELECTIVE] Import error: {e}")
+        return {}
 
-    pdf_io = io.BytesIO(file_bytes)
-    extracted_parts = []
-    chars_so_far = 0
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return {}
 
-    with pdfplumber.open(pdf_io) as pdf:
-        pages_to_parse = min(len(pdf.pages), MAX_PAGES)
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-2.5-flash-lite")
 
-        for i in range(pages_to_parse):
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    except Exception as e:
+        print(f"[OCR-SELECTIVE] PDF open error: {e}")
+        return {}
+
+    results = {}
+    batches = [page_indices[i:i + MAX_OCR_PAGES_PER_CALL] for i in range(0, len(page_indices), MAX_OCR_PAGES_PER_CALL)]
+
+    for batch in batches:
+        valid_batch = []
+        parts = [
+            (
+                f"Extraia o texto completo das imagens a seguir (cada imagem = uma pagina de PDF). "
+                "Para cada pagina responda no formato:\n"
+                "--- PAGINA N ---\n"
+                "(texto da pagina N)\n\n"
+                "Preserve paragrafos, listas, tabelas e cabecalhos. "
+                "Se a pagina nao tiver texto legivel escreva: --- PAGINA N ---\n(vazia)\n"
+            )
+        ]
+
+        for page_idx in batch:
             try:
-                page = pdf.pages[i]
+                page = doc[page_idx]
+                png_bytes = _page_to_png_bytes(page)
+                b64 = base64.standard_b64encode(png_bytes).decode("ascii")
+                parts.append({"inline_data": {"mime_type": "image/png", "data": b64}})
+                valid_batch.append(page_idx)
+            except Exception as e:
+                print(f"[OCR-SELECTIVE] Render error page {page_idx}: {e}")
+                results[page_idx] = ""
 
-                # 1. Texto nativo
-                page_text = page.extract_text() or ""
+        if not valid_batch:
+            continue
 
-                # 2. Tabelas (se houver)
-                tables = page.extract_tables() or []
-                if tables:
-                    page_text += "\n\n[TABELAS DETECTADAS]\n"
-                    for table_idx, table in enumerate(tables):
-                        page_text += f"\n[TABELA {table_idx + 1}]\n"
-                        page_text += _format_table_as_text(table)
-                        page_text += "\n[/TABELA]\n"
+        try:
+            captured_batch = valid_batch[:]
+            response = await asyncio.get_event_loop().run_in_executor(
+                None, lambda p=parts: model.generate_content(p)
+            )
+            raw = (response.text or "").strip()
 
-                # Truncar se necessário
-                remaining = MAX_CHARS_EXTRACTED - chars_so_far
-                if len(page_text) > remaining:
-                    extracted_parts.append(page_text[:remaining])
-                    break
+            import re
+            sections = re.split(r"---\s*PAGINA\s+(\d+)\s*---", raw, flags=re.IGNORECASE)
+            # sections = ['prefix', '1', 'text1', '2', 'text2', ...]
+            for i in range(1, len(sections) - 1, 2):
+                try:
+                    seq = int(sections[i]) - 1  # 1-based -> 0-based
+                    if 0 <= seq < len(captured_batch):
+                        page_text = sections[i + 1].strip()
+                        if page_text.lower() == "(vazia)":
+                            page_text = ""
+                        results[captured_batch[seq]] = page_text
+                except (ValueError, IndexError):
+                    pass
 
-                extracted_parts.append(page_text)
-                chars_so_far += len(page_text)
+        except Exception as e:
+            print(f"[OCR-SELECTIVE] Gemini batch error: {e}")
+            for page_idx in valid_batch:
+                if page_idx not in results:
+                    results[page_idx] = ""
 
-            except Exception:
-                continue
+    doc.close()
+    gc.collect()
+    return results
 
-    return "\n".join(extracted_parts)
 
+# ── Stage fallback: PDF inteiro via Gemini ────────────────────────────────────
 
-async def _extract_with_vision(file_bytes: bytes, has_native_text: bool) -> str:
-    """
-    Usa Gemini Vision para OCR de imagens no PDF.
-    Se PDF tem texto nativo, usa Vision apenas para imagens.
-    """
+async def _extract_full_gemini(file_bytes: bytes) -> str:
     try:
         import google.generativeai as genai
-        from pdf2image import convert_from_bytes
     except ImportError:
         return ""
 
@@ -150,135 +222,95 @@ async def _extract_with_vision(file_bytes: bytes, has_native_text: bool) -> str:
         return ""
 
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.0-flash-exp")
+    model = genai.GenerativeModel("gemini-2.5-flash-lite")
 
-    # Converter PDF para imagens (primeiras 10 páginas para MVP)
+    PROMPT = (
+        "Extraia TODO o texto deste PDF com maxima fidelidade. "
+        "Preserve paragrafos, listas, tabelas e cabecalhos. "
+        "Inclua TODAS as paginas. "
+        "Nao resuma nem omita nenhum conteudo. "
+        "Responda apenas com o texto extraido, sem comentarios."
+    )
+
+    INLINE_MAX = 20 * 1024 * 1024
+
     try:
-        images = convert_from_bytes(file_bytes, first_page=1, last_page=10)
-    except Exception:
+        if len(file_bytes) <= INLINE_MAX:
+            b64 = base64.standard_b64encode(file_bytes).decode("ascii")
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: model.generate_content([
+                    PROMPT,
+                    {"inline_data": {"mime_type": "application/pdf", "data": b64}},
+                ])
+            )
+        else:
+            import tempfile
+            import time
+            tmp_path = None
+            uploaded_file = None
+            try:
+                with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                    tmp.write(file_bytes)
+                    tmp_path = tmp.name
+
+                uploaded_file = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: genai.upload_file(tmp_path, mime_type="application/pdf")
+                )
+                deadline = time.monotonic() + 60
+                while uploaded_file.state.name != "ACTIVE":
+                    if time.monotonic() > deadline:
+                        raise TimeoutError("Files API ACTIVE timeout")
+                    await asyncio.sleep(2)
+                    uploaded_file = await asyncio.get_event_loop().run_in_executor(
+                        None, lambda f=uploaded_file: genai.get_file(f.name)
+                    )
+                response = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: model.generate_content([PROMPT, uploaded_file])
+                )
+            finally:
+                if uploaded_file:
+                    try:
+                        await asyncio.get_event_loop().run_in_executor(
+                            None, lambda f=uploaded_file: genai.delete_file(f.name)
+                        )
+                    except Exception:
+                        pass
+                if tmp_path:
+                    try:
+                        os.unlink(tmp_path)
+                    except Exception:
+                        pass
+
+        raw = (response.text or "").strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+        return raw
+
+    except Exception as e:
+        print(f"[GEMINI-FULL] Failed: {e}")
         return ""
 
-    extracted_text = []
 
-    for idx, img in enumerate(images):
-        try:
-            # Converter PIL Image para bytes
-            img_byte_arr = io.BytesIO()
-            img.save(img_byte_arr, format="PNG")
-            img_byte_arr.seek(0)
-
-            # Prompt depende se já temos texto nativo
-            if has_native_text:
-                prompt = "Extraia APENAS conteúdo visual (gráficos, diagramas, imagens, tabelas complexas). Ignore texto puro. Português/English."
-            else:
-                prompt = "Extraia TODO o texto e conteúdo visual desta página em português e inglês, com máxima fidelidade."
-
-            # Call Gemini Vision
-            response = model.generate_content([
-                prompt,
-                {
-                    "mime_type": "image/png",
-                    "data": img_byte_arr.getvalue(),
-                },
-            ])
-
-            if response.text:
-                extracted_text.append(f"[PAGE {idx + 1} - VISION]\n{response.text}\n")
-
-        except Exception as e:
-            print(f"[VISION-ERROR] Page {idx + 1}: {e}")
-            continue
-
-    return "\n".join(extracted_text)
-
-
-def _extract_sync(file_bytes: bytes) -> PdfParseResultV2:
-    """Extração síncrona (chamada em thread)."""
-    try:
-        import pdfplumber
-    except ImportError:
-        return PdfParseResultV2(
-            text="", pages_parsed=0, total_pages=0,
-            truncated=False, has_images=False, has_tables=False,
-            extraction_method="none",
-            error_code=DocumentErrorCode.PARSE_ERROR,
-            error_message="pdfplumber not installed",
-        )
-
-    try:
-        # 1. Análise prévia
-        analysis = _analyze_pdf_pages(file_bytes)
-        if "error" in analysis:
-            return PdfParseResultV2(
-                text="", pages_parsed=0, total_pages=0,
-                truncated=False, has_images=False, has_tables=False,
-                extraction_method="none",
-                error_code=DocumentErrorCode.PARSE_ERROR,
-                error_message=analysis["error"],
-            )
-
-        # 2. Extrair texto nativo
-        native_text = _extract_native_text(file_bytes)
-        has_images = analysis.get("has_images", False)
-        has_tables = analysis.get("has_tables", False)
-        total_pages = analysis.get("total_pages", 0)
-        text_density = analysis.get("text_density", 0.0)
-
-        # 3. Decidir se usar Vision
-        #    Vision se: tem imagens OU texto muito esparso (scanned)
-        use_vision = has_images or text_density < 0.1
-
-        pdf_io = io.BytesIO(file_bytes)
-        with pdfplumber.open(pdf_io) as pdf:
-            pages_to_parse = min(len(pdf.pages), MAX_PAGES)
-
-        extraction_method = "native"
-        if use_vision:
-            extraction_method = "native+vision"
-
-        return PdfParseResultV2(
-            text=native_text,
-            pages_parsed=pages_to_parse,
-            total_pages=total_pages,
-            truncated=pages_to_parse < total_pages,
-            has_images=has_images,
-            has_tables=has_tables,
-            extraction_method=extraction_method,
-            error_code=None,
-            error_message=None,
-        )
-
-    except MemoryError:
-        gc.collect()
-        return PdfParseResultV2(
-            text="", pages_parsed=0, total_pages=0,
-            truncated=False, has_images=False, has_tables=False,
-            extraction_method="none",
-            error_code=DocumentErrorCode.PARSE_ERROR,
-            error_message="Memory limit exceeded",
-        )
-    except Exception as e:
-        return PdfParseResultV2(
-            text="", pages_parsed=0, total_pages=0,
-            truncated=False, has_images=False, has_tables=False,
-            extraction_method="none",
-            error_code=DocumentErrorCode.MALFORMED,
-            error_message=str(e)[:100],
-        )
-
+# ── Entry point ───────────────────────────────────────────────────────────────
 
 async def parse_pdf_v2(file_bytes: bytes) -> PdfParseResultV2:
     """
-    Entry point async.
-    1. Extrai texto nativo (pdfplumber)
-    2. Se tem imagens, aciona Gemini Vision
-    3. Combina resultados
+    Pipeline hibrido inteligente:
+    - PyMuPDF extrai texto nativo em <5s (218 paginas)
+    - Gemini OCR apenas nas paginas scanned/pobres em texto
+    - Merge do texto nativo + OCR seletivo
     """
-    # Fase 1: Extração síncrona (nativa)
+    import time
+    t0 = time.monotonic()
+
+    # Stage 1: Extracao nativa PyMuPDF ───────────────────────────────────────
     try:
-        result = await asyncio.wait_for(
-            asyncio.get_event_loop().run_in_executor(None, _extract_sync, file_bytes),
-            timeout=MAX_EXTRACTION_TIME_S,
+        native_result = await asyncio.wait_for(
+            asyncio.get_event_loop().run_in_executor(
+                None, _extract_native_pymupdf, file_bytes
+            ),
+            timeout=30.0,
         )
     except asyncio.TimeoutError:
         gc.collect()
@@ -287,30 +319,110 @@ async def parse_pdf_v2(file_bytes: bytes) -> PdfParseResultV2:
             truncated=False, has_images=False, has_tables=False,
             extraction_method="timeout",
             error_code=DocumentErrorCode.TIMEOUT,
-            error_message="Extraction timeout",
+            error_message="PyMuPDF extraction timeout",
         )
 
-    # Fase 2: Vision OCR (se necessário)
-    if result.has_images and not result.error_code:
+    if "error" in native_result and not native_result.get("texts"):
+        # PyMuPDF nao disponivel — fallback Gemini full
+        print(f"[HYBRID] PyMuPDF unavailable: {native_result['error']} — Gemini full fallback")
         try:
-            vision_text = await asyncio.wait_for(
-                _extract_with_vision(file_bytes, has_native_text=len(result.text) > 100),
-                timeout=120.0,  # Vision pode ser mais lento
-            )
-            if vision_text:
-                result = PdfParseResultV2(
-                    text=result.text + "\n\n[VISUAL CONTENT FROM GEMINI VISION]\n" + vision_text,
-                    pages_parsed=result.pages_parsed,
-                    total_pages=result.total_pages,
-                    truncated=result.truncated,
-                    has_images=result.has_images,
-                    has_tables=result.has_tables,
-                    extraction_method="hybrid" if "native" in result.extraction_method else "vision",
-                    error_code=None,
-                    error_message=None,
-                )
-        except Exception as e:
-            print(f"[VISION-FALLBACK] Vision failed: {e}, continuing with native text")
-            # Continue com texto nativo se Vision falhar
+            full_text = await asyncio.wait_for(_extract_full_gemini(file_bytes), timeout=240.0)
+        except asyncio.TimeoutError:
+            full_text = ""
 
-    return result
+        if full_text:
+            return PdfParseResultV2(
+                text=full_text[:MAX_CHARS_EXTRACTED],
+                pages_parsed=0, total_pages=0,
+                truncated=len(full_text) > MAX_CHARS_EXTRACTED,
+                has_images=True, has_tables=False,
+                extraction_method="vision",
+                error_code=None, error_message=None,
+            )
+        return PdfParseResultV2(
+            text="", pages_parsed=0, total_pages=0,
+            truncated=False, has_images=False, has_tables=False,
+            extraction_method="none",
+            error_code=DocumentErrorCode.PARSE_ERROR,
+            error_message=native_result.get("error", "Unknown"),
+        )
+
+    texts = native_result["texts"]
+    total_pages = native_result["total_pages"]
+    pages_processed = native_result["pages_processed"]
+    has_images = native_result["has_images"]
+
+    t_native = time.monotonic() - t0
+    print(f"[HYBRID] Stage 1 done in {t_native:.1f}s")
+
+    # Stage 2: Identifica paginas pobres ─────────────────────────────────────
+    poor_pages = _find_poor_pages(texts, TEXT_THRESHOLD)
+    poor_ratio = len(poor_pages) / max(pages_processed, 1)
+    print(
+        f"[HYBRID] poor_pages={len(poor_pages)}/{pages_processed} ({poor_ratio:.0%})"
+    )
+
+    # Stage 3: OCR seletivo ───────────────────────────────────────────────────
+    ocr_texts = {}
+    extraction_method = "native"
+
+    if poor_pages and has_images:
+        print(f"[HYBRID] Selective OCR on {len(poor_pages)} pages")
+        try:
+            ocr_texts = await asyncio.wait_for(
+                _ocr_pages_with_gemini(file_bytes, poor_pages),
+                timeout=120.0,
+            )
+            extraction_method = "hybrid"
+            print(f"[HYBRID] OCR done in {time.monotonic() - t0:.1f}s, {len(ocr_texts)} pages")
+        except asyncio.TimeoutError:
+            print("[HYBRID] OCR timeout — native only")
+        except Exception as e:
+            print(f"[HYBRID] OCR error: {e} — native only")
+
+    elif poor_ratio > 0.8:
+        # Documento quase todo scanned
+        print("[HYBRID] >80% poor pages — full Gemini")
+        try:
+            full_text = await asyncio.wait_for(_extract_full_gemini(file_bytes), timeout=240.0)
+            if full_text:
+                t_total = time.monotonic() - t0
+                print(f"[HYBRID] Full Gemini in {t_total:.1f}s")
+                return PdfParseResultV2(
+                    text=full_text[:MAX_CHARS_EXTRACTED],
+                    pages_parsed=pages_processed, total_pages=total_pages,
+                    truncated=len(full_text) > MAX_CHARS_EXTRACTED,
+                    has_images=has_images, has_tables=False,
+                    extraction_method="vision",
+                    error_code=None, error_message=None,
+                )
+        except asyncio.TimeoutError:
+            print("[HYBRID] Full Gemini timeout — native fallback")
+
+    # Stage 4: Merge texto nativo + OCR ──────────────────────────────────────
+    merged_parts = []
+    for idx in sorted(texts.keys()):
+        native_text = texts[idx].strip()
+        ocr_text = ocr_texts.get(idx, "").strip()
+        if ocr_text and len(ocr_text) > len(native_text):
+            merged_parts.append(ocr_text)
+        elif native_text:
+            merged_parts.append(native_text)
+
+    final_text = "\n\n".join(merged_parts)
+    total_chars = len(final_text)
+    t_total = time.monotonic() - t0
+
+    print(
+        f"[HYBRID] Done in {t_total:.1f}s | method={extraction_method} | "
+        f"{total_chars} chars | {pages_processed}/{total_pages} pages"
+    )
+
+    return PdfParseResultV2(
+        text=final_text[:MAX_CHARS_EXTRACTED],
+        pages_parsed=pages_processed, total_pages=total_pages,
+        truncated=total_chars > MAX_CHARS_EXTRACTED,
+        has_images=has_images, has_tables=False,
+        extraction_method=extraction_method,
+        error_code=None, error_message=None,
+    )

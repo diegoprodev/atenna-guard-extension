@@ -4,7 +4,7 @@ from services.supabase_admin import get_admin_client
 
 logger = logging.getLogger(__name__)
 
-FREE_DAILY_LIMIT = 10
+FREE_DAILY_LIMIT = 5
 
 
 class QuotaExceeded(Exception):

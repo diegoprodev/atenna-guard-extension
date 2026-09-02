@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Atenna Safe Prompt",
-  "version": "2.1.0",
+  "version": "2.3.0",
   "description": "Proteja seus dados sensíveis e gere prompts melhores com IA no ChatGPT,Perplexity, Claude e Gemini.",
-  "homepage_url": "https://atennaplugin.maestro-n8n.site/privacy",
-  "version_name": "2.1.0",
+  "homepage_url": "https://api.atennaia.com.br/privacy",
+  "version_name": "2.3.0",
   "permissions": ["storage", "tabs", "identity"],
   "host_permissions": [
     "https://chat.openai.com/*",
@@ -12,11 +12,11 @@
     "https://claude.ai/*",
     "https://gemini.google.com/*",
     "https://www.perplexity.ai/*",
-    "https://atennaplugin.maestro-n8n.site/*",
+    "https://api.atennaia.com.br/*",
     "https://kezbssjmgwtrunqeoyir.supabase.co/*"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src https://atennaplugin.maestro-n8n.site https://kezbssjmgwtrunqeoyir.supabase.co; object-src 'none'; base-uri 'none'"
+    "extension_pages": "script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src https://api.atennaia.com.br https://kezbssjmgwtrunqeoyir.supabase.co; object-src 'none'; base-uri 'none'"
   },
   "content_scripts": [
     {

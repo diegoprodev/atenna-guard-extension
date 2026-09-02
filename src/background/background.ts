@@ -1,24 +1,14 @@
-import { getSession, setSession } from '../auth/sessionManager';
+import { getSession } from '../auth/sessionManager';
+import { BFF_BASE } from '../config';
 
 self.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
   console.error('[Atenna] unhandledrejection:', event.reason);
 });
 
-const BACKEND_URL    = 'https://atennaplugin.maestro-n8n.site/generate-prompts';
-const CHECKOUT_URL   = 'https://atennaplugin.maestro-n8n.site/checkout/create';
-const ANALYTICS_URL  = 'https://atennaplugin.maestro-n8n.site/track';
-const PROXY_ALLOWED_HOST = 'atennaplugin.maestro-n8n.site';
-
-function decodeJwtPayload(token: string): Record<string, unknown> {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) throw new Error('Invalid JWT format');
-    const decoded = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
-    return JSON.parse(decoded);
-  } catch {
-    return {};
-  }
-}
+const BACKEND_URL    = `${BFF_BASE}/generate-prompts`;
+const CHECKOUT_URL   = `${BFF_BASE}/checkout/create`;
+const ANALYTICS_URL  = `${BFF_BASE}/track`;
+const PROXY_ALLOWED_HOST = new URL(BFF_BASE).hostname;
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log('[Atenna Guard] Extension installed.');
@@ -173,7 +163,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const formData = new FormData();
       formData.append('file', blob, fileName);
 
-      return fetch('https://atennaplugin.maestro-n8n.site/document/protect', {
+      return fetch(`${BFF_BASE}/document/protect`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${authToken}` },
         body: formData,
@@ -201,7 +191,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const formData = new FormData();
       formData.append('file', blob, fileName);
 
-      return fetch('https://atennaplugin.maestro-n8n.site/document/export-protected', {
+      return fetch(`${BFF_BASE}/document/export-protected`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${authToken}` },
         body: formData,
@@ -270,25 +260,4 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   return false;
-});
-
-chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
-  // Listen for magic link callback from Supabase
-  if (changeInfo.url && changeInfo.url.includes('#access_token=')) {
-    const url = new URL(changeInfo.url);
-    const fragment = url.hash.substring(1);
-    const params = new URLSearchParams(fragment);
-    const accessToken = params.get('access_token');
-    const expiresIn = params.get('expires_in');
-
-    if (accessToken && expiresIn) {
-      const payload = decodeJwtPayload(accessToken);
-      const email = payload.email as string | undefined;
-
-      if (email) {
-        const expiresAtSeconds = Math.floor(Date.now() / 1000) + parseInt(expiresIn, 10);
-        void setSession({ token: accessToken, email, expires_at: expiresAtSeconds, plan: 'free' });
-      }
-    }
-  }
 });

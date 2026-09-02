@@ -38,7 +38,7 @@ class CheckoutBody(BaseModel):
 ASAAS_TOKEN   = os.getenv("ASAAS_API_TOKEN", "")
 ASAAS_BASE    = os.getenv("ASAAS_BASE_URL", "https://api.asaas.com/v3")
 WEBHOOK_TOKEN = os.getenv("ASAAS_WEBHOOK_TOKEN", "")
-VPS_BASE      = "https://atennaplugin.maestro-n8n.site"
+VPS_BASE      = "https://api.atennaia.com.br"
 
 LINK_MONTHLY_URL = os.getenv("ASAAS_LINK_MONTHLY_URL", "")
 LINK_YEARLY_URL      = os.getenv("ASAAS_LINK_YEARLY_URL",      "")

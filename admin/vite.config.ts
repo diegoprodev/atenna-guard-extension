@@ -11,7 +11,7 @@ export default defineConfig({
   server: {
     port: 3001,
     proxy: {
-      '/admin': 'https://atennaplugin.maestro-n8n.site',
+      '/admin': 'https://api.atennaia.com.br',
     },
   },
 });

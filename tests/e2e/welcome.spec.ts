@@ -22,7 +22,7 @@ async function openWelcomePage(context: import('@playwright/test').BrowserContex
   const page = await context.newPage();
 
   // Mock BFF endpoints usados pelo welcome.ts
-  await page.route('**/atennaplugin.maestro-n8n.site/auth/login', (route) =>
+  await page.route('**/api.atennaia.com.br/auth/login', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -35,11 +35,11 @@ async function openWelcomePage(context: import('@playwright/test').BrowserContex
       }),
     })
   );
-  await page.route('**/atennaplugin.maestro-n8n.site/auth/reset-password', (route) =>
+  await page.route('**/api.atennaia.com.br/auth/reset-password', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
   );
   // BFF signup endpoint
-  await page.route('**/atennaplugin.maestro-n8n.site/auth/signup', (route) =>
+  await page.route('**/api.atennaia.com.br/auth/signup', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -269,7 +269,7 @@ test('W8: login with valid credentials shows success screen with platform links'
 test('W9: login with wrong credentials shows error message', async ({ context, extensionId }) => {
   const page = await context.newPage();
   // Mock retornando 401
-  await page.route('**/atennaplugin.maestro-n8n.site/auth/login', (route) =>
+  await page.route('**/api.atennaia.com.br/auth/login', (route) =>
     route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"invalid"}' })
   );
   await page.goto(`chrome-extension://${extensionId}/welcome.html`, { waitUntil: 'domcontentloaded' });
@@ -357,7 +357,7 @@ test('W11: Google button has correct initial state and shows loading immediately
 test('W12: signup with already registered email shows friendly error', async ({ context, extensionId }) => {
   const page = await context.newPage();
   // BFF retorna 400 com error=email_already_registered
-  await page.route('**/atennaplugin.maestro-n8n.site/auth/signup', (route) =>
+  await page.route('**/api.atennaia.com.br/auth/signup', (route) =>
     route.fulfill({
       status: 400,
       contentType: 'application/json',

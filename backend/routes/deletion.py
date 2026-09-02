@@ -40,7 +40,7 @@ async def initiate_deletion(
             "message": str
         }
     """
-    user_id = _user.get("sub")
+    user_id = _user.get("id") or _user.get("sub")
     email = _user.get("email")
 
     if not user_id or not email:
@@ -141,7 +141,7 @@ async def get_deletion_status(
             "grace_period_remaining_days": int | None
         }
     """
-    user_id = _user.get("sub")
+    user_id = _user.get("id") or _user.get("sub")
 
     manager = get_deletion_manager()
     status = manager.get_deletion_status(user_id=user_id)
@@ -181,7 +181,7 @@ async def cancel_deletion(
             "message": str
         }
     """
-    user_id = _user.get("sub")
+    user_id = _user.get("id") or _user.get("sub")
 
     logger.info(f"Deletion cancellation requested by {user_id}")
 

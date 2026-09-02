@@ -33,7 +33,7 @@ test('T3: badge does NOT inject when user is not authenticated', async ({ contex
 
 test.skip('T4: [MOCK ISSUE]  badge injects into #prompt-textarea after session is set', async ({ context }) => {
   // Mock BFF /auth/me endpoint
-  await context.route('**/maestro-n8n.site/auth/me**', (route) =>
+  await context.route('**/api.atennaia.com.br/auth/me**', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -72,7 +72,7 @@ test.skip('T4: [MOCK ISSUE]  badge injects into #prompt-textarea after session i
 
 test.skip('T5: [MOCK ISSUE]  DLP protection banner appears when CPF is typed into textarea', async ({ context }) => {
   // Mock BFF /auth/me endpoint
-  await context.route('**/maestro-n8n.site/auth/me**', (route) =>
+  await context.route('**/api.atennaia.com.br/auth/me**', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -143,7 +143,7 @@ test.skip('T6: [MOCK ISSUE]  clicking the badge opens the Atenna modal overlay',
   // Mock BFF /auth/me so toggleModal() sees a valid session and renders the full modal.
   // plan must match the injected session plan ('free') — a 'pro' response would trigger
   // the pro-welcome overlay and close the modal before tabs render.
-  await context.route('**/maestro-n8n.site/auth/me**', (route) =>
+  await context.route('**/api.atennaia.com.br/auth/me**', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -192,7 +192,7 @@ test.skip('T6: [MOCK ISSUE]  clicking the badge opens the Atenna modal overlay',
 // ─── Test 7: Perplexity DLP — banner aparece ──────────────────
 
 test.skip('T7: [MOCK ISSUE]  DLP banner appears when CPF is typed into Perplexity-like textarea', async ({ context }) => {
-  await context.route('**/maestro-n8n.site/auth/me**', (route) =>
+  await context.route('**/api.atennaia.com.br/auth/me**', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -234,7 +234,7 @@ test.skip('T7: [MOCK ISSUE]  DLP banner appears when CPF is typed into Perplexit
 // ─── Test 8: Perplexity DLP — "Proteger dados" mascara CPF ────
 
 test.skip('T8: [MOCK ISSUE]  clicking "Proteger dados" masks CPF in Perplexity React-controlled textarea', async ({ context }) => {
-  await context.route('**/maestro-n8n.site/auth/me**', (route) =>
+  await context.route('**/api.atennaia.com.br/auth/me**', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',

@@ -6,6 +6,11 @@ ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:4200",
     "http://localhost:5173",
+    "https://chat.openai.com",
+    "https://chatgpt.com",
+    "https://claude.ai",
+    "https://gemini.google.com",
+    "https://www.perplexity.ai",
 ]
 import json
 

@@ -16,7 +16,7 @@
 
 import { test, expect, Page } from '@playwright/test';
 
-const BACKEND_URL = 'https://atennaplugin.maestro-n8n.site';
+const BACKEND_URL = 'https://api.atennaia.com.br';
 const TEST_DATA = {
   CPF_RAW: '123.456.789-10',
   EMAIL_RAW: 'user@example.com',

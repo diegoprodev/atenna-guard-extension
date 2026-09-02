@@ -121,38 +121,48 @@ def evaluate_strict_enforcement(
             # Use provided entities (from server analysis) to rewrite
             # Convert Presidio RecognizerResult objects to dict format if needed
             entity_list = []
-            if entities:
-                for entity in entities:
-                    if hasattr(entity, '__dict__'):
-                        # It's a RecognizerResult object
-                        entity_list.append({
-                            "type": entity.entity_type,
-                            "value": entity.text,
-                            "start": entity.start,
-                            "end": entity.end,
-                        })
-                    else:
-                        # Already a dict
-                        entity_list.append(entity)
+            for entity in (entities or []):
+                if isinstance(entity, dict):
+                    entity_list.append(entity)
+                else:
+                    # presidio RecognizerResult: sem .text — fatiar do texto original
+                    start = getattr(entity, "start", 0)
+                    end = getattr(entity, "end", 0)
+                    entity_list.append({
+                        "type": getattr(entity, "entity_type", "UNKNOWN"),
+                        "value": input_text[start:end],
+                        "start": start,
+                        "end": end,
+                    })
 
             if entity_list:
                 rewritten = rewrite_pii_tokens(input_text, entity_list)
                 result["rewritten_text"] = rewritten
                 result["applied"] = True
                 result["sanitized"] = True
-
-                # Log: strict enforcement aplicado
                 _log_event("dlp_strict_applied", {
                     "original_length": len(input_text),
                     "rewritten_length": len(rewritten),
                     "entity_count": len(entity_list),
                     "entity_types": [e.get("type") for e in entity_list],
                 })
+            else:
+                # HIGH risk mas sem entidades posicionais → fallback pelo scanner regex
+                rewritten = _fallback_redact(input_text)
+                result["rewritten_text"] = rewritten
+                result["applied"] = rewritten != input_text
+                result["sanitized"] = result["applied"]
+                _log_event("dlp_strict_applied_fallback", {"reason": "no_positional_entities"})
         except Exception as e:
-            # Se rewrite falhar, usa original (fail-open)
+            # STRICT mode: NUNCA enviar PII crua ao LLM. Fail-safe = redação crua.
+            fallback = _fallback_redact(input_text)
+            result["rewritten_text"] = fallback
+            result["applied"] = fallback != input_text
+            result["sanitized"] = result["applied"]
             _log_event("dlp_strict_error", {
                 "error": str(e),
                 "risk_level": server_risk,
+                "fallback_applied": result["applied"],
             })
     else:
         # Modo observação: registra o que TERIA feito
@@ -162,6 +172,18 @@ def evaluate_strict_enforcement(
         })
 
     return result
+
+
+def _fallback_redact(text: str) -> str:
+    """
+    Redação crua para STRICT mode quando o rewrite posicional falha.
+    Usa o scanner regex (dlp/scanner.py) — nunca deixa PII crua passar.
+    """
+    try:
+        from .scanner import scan
+        return scan(text).masked_content or text
+    except Exception:
+        return text
 
 
 def _log_event(event_type: str, data: dict) -> None:

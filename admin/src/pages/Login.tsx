@@ -1,6 +1,5 @@
 import { useState } from 'react';
-
-const BASE = 'https://atennaplugin.maestro-n8n.site';
+import { API_BASE as BASE } from '../config';
 
 interface Props {
   onLogin: (token: string) => void;

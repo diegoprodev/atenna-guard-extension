@@ -1,6 +1,7 @@
 import { clearMsgInterval, getLogoUrl } from './utils';
 import { trackEvent } from '../../core/analytics';
 import type { Advisory } from '../../dlp/types';
+import { BFF_BASE } from '../../config';
 
 // ─── DLP Advisory (Layer 3 UX) ────────────────────────────────
 
@@ -150,7 +151,7 @@ export function renderPostLoginOnboarding(modal: HTMLElement, close: () => void)
       const { getActiveSession } = await import('../../core/auth');
       const session = await getActiveSession();
       if (session?.access_token) {
-        await fetch('https://atennaplugin.maestro-n8n.site/auth/mark-onboarding-seen', {
+        await fetch(`${BFF_BASE}/auth/mark-onboarding-seen`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
         });

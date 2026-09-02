@@ -6,6 +6,7 @@ import {
 } from '../auth/sessionManager';
 import { bffLogin, bffLogout, bffResetPassword, bffMe } from '../auth/bffClient';
 import { AppError, E } from '../core/errors';
+import { BFF_BASE } from '../config';
 
 const JWT_KEY = 'atenna_jwt';
 
@@ -131,7 +132,6 @@ export async function signInWithPassword(email: string, password: string): Promi
 
 export async function signUpWithPassword(email: string, password: string, displayName?: string): Promise<{ error?: string }> {
   try {
-    const BFF_BASE = 'https://atennaplugin.maestro-n8n.site';
     const r = await fetch(`${BFF_BASE}/auth/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -170,7 +170,6 @@ export async function saveDisplayName(session: { email: string }, name: string):
     const { getSession } = await import('../auth/sessionManager');
     const bff = await getSession();
     if (!bff) return;
-    const BFF_BASE = 'https://atennaplugin.maestro-n8n.site';
     await fetch(`${BFF_BASE}/user/profile`, {
       method: 'PATCH',
       headers: {
@@ -192,5 +191,5 @@ export async function signOut(): Promise<void> {
 }
 
 function getCallbackUrl(): string {
-  return 'https://atennaplugin.maestro-n8n.site/auth/callback';
+  return `${BFF_BASE}/auth/callback`;
 }
