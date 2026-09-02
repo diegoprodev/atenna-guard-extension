@@ -30,7 +30,7 @@ from collections import deque
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from services.supabase_admin import get_admin_client
+from services.supabase_admin import get_admin_client, get_auth_client
 try:
     from security.monitor import log_security_event, record_auth_failure
 except ImportError:
@@ -89,6 +89,11 @@ def _check_login_rate_limit(email: str) -> bool:
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+class SignupRequest(BaseModel):
+    email: str
+    password: str
+    display_name: str | None = None
 
 class RefreshRequest(BaseModel):
     token: str
@@ -180,7 +185,7 @@ async def login(req: LoginRequest):
         raise HTTPException(429, "Too many login attempts. Please try again later.")
 
     try:
-        client = get_admin_client()
+        client = get_auth_client()  # auth: cliente separado (não polui o de DB)
         r = client.auth.sign_in_with_password({"email": req.email, "password": req.password})
     except Exception:
         record_auth_failure(ip="server", user_id=req.email)
@@ -195,11 +200,58 @@ async def login(req: LoginRequest):
     plan = _get_plan(uid)
     return _issue_token(jwt, refresh_tok, uid, email, plan)
 
+
+_EMAIL_RE = __import__("re").compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+@router.post("/signup")
+async def signup(req: SignupRequest):
+    """
+    Cria uma conta. O Supabase envia o e-mail de confirmação (se habilitado).
+    Contrato esperado pelo front (src/core/auth.ts):
+      400 {detail:{error:'email_already_registered'}} · 422 e-mail inválido · 200 {ok:true}
+    """
+    if not _EMAIL_RE.match(req.email or ""):
+        raise HTTPException(422, "invalid email")
+    if not req.password or len(req.password) < 6:
+        raise HTTPException(400, {"error": "weak_password"})
+    if not _check_login_rate_limit(req.email):
+        raise HTTPException(429, "Too many attempts. Please try again later.")
+
+    # Cria já confirmado (não depende do SMTP do Supabase, que é frágil e rate-limited).
+    # O produto promete "ativo em 30 segundos" — o usuário loga em seguida.
+    try:
+        admin = get_admin_client()
+        created = admin.auth.admin.create_user({
+            "email": req.email,
+            "password": req.password,
+            "email_confirm": True,
+            "user_metadata": {"display_name": req.display_name or ""},
+        })
+    except Exception as e:
+        msg = str(e).lower()
+        if "already" in msg or "registered" in msg or "exists" in msg or "duplicate" in msg:
+            raise HTTPException(400, {"error": "email_already_registered"})
+        logger.warning(f"signup failed for {req.email[:40]}: {e}")
+        raise HTTPException(400, {"error": "signup_failed"})
+
+    uid = getattr(getattr(created, "user", None), "id", None)
+    log_security_event("signup", {"email": req.email[:40]}, severity="LOW")
+
+    # e-mail de boas-vindas (best-effort, não bloqueia)
+    try:
+        from routes.lifecycle_emails import send_welcome
+        import asyncio
+        asyncio.get_event_loop().create_task(send_welcome(uid or "", req.email))
+    except Exception:
+        pass
+
+    return {"ok": True, "confirmation_required": False}
+
 @router.post("/refresh")
 async def refresh(req: RefreshRequest):
     session = resolve_token(req.token)
     try:
-        client = get_admin_client()
+        client = get_auth_client()  # auth: cliente separado
         r = client.auth.refresh_session(session["refresh_token"])
         new_jwt = r.session.access_token
         new_refresh = r.session.refresh_token
@@ -322,7 +374,7 @@ async def usage(creds: HTTPAuthorizationCredentials = Depends(_bearer)):
 @router.post("/reset-password")
 async def reset_password(req: ResetRequest):
     try:
-        get_admin_client().auth.reset_password_email(req.email)
+        get_auth_client().auth.reset_password_email(req.email)
     except Exception:
         pass
     return {"ok": True}
@@ -368,7 +420,7 @@ class GoogleAuthRequest(BaseModel):
 @router.post("/google")
 async def google_auth(req: GoogleAuthRequest):
     try:
-        client = get_admin_client()
+        client = get_auth_client()  # auth: cliente separado
         r = client.auth.exchange_code_for_session({
             "provider": "google",
             "code": req.code,

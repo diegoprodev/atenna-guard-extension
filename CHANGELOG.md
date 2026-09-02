@@ -39,6 +39,18 @@ Três bugs encadeados (todos há meses em produção, com erros engolidos silenc
   `dlp/rate_limit.py` e o cliente).
 - `routes/checkout.py`, `security/monitor.py`, `routes/email_service.py` — URLs → `api.atennaia.com.br`.
 
+### Fixed — login e cadastro estavam quebrados em produção (bugs pré-existentes, achados na validação E2E)
+- **`POST /auth/login` → 500** ("Failed to create session"). Causa: `sign_in_with_password` era
+  chamado no cliente Supabase **admin compartilhado** — isso troca o `Authorization` do cliente
+  pelo JWT do usuário, então o `INSERT` seguinte em `bff_sessions` batia em RLS. Adicionado
+  `get_auth_client()` (cliente anon descartável) em `services/supabase_admin.py`; `login`,
+  `refresh`, `/google` e `reset-password` passam a usá-lo. `get_admin_client()` fica só para DB.
+- **`POST /auth/signup` → 404** — o endpoint nunca existiu, mas o front (`src/core/auth.ts`,
+  welcome + modal) chama ele. **Ninguém conseguia criar conta.** Adicionado: cria o usuário já
+  confirmado (`admin.create_user(email_confirm=True)` — o SMTP do Supabase é frágil/rate-limited),
+  contrato `400 {error:'email_already_registered'}` / `422` / `200`, e-mail de boas-vindas best-effort.
+- Validado E2E em produção: `signup → login → /auth/me → /dlp/scan (autenticado)` funcionando.
+
 ### Fixed — geração de prompts estava 100% quebrada em produção (bug pré-existente)
 - `services/openai_service.py` e `services/gemini_service.py` faziam
   `_SYSTEM_PROMPT_TEMPLATE.format(canary=canary)` num template que contém JSON literal
@@ -54,6 +66,10 @@ Três bugs encadeados (todos há meses em produção, com erros engolidos silenc
   mentindo `dlp_risk_level=NONE` + CPF cru resulta em `[CPF]` (não o CPF) chegando ao LLM.
 - Validado em staging isolado na VPS: **+287 testes passam** vs baseline de produção. Zero regressão.
 - `backend/pytest.ini` + `backend/requirements-dev.txt` adicionados.
+- **E2E Playwright reais:** `--project=extension` **23/23** (T1–T8 reativados — badge, banner DLP,
+  modal, textarea React do Perplexity + W1–W15) e `--project=api` **22/22** contra o backend
+  **de produção** com token autenticado real. `tests/e2e/fase-4.2a-*` reescrito para o contrato
+  real de `/dlp/scan` (Presidio `ScanResponse`).
 
 ### Docs
 - `docs/specs/FASE_9.0_BACKEND_RECONCILIACAO_DLP.md` (spec) + `FASE_9.0_CODE_REVIEW.md` (review).

@@ -22,8 +22,11 @@
 - Build order: generate-icons → vite (content) → vite popup → vite bg
 
 ## Testes
-- Unitários: `npx vitest run` (163 testes, deve ser 0 falhas)
-- E2E: `npx playwright test --project=extension` (6 testes, T1–T6)
+- Unitários front: `npx vitest run` (~314 testes, deve ser 0 falhas)
+- Unitários backend: `pytest backend/` no container (harness FASE 9.0 = 68; total ~470)
+- E2E: `npx playwright test --project=extension` — **T1–T8 + W1–W15 (23 testes, 0 skip)**.
+  Precisa de `npx playwright install chromium` uma vez. `npm run test:e2e` faz build + localhost + run.
+- E2E `api`: `npx playwright test --project=api` — bate no backend real (`api.atennaia.com.br`)
 - E2E requer `dist/` atualizado — rodar `npm run build` antes
 - E2E usa contexto persistente — testes compartilham estado, ordem importa
 
@@ -60,10 +63,10 @@
 - SEMPRE aguardar 300–500ms após `injectSession()` antes de `openFixturePage()`
 - Exemplo: `await new Promise(r => setTimeout(r, 500));`
 
-### 7. E2E — fake JWT rejeitado pelo Supabase
-- O content script chama `getActiveSession()` que valida o JWT no Supabase
-- Com JWT falso, Supabase retorna 401 → clearSession() → badge não aparece
-- SEMPRE mockar `**/auth/v1/user**` e `**/rest/v1/profiles**` via `context.route()`
+### 7. E2E — sessão fake basta (não valida no Supabase) — DESATUALIZADO/RESOLVIDO
+- Histórico: o content script validava o JWT no Supabase → JWT falso → badge não aparecia.
+- **Hoje (FASE 9.0):** `content.ts` `checkAuth()` só faz `await getSession()` do storage — não
+  valida server-side. `injectSession()` do helper já é suficiente. T4–T8 reativados e passando.
 
 ### 8. NAME pattern — falsos positivos em texto técnico
 - O NAME pattern detecta sequências de palavras em minúsculas como nomes

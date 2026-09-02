@@ -1,26 +1,17 @@
 /**
- * FASE 4.2A — DLP Alignment: Testes E2E
+ * FASE 4.2A / 9.0 — DLP server-side E2E (backend REAL, autenticado)
  *
- * Valida que a arquitetura DLP do backend (scanner → classification → policy)
- * está corretamente alinhada com o frontend (placeholders canônicos).
+ * Valida o contrato REAL de POST /dlp/scan → Presidio pipeline → ScanResponse:
+ *   { risk_level, score, entities: [{type,value,start,end,score}], advisory, show_warning, duration_ms }
  *
- * 9 cenários obrigatórios:
- * 1. Scanner detecta CPF válido e retorna placeholder [CPF]
- * 2. Scanner rejeita CPF inválido (dígito verificador errado)
- * 3. Scanner detecta JWT e bloqueia (action=block)
- * 4. Scanner detecta API_KEY e bloqueia (action=block)
- * 5. Policy evaluate com strict_mode mascara HIGH risk automaticamente
- * 6. Policy evaluate sem strict_mode não bloqueia MEDIUM
- * 7. Placeholder frontend [CPF] coincide com placeholder backend [CPF]
- * 8. Outbound security: URL não-allowlist lança erro
- * 9. Combinação 3+ dados pessoais HIGH → policy bloqueia
+ * (O mascaramento / [CPF] acontece no /generate-prompts via enforcement — coberto
+ *  pelo harness backend `test_engine_revalidate_reconciliation` + fase-5.1.)
+ *
+ * Precisa de ATENNA_TEST_TOKEN (token BFF opaco de um usuário de teste). Sem ele, skip.
  */
-
 import { test, expect } from '@playwright/test';
 
 const BACKEND_URL = 'https://api.atennaia.com.br';
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function dlpScan(
   text: string,
@@ -28,128 +19,103 @@ async function dlpScan(
   request: import('@playwright/test').APIRequestContext,
 ) {
   return request.post(`${BACKEND_URL}/dlp/scan`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     data: { text },
   });
 }
 
-// ─── Testes ───────────────────────────────────────────────────────────────────
+const types = (body: { entities?: Array<{ type?: string }> }) =>
+  (body.entities ?? []).map((e) => e.type ?? '');
 
-test.describe('FASE 4.2A — DLP Alignment E2E', () => {
-  // Token de teste obtido via env var (CI) ou skip
+test.describe('FASE 4.2A — DLP server-side E2E', () => {
   const TOKEN = process.env.ATENNA_TEST_TOKEN ?? '';
-
   test.beforeEach(() => {
     if (!TOKEN) test.skip();
   });
 
-  // 1. CPF válido detectado com placeholder canônico
-  test('scanner detecta CPF válido → placeholder [CPF]', async ({ request }) => {
+  test('CPF válido → entity BR_CPF + risk HIGH', async ({ request }) => {
     const res = await dlpScan('CPF do cliente: 529.982.247-25', TOKEN, request);
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
-    expect(body.entities ?? body.findings ?? []).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ type: expect.stringMatching(/CPF/i) }),
-      ]),
-    );
-    const masked: string = body.masked_text ?? body.masked_content ?? '';
-    expect(masked).toContain('[CPF]');
-    expect(masked).not.toContain('529.982.247-25');
+    expect(types(body)).toContain('BR_CPF');
+    expect(body.risk_level).toBe('HIGH');
+    expect(body.show_warning).toBe(true);
   });
 
-  // 2. CPF inválido não deve ser detectado
-  test('scanner rejeita CPF inválido (dígito verificador errado)', async ({ request }) => {
+  test('CPF inválido (dígito verificador errado) → NÃO detectado', async ({ request }) => {
     const res = await dlpScan('CPF: 111.111.111-11', TOKEN, request);
     expect(res.ok()).toBeTruthy();
-    const body = await res.json();
-    const entities = body.entities ?? body.findings ?? [];
-    const cpfFindings = entities.filter(
-      (e: { type?: string; entity_type?: string }) =>
-        (e.type ?? e.entity_type ?? '').includes('CPF'),
-    );
-    expect(cpfFindings).toHaveLength(0);
+    expect(types(await res.json())).not.toContain('BR_CPF');
   });
 
-  // 3. JWT detectado com action=block
-  test('scanner detecta JWT e define action=block', async ({ request }) => {
+  test('cartão Luhn válido → CREDIT_CARD + HIGH', async ({ request }) => {
+    const res = await dlpScan('cartão 4111 1111 1111 1111', TOKEN, request);
+    const body = await res.json();
+    expect(types(body)).toContain('CREDIT_CARD');
+    expect(body.risk_level).toBe('HIGH');
+  });
+
+  test('JWT → entity TOKEN + HIGH', async ({ request }) => {
     const jwt =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-    const res = await dlpScan(`token: ${jwt}`, TOKEN, request);
-    expect(res.ok()).toBeTruthy();
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+    const res = await dlpScan(`Authorization: Bearer ${jwt}`, TOKEN, request);
     const body = await res.json();
-    expect(body.blocked ?? false).toBe(true);
+    expect(types(body)).toContain('TOKEN');
+    expect(body.risk_level).toBe('HIGH');
   });
 
-  // 4. API_KEY detectada e bloqueada
-  test('scanner detecta API_KEY OpenAI e define blocked=true', async ({ request }) => {
+  test('API key OpenAI → API_KEY + HIGH', async ({ request }) => {
     const res = await dlpScan(
       'chave: sk-proj-ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890',
       TOKEN,
       request,
     );
-    expect(res.ok()).toBeTruthy();
     const body = await res.json();
-    expect(body.blocked ?? false).toBe(true);
+    expect(types(body)).toContain('API_KEY');
+    expect(body.risk_level).toBe('HIGH');
   });
 
-  // 5. Strict mode: HIGH risk mascarado automaticamente
-  test('policy strict_mode=true mascara PIS automaticamente', async ({ request }) => {
-    const res = await request.post(`${BACKEND_URL}/dlp/evaluate`, {
-      headers: {
-        Authorization: `Bearer ${TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      data: { text: 'PIS: 120.74321.85-8', strict_mode: true },
-    });
-    if (res.status() === 404) {
-      // endpoint /dlp/evaluate ainda não exposto — testar via scan
-      test.skip();
-      return;
-    }
-    expect(res.ok()).toBeTruthy();
-    const body = await res.json();
-    expect(body.masked_text ?? '').toContain('[PIS_PASEP]');
+  test('recognizers PT-BR: RG, CNH, OAB, placa, CRM', async ({ request }) => {
+    const res = await dlpScan(
+      'RG: 12.345.678-9, habilitação 01234567890, OAB/SP 123456, placa ABC1D23, CRM/RJ 54321',
+      TOKEN,
+      request,
+    );
+    const t = types(await res.json());
+    for (const e of ['RG', 'CNH', 'OAB', 'PLACA', 'CRM']) expect(t).toContain(e);
   });
 
-  // 6. Sem strict_mode, MEDIUM não bloqueia
-  test('policy strict_mode=false com email não bloqueia', async ({ request }) => {
-    const res = await dlpScan('contato: user@example.com', TOKEN, request);
-    expect(res.ok()).toBeTruthy();
+  test('texto técnico → sem falso positivo, risk NONE', async ({ request }) => {
+    const res = await dlpScan(
+      'the observer pattern in typescript uses a subject and listeners',
+      TOKEN,
+      request,
+    );
     const body = await res.json();
-    expect(body.blocked ?? false).toBe(false);
+    expect(body.risk_level === 'NONE' || body.risk_level === 'LOW').toBeTruthy();
+    expect(types(body)).not.toContain('PERSON');
   });
 
-  // 7. Placeholder canônico frontend === backend
-  test('placeholder [CPF] é idêntico entre frontend e backend', async ({ request }) => {
-    const res = await dlpScan('CPF: 529.982.247-25', TOKEN, request);
-    expect(res.ok()).toBeTruthy();
+  test('combinação CPF + RG + cartão → HIGH', async ({ request }) => {
+    const res = await dlpScan(
+      'CPF: 529.982.247-25, RG: 12.345.678-9, cartão 4111 1111 1111 1111',
+      TOKEN,
+      request,
+    );
     const body = await res.json();
-    const masked: string = body.masked_text ?? body.masked_content ?? '';
-    // Placeholder canônico definido em dlp/types.py e rewriter.ts
-    expect(masked).toContain('[CPF]');
+    expect(body.risk_level).toBe('HIGH');
+    expect((body.entities ?? []).length).toBeGreaterThanOrEqual(3);
   });
 
-  // 8. Outbound security: URL não-allowlist rejeitada (unit-level via backend health)
-  test('backend health responde — outbound security não bloqueia rota interna', async ({
-    request,
-  }) => {
+  test('backend health responde (assert_safe_llm_url não quebrou o boot)', async ({ request }) => {
     const res = await request.get(`${BACKEND_URL}/health`);
-    // Se assert_safe_llm_url falhar em import time o backend não sobe
-    expect([200, 404]).toContain(res.status());
+    expect(res.status()).toBe(200);
   });
 
-  // 9. Combinação 3+ dados pessoais HIGH → policy bloqueia
-  test('combinação CPF + RG + Título Eleitor → blocked=true', async ({ request }) => {
-    const text =
-      'CPF: 529.982.247-25, RG: 12.345.678-9, Título: 2345 6789 0012';
-    const res = await dlpScan(text, TOKEN, request);
-    expect(res.ok()).toBeTruthy();
-    const body = await res.json();
-    // combined_high_risk rule: 3+ entidades pessoais HIGH → block
-    expect(body.blocked ?? false).toBe(true);
+  test('paridade cliente↔servidor: mesmos tipos para o mesmo input (SI-15)', async ({ request }) => {
+    // O cliente (src/dlp) detecta BR_CPF + CREDIT_CARD para este input; o servidor idem.
+    const res = await dlpScan('CPF 529.982.247-25 e cartão 4111 1111 1111 1111', TOKEN, request);
+    const t = types(await res.json());
+    expect(t).toEqual(expect.arrayContaining(['BR_CPF', 'CREDIT_CARD']));
   });
 });

@@ -31,7 +31,7 @@ test('T3: badge does NOT inject when user is not authenticated', async ({ contex
 
 // ─── Test 4: Badge injects after auth ─────────────────────────
 
-test.skip('T4: [MOCK ISSUE]  badge injects into #prompt-textarea after session is set', async ({ context }) => {
+test('T4: badge injects into #prompt-textarea after session is set', async ({ context }) => {
   // Mock BFF /auth/me endpoint
   await context.route('**/api.atennaia.com.br/auth/me**', (route) =>
     route.fulfill({
@@ -70,7 +70,7 @@ test.skip('T4: [MOCK ISSUE]  badge injects into #prompt-textarea after session i
 
 // ─── Test 5: DLP banner on CPF input ──────────────────────────
 
-test.skip('T5: [MOCK ISSUE]  DLP protection banner appears when CPF is typed into textarea', async ({ context }) => {
+test('T5: DLP protection banner appears when CPF is typed into textarea', async ({ context }) => {
   // Mock BFF /auth/me endpoint
   await context.route('**/api.atennaia.com.br/auth/me**', (route) =>
     route.fulfill({
@@ -125,7 +125,7 @@ test.skip('T5: [MOCK ISSUE]  DLP protection banner appears when CPF is typed int
 
 // ─── Test 6: Modal opens from badge click ─────────────────────
 
-test.skip('T6: [MOCK ISSUE]  clicking the badge opens the Atenna modal overlay', async ({ context }) => {
+test('T6: clicking the badge opens the Atenna modal overlay', async ({ context }) => {
   await context.route('**/auth/v1/user**', (route) =>
     route.fulfill({
       status: 200,
@@ -191,7 +191,7 @@ test.skip('T6: [MOCK ISSUE]  clicking the badge opens the Atenna modal overlay',
 
 // ─── Test 7: Perplexity DLP — banner aparece ──────────────────
 
-test.skip('T7: [MOCK ISSUE]  DLP banner appears when CPF is typed into Perplexity-like textarea', async ({ context }) => {
+test('T7: DLP banner appears when CPF is typed into Perplexity-like textarea', async ({ context }) => {
   await context.route('**/api.atennaia.com.br/auth/me**', (route) =>
     route.fulfill({
       status: 200,
@@ -233,7 +233,7 @@ test.skip('T7: [MOCK ISSUE]  DLP banner appears when CPF is typed into Perplexit
 
 // ─── Test 8: Perplexity DLP — "Proteger dados" mascara CPF ────
 
-test.skip('T8: [MOCK ISSUE]  clicking "Proteger dados" masks CPF in Perplexity React-controlled textarea', async ({ context }) => {
+test('T8: clicking "Proteger dados" masks CPF in Perplexity React-controlled textarea', async ({ context }) => {
   await context.route('**/api.atennaia.com.br/auth/me**', (route) =>
     route.fulfill({
       status: 200,
