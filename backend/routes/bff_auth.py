@@ -449,21 +449,29 @@ async def cleanup_old_dlp_events() -> dict:
         return {'deleted': 0, 'error': str(e)}
 
 class GoogleAuthRequest(BaseModel):
-    code: str
-    redirect_uri: str
-    access_token: str | None = None
-    refresh_token: str | None = None
+    # O front (bffClient.ts) manda OU {code, redirect_uri} (PKCE) OU
+    # {access_token, refresh_token} (fluxo implícito). Todos opcionais no schema;
+    # o handler valida que veio pelo menos um.
     code: str | None = None
     redirect_uri: str | None = None
+    access_token: str | None = None
+    refresh_token: str | None = None
+
 
 @router.post("/google")
 async def google_auth(req: GoogleAuthRequest):
+    if not req.code and not req.access_token:
+        raise HTTPException(422, "code ou access_token é obrigatório")
     try:
         client = get_auth_client()  # auth: cliente separado
-        r = client.auth.exchange_code_for_session({
-            "provider": "google",
-            "code": req.code,
-        })
+        if req.access_token:
+            # fluxo implícito: o front já obteve os tokens do Supabase no fragmento
+            r = client.auth.set_session(req.access_token, req.refresh_token or "")
+        else:
+            r = client.auth.exchange_code_for_session({
+                "provider": "google",
+                "code": req.code,
+            })
     except Exception as e:
         logger.error(f"Google auth error: {e}")
         raise HTTPException(401, "Google authentication failed")

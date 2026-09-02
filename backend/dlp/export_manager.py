@@ -224,6 +224,12 @@ class ExportManager:
         """
         try:
             pdf = FPDF(orientation='P', unit='mm', format='A4')
+            # Artefato de compliance LGPD (Art. 18) — 1–2 páginas. Sem compressão:
+            # o documento fica auditável/greppável e o ganho de tamanho é irrelevante.
+            try:
+                pdf.set_compression(False)
+            except Exception:
+                pass
             pdf.add_page()
             pdf.set_font('Helvetica', '', 11)
 
@@ -279,8 +285,11 @@ class ExportManager:
             pdf.cell(0, 3, 'Para duvidas ou solicitacoes: suporte@atenna.ai', ln=True, align='C')
             pdf.cell(0, 3, f'Atenna Guard v2.22.0 | LGPD Compliant', align='C')
 
-            # Retornar bytes
-            return pdf.output(dest='S').encode('latin-1')
+            # Retornar bytes — fpdf2 novo devolve bytearray; versões antigas, str
+            out = pdf.output()
+            if isinstance(out, str):
+                return out.encode('latin-1')
+            return bytes(out)
 
         except Exception as e:
             logger.error(f"Error generating PDF: {e}")
@@ -426,7 +435,7 @@ class ExportManager:
                 "status": None
             }
 
-    def purge_expired_exports() -> dict:
+    def purge_expired_exports(self) -> dict:
         """
         Purgar exports expirados (job automático).
 
@@ -471,7 +480,7 @@ class ExportManager:
                 "error": str(e)
             }
 
-    def get_export_summary() -> dict:
+    def get_export_summary(self) -> dict:
         """
         Obter sumário de exports (compliance view).
 

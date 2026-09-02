@@ -122,9 +122,9 @@ def test_validate_arquivo_muito_pequeno():
 
 
 def test_validate_tipo_nao_suportado():
-    """Arquivo .xlsx — rejeitado com UNSUPPORTED_TYPE."""
-    data = b"PK\x03\x04" + b"B" * 100
-    r = validate_upload("planilha.xlsx", data)
+    """Arquivo .exe — rejeitado com UNSUPPORTED_TYPE (.xlsx/.csv passaram a ser aceitos)."""
+    data = b"MZ" + b"B" * 200
+    r = validate_upload("malware.exe", data)
     assert not r.valid
     assert r.error_code == DocumentErrorCode.UNSUPPORTED_TYPE
 
@@ -197,16 +197,16 @@ async def test_pdf_timeout_retorna_erro():
 
 @pytest.mark.asyncio
 async def test_pdf_trunca_paginas_acima_do_limite():
-    """
-    Simula PDF com 60 páginas — deve retornar truncated=True e pages_parsed=50.
-    """
+    """PDF acima de MAX_PAGES → truncated=True e pages_parsed == MAX_PAGES."""
+    n_pages = MAX_PAGES + 10
+
     class FakePage:
         def extract_text(self) -> str:
             return "Texto da página com CPF 529.982.247-25"
 
     class FakePdf:
         is_encrypted = False
-        pages = [FakePage() for _ in range(60)]
+        pages = [FakePage() for _ in range(n_pages)]
         def __enter__(self): return self
         def __exit__(self, *a): pass
         @property
@@ -217,7 +217,7 @@ async def test_pdf_trunca_paginas_acima_do_limite():
 
     assert result.truncated is True
     assert result.pages_parsed == MAX_PAGES
-    assert result.total_pages == 60
+    assert result.total_pages == n_pages
 
 
 @pytest.mark.asyncio

@@ -140,7 +140,18 @@ _PATTERNS: list[dict] = [
         "action": "block",
         # CREDIT_CARD antes de TITULO_ELEITOR: 16 dígitos com Luhn têm prioridade
         # Não usa \b pois espaços entre grupos quebram word boundary
-        "regex": re.compile(r'(?i)(?:cartao|credito|credit\s+card|visa|mastercard|amex|elo|diners)[^0-9]*(?<!\d)(\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{1,4})(?!\d)'),
+        # cart[aã]o / cr[eé]dito: tolera acento ("Cartão", "Crédito")
+        "regex": re.compile(r'(?i)(?:cart[aã]o|cr[eé]dito|credit\s+card|visa|mastercard|amex|elo|diners)[^0-9]*(?<!\d)(\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{1,4})(?!\d)'),
+        "validator": _luhn_valid,
+        "source": "validator",
+    },
+    {
+        # Cartão "solto" (sem palavra de contexto): só entra se passar Luhn — baixo
+        # falso-positivo. Cobre PDFs/planilhas onde o número aparece sem rótulo.
+        "entity": EntityType.CREDIT_CARD,
+        "risk": RiskLevel.HIGH,
+        "action": "block",
+        "regex": re.compile(r'(?<!\d)(\d{4}[\s\-]\d{4}[\s\-]\d{4}[\s\-]\d{4}|\d{16})(?!\d)'),
         "validator": _luhn_valid,
         "source": "validator",
     },
@@ -270,9 +281,17 @@ _PATTERNS: list[dict] = [
         "risk": RiskLevel.MEDIUM,
         "action": "alert",
         "regex": re.compile(
-            r'(?i)(?:mandado\s+de\s+prisão\s+n[°º]?\s*\d+'
-            r'|sentença\s+n[°º]?\s*\d+'
-            r'|habeas\s+corpus\s+n[°º]?\s*\d+)'
+            r'(?i)(?:'
+            r'mandado\s+de\s+pris[aã]o(?:\s+n[°º]?\s*\d+)?'
+            r'|senten[çc]a(?:\s+n[°º]?\s*\d+)?'
+            r'|habeas\s+corpus'
+            r'|vara\s+(?:c[íi]vel|criminal|federal|do\s+trabalho|de\s+fam[íi]lia)'
+            r'|a[çc][aã]o\s+(?:penal|judicial|trabalhista|de\s+indeniza[çc][aã]o)'
+            r'|\br[ée]u\b|autor(?:a)?\s+da\s+a[çc][aã]o'
+            r'|foi\s+condenad[oa]|condenad[oa]\s+(?:na|no|pelo|pela)'
+            r'|inqu[ée]rito\s+policial|processo\s+n[°º]?\s*\d'
+            r'|intima[çc][aã]o\s+judicial|peti[çc][aã]o\s+inicial|ac[óo]rd[aã]o'
+            r')'
         ),
         "source": "heuristic",
     },

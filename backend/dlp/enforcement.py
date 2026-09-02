@@ -53,6 +53,7 @@ def rewrite_pii_tokens(text: str, entities: list) -> str:
     a mesma região) — funde spans que se tocam/cruzam antes de substituir, para
     não corromper o texto (bug: "RG 12.345.678-9" virava "[ORGANIZATION]G]").
     """
+    n = len(text)
     spans = []
     for e in entities:
         try:
@@ -60,7 +61,10 @@ def rewrite_pii_tokens(text: str, entities: list) -> str:
             end = int(e.get("end", 0))
         except (TypeError, ValueError):
             continue
-        if end <= start or start < 0 or end > len(text):
+        # clampa em vez de descartar: um offset levemente fora nunca pode deixar PII passar
+        start = max(0, min(start, n))
+        end = max(0, min(end, n))
+        if end <= start:
             continue
         spans.append((start, end, e.get("type", "UNKNOWN")))
 

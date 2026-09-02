@@ -28,6 +28,13 @@ class MockSupabaseTable:
         """SELECT operation."""
         return self
 
+    def limit(self, *args):
+        """LIMIT — usado pelo probe _check_table()."""
+        return self
+
+    def maybe_single(self):
+        return self
+
     def eq(self, field, value):
         """WHERE field = value."""
         self.query_filters[field] = value
@@ -83,12 +90,15 @@ def make_mock_supabase(email="a@b.com", user_id="uid-123", jwt="mock.jwt.token")
 @pytest.fixture
 def client():
     mock_sb = make_mock_supabase()
-    with patch("services.supabase_admin.get_admin_client", return_value=mock_sb):
-        with patch("routes.bff_auth.get_admin_client", return_value=mock_sb):
-            from main import app
-            yield TestClient(app)
-            # Clear sessions between tests
-            mock_sb._sessions_store.clear()
+    # FASE 9.0: login/refresh/google usam get_auth_client() (cliente anon descartável),
+    # não mais o admin compartilhado. Precisa mockar os dois.
+    with patch("services.supabase_admin.get_admin_client", return_value=mock_sb), \
+         patch("services.supabase_admin.get_auth_client", return_value=mock_sb), \
+         patch("routes.bff_auth.get_admin_client", return_value=mock_sb), \
+         patch("routes.bff_auth.get_auth_client", return_value=mock_sb):
+        from main import app
+        yield TestClient(app)
+        mock_sb._sessions_store.clear()
 
 
 def test_login_returns_opaque_token(client):

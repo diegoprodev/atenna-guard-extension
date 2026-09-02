@@ -264,6 +264,15 @@ def _extract_sync(file_bytes: bytes) -> tuple:
 
 
 async def parse_docx(file_bytes: bytes) -> DocxParseResult:
+    # Guard: zip bomb → rejeita com FILE_TOO_LARGE (não "malformed")
+    if _check_zip_bomb(file_bytes):
+        return DocxParseResult(
+            text="", paragraphs=0, truncated=False, has_images=False,
+            extraction_method="rejected",
+            error_code=DocumentErrorCode.FILE_TOO_LARGE,
+            error_message="Documento rejeitado: taxa de compressão suspeita (zip bomb)",
+        )
+
     # Phase 1: Native extraction
     try:
         text, count, truncated, has_images, needs_vision = await asyncio.wait_for(

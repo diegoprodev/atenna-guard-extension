@@ -90,7 +90,7 @@ class TestPIIRewriting:
         """Reescreve email com token [EMAIL]."""
         text = "Contato: diego@example.com"
         entities = [
-            {"type": "EMAIL_ADDRESS", "start": 9, "end": 27}
+            {"type": "EMAIL_ADDRESS", "start": 9, "end": 26}
         ]
         result = rewrite_pii_tokens(text, entities)
         assert "[EMAIL]" in result
@@ -101,7 +101,7 @@ class TestPIIRewriting:
         text = "CPF 050.423.674-11 e email diego@example.com"
         entities = [
             {"type": "BR_CPF", "start": 4, "end": 18},
-            {"type": "EMAIL_ADDRESS", "start": 28, "end": 46},
+            {"type": "EMAIL_ADDRESS", "start": 27, "end": 44},
         ]
         result = rewrite_pii_tokens(text, entities)
         assert "[CPF]" in result

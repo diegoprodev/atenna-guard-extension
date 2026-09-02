@@ -133,9 +133,32 @@ Três bugs encadeados (todos há meses em produção, com erros engolidos silenc
 - **Em aberto (parte 2):** coletor + painel + alerta de degradação. Decisão pendente:
   Grafana Cloud (recomendado) vs Prometheus+Grafana self-hosted.
 
+#### FASE 9.2 — harness verde (pré-requisito do CI/CD) + bugs achados na triagem
+`pytest` no container: **36 falhas + 1 erro de coleta → 454 passed, 0 failed**. Ao triar o
+vermelho (não era só teste velho):
+- **`rewrite_pii_tokens`** descartava o span de PII quando `end > len(text)` → um offset
+  levemente fora **deixava a PII vazar** em STRICT. Agora **clampa** em vez de descartar.
+- **scanner** não detectava `CREDIT_CARD` com "Cartão:" (acento) nem cartão "solto" (16 díg.
+  com Luhn). Corrigido.
+- **`LEGAL_CONTEXT`** — regex morto (corrompido com bytes `\x08`, só casava backspace literal).
+  Reescrito.
+- **export PDF LGPD 100% quebrado** — `fpdf2.output()` passou a devolver `bytearray` e o código
+  fazia `.encode()`. Todo export de dados do usuário (LGPD Art. 18) falhava.
+- **`ExportManager.purge_expired_exports()` / `get_export_summary()` sem `self`** → `routes/export.py`
+  dava 500 em toda chamada; o job de purga de exports nunca rodou.
+- **docx zip-bomb** rejeitava com `error_code=malformed` em vez de `file_too_large`.
+- **`GoogleAuthRequest`** tinha campos duplicados e o **fluxo implícito do Google login**
+  (`access_token`, o default do Supabase OAuth) **não era tratado** → 401. Agora `set_session()`.
+  *(validar login Google real na extensão — FASE 9.3.)*
+- Infra de teste: `tests/conftest.py` + `dlp/conftest.py` (reset de estado de módulo + limpa env
+  de Supabase); mocks de `bff_auth`/`auth_middleware` atualizados p/ o `get_auth_client` da 9.0;
+  `test_google_auth` reescrito; `test_pdf_parser_v2.py` removido.
+- Specs: `docs/specs/FASE_9.2_HARNESS_VERDE.md` + `FASE_9.2_CODE_REVIEW.md`.
+
 ### Docs
 - `docs/specs/FASE_9.0_BACKEND_RECONCILIACAO_DLP.md` (spec) + `FASE_9.0_CODE_REVIEW.md` (review).
 - `infra/glitchtip/README.md` — seção "Armadilhas" (os dois bugs do GlitchTip 6.x).
+- `docs/specs/FASE_9.1_METRICAS_GRAFANA.md` + `FASE_P3_CICD_ENTERPRISE.md` (planejamento).
 
 ---
 

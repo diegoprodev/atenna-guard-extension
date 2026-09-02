@@ -23,6 +23,10 @@ class MockSupabaseTable:
         """SELECT operation."""
         return self
 
+    def limit(self, *args):
+        """LIMIT — usado pelo probe _check_table()."""
+        return self
+
     def eq(self, field, value):
         """WHERE field = value."""
         self.query_filters[field] = value
@@ -30,6 +34,9 @@ class MockSupabaseTable:
 
     def single(self):
         """Fetch single row."""
+        return self
+
+    def maybe_single(self):
         return self
 
     def delete(self):
