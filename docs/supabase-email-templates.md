@@ -50,7 +50,7 @@ Para cada template: selecione o tipo, apague o conteúdo, cole o HTML, altere o 
     <p style="font-size:13px;color:#999">Este link expira em <strong>24 horas</strong>. Se você não criou uma conta, ignore este email.</p>
     <p class="note">Botão não funcionou? Copie:<br><a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a></p>
   </div>
-  <div class="ft"><p>© 2026 Atenna Safe Prompt · <a href="https://atennaia.com.br">atennaia.com.br</a></p><p>Você recebeu este email porque criou uma conta.</p></div>
+  <div class="ft"><p>© 2026 Atenna Safe Prompt</p><p>Suporte / fale conosco: <a href="mailto:plugin@arckosia.com.br">plugin@arckosia.com.br</a></p><p>Este é um email automático — não responda a esta mensagem.</p><p>Você recebeu este email porque criou uma conta.</p></div>
 </div></div>
 </body></html>
 ```
@@ -101,7 +101,7 @@ Para cada template: selecione o tipo, apague o conteúdo, cole o HTML, altere o 
     <p style="font-size:13px;color:#999">Este link expira em <strong>1 hora</strong>. Se você não solicitou isso, ignore este email — sua senha está segura.</p>
     <p class="note">Botão não funcionou? Copie:<br><a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a></p>
   </div>
-  <div class="ft"><p>© 2026 Atenna Safe Prompt · <a href="https://atennaia.com.br">atennaia.com.br</a></p><p>Você recebeu este email porque tem uma conta ativa.</p></div>
+  <div class="ft"><p>© 2026 Atenna Safe Prompt</p><p>Suporte / fale conosco: <a href="mailto:plugin@arckosia.com.br">plugin@arckosia.com.br</a></p><p>Este é um email automático — não responda a esta mensagem.</p><p>Você recebeu este email porque tem uma conta ativa.</p></div>
 </div></div>
 </body></html>
 ```
@@ -149,7 +149,7 @@ Para cada template: selecione o tipo, apague o conteúdo, cole o HTML, altere o 
     <hr class="sep">
     <p style="font-size:13px;color:#999">Este link expira em <strong>10 minutos</strong> e só pode ser usado uma vez.</p>
   </div>
-  <div class="ft"><p>© 2026 Atenna Safe Prompt · <a href="https://atennaia.com.br">atennaia.com.br</a></p><p>Você recebeu este email porque tem uma conta ativa.</p></div>
+  <div class="ft"><p>© 2026 Atenna Safe Prompt</p><p>Suporte / fale conosco: <a href="mailto:plugin@arckosia.com.br">plugin@arckosia.com.br</a></p><p>Este é um email automático — não responda a esta mensagem.</p><p>Você recebeu este email porque tem uma conta ativa.</p></div>
 </div></div>
 </body></html>
 ```
@@ -210,7 +210,7 @@ Sua conta Atenna Safe Prompt Pro foi criada 🎉
       <div class="feat"><div class="fi">✓</div><div class="ft"><strong>Sem limite diário</strong></div></div>
     </div>
   </div>
-  <div class="footer"><p>© 2026 Atenna Safe Prompt · <a href="https://atennaia.com.br">atennaia.com.br</a></p><p>Você recebeu este email porque efetuou uma compra.</p></div>
+  <div class="footer"><p>© 2026 Atenna Safe Prompt</p><p>Suporte / fale conosco: <a href="mailto:plugin@arckosia.com.br">plugin@arckosia.com.br</a></p><p>Este é um email automático — não responda a esta mensagem.</p><p>Você recebeu este email porque efetuou uma compra.</p></div>
 </div></div>
 </body></html>
 ```

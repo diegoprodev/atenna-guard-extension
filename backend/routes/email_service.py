@@ -13,6 +13,7 @@ FROM_EMAIL     = os.getenv("RENEWAL_FROM_EMAIL", "Atenna Safe Prompt <noreply@pl
 LOGO_URL       = "https://api.atennaia.com.br/static/admin/logo.png"
 PRODUCT_NAME   = "Atenna Safe Prompt"
 SITE_URL       = "https://api.atennaia.com.br"
+SUPPORT_EMAIL  = os.getenv("SUPPORT_EMAIL", "plugin@arckosia.com.br")
 
 # Link DIRETO da extensão publicada (não a busca da CWS)
 EXTENSION_URL  = os.getenv(
@@ -92,7 +93,9 @@ def _base(content: str, preheader: str = "") -> str:
       {content}
     </div>
     <div class="footer">
-      <p>© {year} {PRODUCT_NAME} · <a href="{SITE_URL}">atennaia.com.br</a></p>
+      <p>© {year} {PRODUCT_NAME}</p>
+      <p>Suporte / fale conosco: <a href="mailto:{SUPPORT_EMAIL}">{SUPPORT_EMAIL}</a></p>
+      <p>Este é um email automático — <strong>não responda a esta mensagem</strong>.</p>
       <p>Você está recebendo este email porque tem uma conta ativa.</p>
     </div>
   </div>
@@ -306,7 +309,7 @@ def render_past_due(email: str) -> str:
   <a href="{ASAAS_INSTALLMENT_URL}" class="btn">Regularizar agora →</a>
 </div>
 <hr class="divider">
-<p style="font-size:13px;color:#555">Após o pagamento, seu acesso é restaurado automaticamente em instantes. Em caso de dúvidas, responda este email.</p>
+<p style="font-size:13px;color:#555">Após o pagamento, seu acesso é restaurado automaticamente em instantes. Em caso de dúvidas, fale com o suporte: {SUPPORT_EMAIL}.</p>
 """
     return _base(content, preheader="Ação necessária — regularize seu pagamento para manter o acesso")
 
