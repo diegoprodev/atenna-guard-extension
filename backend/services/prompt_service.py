@@ -12,16 +12,22 @@ async def generate_prompts(input_text: str, user_id: str = "") -> dict:
     2. gemini-2.5-flash-lite ($0.10/1M input, ~8s)
     Sem templates locais — retorna erro se ambos falharem.
     """
-    # 1. OpenAI gpt-4.1-nano
-    result = await generate_prompts_openai(input_text, user_id=user_id)
-    if result:
-        return result
+    # 1. OpenAI gpt-4.1-nano  — bug num provider nunca pode virar 500 pro usuário
+    try:
+        result = await generate_prompts_openai(input_text, user_id=user_id)
+        if result:
+            return result
+    except Exception as exc:
+        print(f'[Atenna] OpenAI exception: {type(exc).__name__}: {exc}')
 
     # 2. Gemini fallback
     print('[Atenna] OpenAI falhou — tentando Gemini como fallback...')
-    result = await generate_prompts_gemini(input_text, user_id=user_id)
-    if result:
-        return result
+    try:
+        result = await generate_prompts_gemini(input_text, user_id=user_id)
+        if result:
+            return result
+    except Exception as exc:
+        print(f'[Atenna] Gemini exception: {type(exc).__name__}: {exc}')
 
     # Ambas falharam
     print('[Atenna] Ambas as APIs falharam')

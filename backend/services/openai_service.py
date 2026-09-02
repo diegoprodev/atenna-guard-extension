@@ -70,7 +70,9 @@ async def generate_prompts_openai(input_text: str, user_id: str = "") -> dict | 
         return None
 
     canary = generate_canary()
-    system_prompt = _SYSTEM_PROMPT_TEMPLATE.format(canary=canary)
+    # .replace (não .format): o template contém JSON literal {"direct":...} que o
+    # str.format interpretaria como campo → KeyError. (FASE 9.0)
+    system_prompt = _SYSTEM_PROMPT_TEMPLATE.replace("{canary}", canary)
     safe_input = f"<user_input>\n{san.normalized_text}\n</user_input>"
 
     base_url = _get_base_url()

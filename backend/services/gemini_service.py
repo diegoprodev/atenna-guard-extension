@@ -78,7 +78,8 @@ async def generate_prompts_gemini(input_text: str, retry_count: int = 0, max_ret
         return None
 
     canary = generate_canary()
-    system_instruction = _SYSTEM_INSTRUCTION_TEMPLATE.format(canary=canary)
+    # .replace (não .format): template com JSON literal {"direct":...} → KeyError no format. (FASE 9.0)
+    system_instruction = _SYSTEM_INSTRUCTION_TEMPLATE.replace("{canary}", canary)
     safe_input = f"<user_input>\n{san.normalized_text}\n</user_input>"
 
     via = "CF Gateway" if CF_AIG_TOKEN else "direto"

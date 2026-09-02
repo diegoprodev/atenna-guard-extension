@@ -39,10 +39,19 @@ Três bugs encadeados (todos há meses em produção, com erros engolidos silenc
   `dlp/rate_limit.py` e o cliente).
 - `routes/checkout.py`, `security/monitor.py`, `routes/email_service.py` — URLs → `api.atennaia.com.br`.
 
+### Fixed — geração de prompts estava 100% quebrada em produção (bug pré-existente)
+- `services/openai_service.py` e `services/gemini_service.py` faziam
+  `_SYSTEM_PROMPT_TEMPLATE.format(canary=canary)` num template que contém JSON literal
+  `{"direct":...}` → `str.format` interpretava como campo → `KeyError: '"direct"'`. **Ambos**
+  os providers quebravam antes de chamar a API → `/generate-prompts` retornava **500** em toda
+  chamada. Trocado para `.replace("{canary}", canary)`.
+- `services/prompt_service.py` — `generate_prompts()` agora envolve cada provider em
+  `try/except`: bug num provider degrada para `_is_fallback`, nunca vira 500 para o usuário.
+
 ### Testes
-- Novo harness FASE 9.0 (`backend/tests/test_*_reconciliation*.py`, `test_generate_prompts_e2e.py`)
-  — 51 testes, incluindo E2E provando que cliente mentindo `dlp_risk_level=NONE` + CPF cru
-  resulta em `[CPF]` (não o CPF) chegando ao LLM.
+- Novo harness FASE 9.0 (`backend/tests/test_*_reconciliation*.py`, `test_generate_prompts_e2e.py`,
+  `test_prompt_services_reconciliation.py`) — 66 testes, incluindo E2E provando que cliente
+  mentindo `dlp_risk_level=NONE` + CPF cru resulta em `[CPF]` (não o CPF) chegando ao LLM.
 - Validado em staging isolado na VPS: **+287 testes passam** vs baseline de produção. Zero regressão.
 - `backend/pytest.ini` + `backend/requirements-dev.txt` adicionados.
 
