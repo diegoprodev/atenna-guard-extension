@@ -98,6 +98,21 @@
 
 ## Qualidade — NUNCA entregar sem isso
 
+### REGRA CANÔNICA — padrão 9.5/10 em TODA tarefa (sem exceção)
+Toda tarefa — por menor que pareça — passa por este ciclo **antes** de commit/push/deploy:
+1. **Spec** — `docs/specs/FASE_X_*.md`: problema, decisões (tabela), arquivos, contrato, riscos, rollout.
+2. **Harness + testes** — teste comportamental por feature; teste de regressão por bug (falha ANTES do fix);
+   teste de bypass por regra de segurança. Rodar o harness e reportar o número real.
+3. **Code review severo** — revisar com 3 chapéus e registrar os achados:
+   - **Arquiteto sênior**: acoplamento, camadas, zero-trust, falha-fechado, o que quebra em produção.
+   - **Product Owner**: o comportamento entregue é o que o usuário precisa? fricção proposital no free mantida?
+   - **PM / Estrategista**: alinhado ao posicionamento (extensão = isca → Plataforma → Arckos)? não implementa o que já existe na Plataforma?
+4. **Changelog enterprise** — `CHANGELOG.md`: o que era, o que quebrava, o que mudou, como foi validado, nº de testes.
+5. Só então: **commit → push → deploy** (deploy do backend é na VPS; ver seção Deploy).
+
+Nunca entregar “parece certo”. Nunca pular etapa “porque é pequeno”. Se o usuário pedir pressa,
+fazer o ciclo mesmo assim e explicar o porquê.
+
 ### Antes de qualquer entrega de código
 1. `npx vitest run` — 0 falhas (atualizar número no CLAUDE.md se mudar)
 2. `npm run build` — build limpo sem erros
