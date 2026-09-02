@@ -16,7 +16,7 @@
     "https://kezbssjmgwtrunqeoyir.supabase.co/*"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src https://api.atennaia.com.br https://kezbssjmgwtrunqeoyir.supabase.co; object-src 'none'; base-uri 'none'"
+    "extension_pages": "script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src https://api.atennaia.com.br https://errors.atennaia.com.br https://kezbssjmgwtrunqeoyir.supabase.co; object-src 'none'; base-uri 'none'"
   },
   "content_scripts": [
     {

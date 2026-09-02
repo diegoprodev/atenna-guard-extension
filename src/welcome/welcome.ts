@@ -1,3 +1,5 @@
+import { initObservability } from '../core/observability';
+initObservability('welcome');
 import { bffLogin, bffGoogleLogin, bffResetPassword } from '../auth/bffClient';
 import { getSession } from '../auth/sessionManager';
 import { signUpWithPassword } from '../core/auth';

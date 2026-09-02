@@ -1,3 +1,5 @@
+import { initObservability } from '../core/observability';
+initObservability('background');
 import { getSession } from '../auth/sessionManager';
 import { BFF_BASE } from '../config';
 

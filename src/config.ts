@@ -16,3 +16,10 @@ export const SUPABASE_PROJECT_REF = 'kezbssjmgwtrunqeoyir';
 
 /** URL do Supabase (público). */
 export const SUPABASE_URL = `https://${SUPABASE_PROJECT_REF}.supabase.co`;
+
+/** Versão da extensão — manter em sync com manifest.json / package.json. */
+export const VERSION = '2.3.0';
+
+/** URL da extensão publicada na Chrome Web Store. */
+export const EXTENSION_URL =
+  'https://chromewebstore.google.com/detail/atenna-safe-prompt/mcofdpebfbkbgnekidmepbpebapliifa';

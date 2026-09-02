@@ -1,3 +1,5 @@
+import { initObservability } from './core/observability';
+initObservability('popup');
 import { signUpWithPassword } from './core/auth';
 import { bffLogin, bffLogout, bffMe, bffResetPassword, bffGoogleLogin } from './auth/bffClient';
 import { openSettingsOverlay } from './ui/modal';

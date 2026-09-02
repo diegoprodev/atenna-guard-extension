@@ -1,4 +1,9 @@
 import asyncio
+
+# Observabilidade — deve inicializar ANTES de qualquer import pesado
+import observability
+observability.init()
+
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -49,11 +54,17 @@ from routes.lifecycle_emails import run_onboarding_d1, run_upsell, send_welcome,
 @asynccontextmanager
 async def _lifespan(app):
     scheduler = AsyncIOScheduler(timezone="America/Sao_Paulo")
-    scheduler.add_job(run_renewal_check,  "cron", hour=9,  minute=0,  id="daily_renewal_30d",   replace_existing=True)
-    scheduler.add_job(run_renewal_urgent, "cron", hour=9,  minute=15, id="daily_renewal_7d",    replace_existing=True)
-    scheduler.add_job(run_onboarding_d1, "cron", hour=10, minute=0,  id="daily_onboarding_d1", replace_existing=True)
-    scheduler.add_job(run_upsell,        "cron", hour=11, minute=0,  id="daily_upsell",         replace_existing=True)
-    scheduler.add_job(cleanup_old_dlp_events, "cron", hour=3, minute=0, id="daily_dlp_cleanup", replace_existing=True)
+    # GlitchTip cron monitoring: alerta se um job não rodar na janela / falhar
+    _renewal30 = observability.monitor("daily-renewal-30d")(run_renewal_check)
+    _renewal7  = observability.monitor("daily-renewal-7d")(run_renewal_urgent)
+    _onbd1     = observability.monitor("daily-onboarding-d1")(run_onboarding_d1)
+    _upsell    = observability.monitor("daily-upsell")(run_upsell)
+    _cleanup   = observability.monitor("daily-dlp-cleanup")(cleanup_old_dlp_events)
+    scheduler.add_job(_renewal30, "cron", hour=9,  minute=0,  id="daily_renewal_30d",   replace_existing=True)
+    scheduler.add_job(_renewal7,  "cron", hour=9,  minute=15, id="daily_renewal_7d",    replace_existing=True)
+    scheduler.add_job(_onbd1,     "cron", hour=10, minute=0,  id="daily_onboarding_d1", replace_existing=True)
+    scheduler.add_job(_upsell,    "cron", hour=11, minute=0,  id="daily_upsell",         replace_existing=True)
+    scheduler.add_job(_cleanup,   "cron", hour=3,  minute=0,  id="daily_dlp_cleanup",   replace_existing=True)
     scheduler.start()
     import logging
     logging.getLogger(__name__).info("[SCHEDULER] All lifecycle jobs scheduled")

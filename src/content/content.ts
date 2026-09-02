@@ -1,3 +1,5 @@
+import { initObservability } from '../core/observability';
+initObservability('content');
 import { detectPlatform } from './detectInput';
 import { injectButton, removeButton, disconnectInjector } from './injectButton';
 import { toggleModal, openSettingsOverlay } from '../ui/modal';

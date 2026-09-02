@@ -27,6 +27,11 @@ def require_auth(
     try:
         from routes.bff_auth import resolve_token
         session = resolve_token(token)
+        try:
+            import observability
+            observability.set_request_user(session["user_id"], session.get("email"), session.get("plan"))
+        except Exception:
+            pass
         return {
             "user_id": session["user_id"],
             "email":   session["email"],
