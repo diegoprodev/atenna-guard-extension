@@ -114,7 +114,8 @@ app.include_router(bff_auth_router)
 app.include_router(admin_security_router)
 
 
-@app.get("/health", tags=["Health"])
+# HEAD além de GET: monitores de uptime (UptimeRobot etc.) batem com HEAD.
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["Health"])
 async def health():
     """Verifica se o servidor está no ar."""
     return {"status": "ok"}
