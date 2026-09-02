@@ -14,6 +14,16 @@ LOGO_URL       = "https://api.atennaia.com.br/static/admin/logo.png"
 PRODUCT_NAME   = "Atenna Safe Prompt"
 SITE_URL       = "https://api.atennaia.com.br"
 
+# Link DIRETO da extensão publicada (não a busca da CWS)
+EXTENSION_URL  = os.getenv(
+    "CHROME_EXTENSION_URL",
+    "https://chromewebstore.google.com/detail/atenna-safe-prompt/mcofdpebfbkbgnekidmepbpebapliifa",
+)
+# Links de checkout Asaas (Brasil — PIX/boleto/cartão). Sempre do .env.
+ASAAS_MONTHLY_URL     = os.getenv("ASAAS_LINK_MONTHLY_URL", "https://www.asaas.com/c/jy7seg55ba1w7d1f")
+ASAAS_YEARLY_URL      = os.getenv("ASAAS_LINK_YEARLY_URL", "https://www.asaas.com/c/4j36ri7m844z1f4c")
+ASAAS_INSTALLMENT_URL = os.getenv("ASAAS_LINK_INSTALLMENT_URL", "https://www.asaas.com/c/48f6gz5zx2rl62d4")
+
 
 # ---------------------------------------------------------------------------
 # Base template — wrapper HTML com identidade visual
@@ -172,7 +182,7 @@ def render_welcome(email: str) -> str:
 <h1>Bem-vindo ao {PRODUCT_NAME}!</h1>
 <p>Sua conta foi confirmada. Agora você tem acesso à proteção LGPD inteligente para todas as suas conversas com IA.</p>
 <div class="btn-wrap">
-  <a href="https://chromewebstore.google.com/search/Atenna" class="btn">Instalar extensão no Chrome →</a>
+  <a href="{EXTENSION_URL}" class="btn">Instalar extensão no Chrome →</a>
 </div>
 <hr class="divider">
 <p><strong>Como funciona em 3 passos:</strong></p>
@@ -194,7 +204,7 @@ def render_onboarding_d1(email: str) -> str:
 <h1>Você ainda não protegeu nenhum prompt</h1>
 <p>Você criou sua conta ontem mas ainda não experimentou o {PRODUCT_NAME}. Leva menos de 2 minutos para começar.</p>
 <div class="btn-wrap">
-  <a href="https://chromewebstore.google.com/search/Atenna" class="btn">Instalar e experimentar →</a>
+  <a href="{EXTENSION_URL}" class="btn">Instalar e experimentar →</a>
 </div>
 <hr class="divider">
 <p><strong>O que você está perdendo:</strong></p>
@@ -222,8 +232,8 @@ def render_upsell_free_to_pro(email: str, quota_count: int) -> str:
 <hr class="divider">
 <p style="text-align:center;margin-bottom:8px"><strong>Escolha seu plano:</strong></p>
 <div class="btn-wrap" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-  <a href="https://www.asaas.com/c/jy7seg55ba1w7d1f" class="btn btn-secondary" style="font-size:13px;padding:12px 20px">Mensal<br><span style="font-weight:400;font-size:12px">R$29,90/mês</span></a>
-  <a href="https://www.asaas.com/c/48f6gz5zx2rl62d4" class="btn" style="font-size:13px;padding:12px 20px">Anual — 10x<br><span style="font-weight:400;font-size:12px">R$19,70/mês · economize 45%</span></a>
+  <a href="{ASAAS_MONTHLY_URL}" class="btn btn-secondary" style="font-size:13px;padding:12px 20px">Mensal<br><span style="font-weight:400;font-size:12px">R$29,90/mês</span></a>
+  <a href="{ASAAS_INSTALLMENT_URL}" class="btn" style="font-size:13px;padding:12px 20px">Anual — 10x<br><span style="font-weight:400;font-size:12px">R$19,70/mês · economize 45%</span></a>
 </div>
 """
     return _base(content, preheader=f"Você usou {quota_count} prompts — upgrade para Pro e use sem limites")
@@ -249,7 +259,7 @@ def render_pro_welcome(email: str, plan_key: str, expires_at: str) -> str:
   <div class="feature"><div class="feature-icon">✓</div><div class="feature-text"><strong>Suporte prioritário</strong> por email</div></div>
 </div>
 <div class="btn-wrap">
-  <a href="https://chromewebstore.google.com/search/Atenna" class="btn">Abrir extensão →</a>
+  <a href="{EXTENSION_URL}" class="btn">Abrir extensão →</a>
 </div>
 <hr class="divider">
 <p style="font-size:13px;color:#555">Renovação automática em <strong style="color:#666">{exp_str}</strong>. Você receberá um aviso 30 dias antes.</p>
@@ -293,7 +303,7 @@ def render_past_due(email: str) -> str:
 <h1>Problema com seu pagamento</h1>
 <p>Identificamos um problema com o pagamento da sua assinatura {PRODUCT_NAME}. Sua conta ainda está ativa por alguns dias, mas você precisa regularizar para não perder o acesso.</p>
 <div class="btn-wrap">
-  <a href="https://www.asaas.com/c/48f6gz5zx2rl62d4" class="btn">Regularizar agora →</a>
+  <a href="{ASAAS_INSTALLMENT_URL}" class="btn">Regularizar agora →</a>
 </div>
 <hr class="divider">
 <p style="font-size:13px;color:#555">Após o pagamento, seu acesso é restaurado automaticamente em instantes. Em caso de dúvidas, responda este email.</p>
