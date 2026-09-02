@@ -373,10 +373,39 @@ async def usage(creds: HTTPAuthorizationCredentials = Depends(_bearer)):
 
 @router.post("/reset-password")
 async def reset_password(req: ResetRequest):
+    """
+    Reset backend-driven: gera o link de recuperação (admin.generate_link) e envia
+    via Resend. Não depende do SMTP do Supabase (que é frágil/mal configurado).
+    Sempre retorna {ok:true} (não vaza se o e-mail existe).
+    """
+    if not _EMAIL_RE.match(req.email or ""):
+        return {"ok": True}
+    if not _check_login_rate_limit(req.email):
+        return {"ok": True}
+
     try:
-        get_auth_client().auth.reset_password_email(req.email)
-    except Exception:
-        pass
+        r = get_admin_client().auth.admin.generate_link({
+            "type": "recovery",
+            "email": req.email,
+            "options": {"redirect_to": "https://api.atennaia.com.br/auth/callback"},
+        })
+        props = getattr(r, "properties", None)
+        action_link = (
+            getattr(props, "action_link", None)
+            if props is not None
+            else (r.get("properties", {}) if isinstance(r, dict) else {}).get("action_link")
+        )
+        if action_link:
+            from routes.email_service import render_reset_password, send_email
+            await send_email(
+                req.email,
+                "Redefina sua senha — Atenna Safe Prompt",
+                render_reset_password(action_link, req.email),
+            )
+    except Exception as e:
+        # e-mail inexistente → generate_link lança; não é erro pro cliente
+        logger.info(f"reset-password: {type(e).__name__} para {req.email[:40]}")
+
     return {"ok": True}
 
 

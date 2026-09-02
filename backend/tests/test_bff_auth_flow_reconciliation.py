@@ -62,3 +62,13 @@ def test_signup_cria_confirmado_nao_depende_de_smtp():
     src = inspect.getsource(bff_auth.signup)
     assert "email_confirm" in src and "True" in src
     assert "create_user" in src
+
+
+def test_reset_password_e_backend_driven_via_resend():
+    """O SMTP do Supabase falha ('Error sending recovery email'); reset gera o link
+    e manda pelo Resend (que funciona)."""
+    src = inspect.getsource(bff_auth.reset_password)
+    assert "generate_link" in src
+    assert "recovery" in src
+    assert "send_email" in src or "render_reset_password" in src
+    assert "reset_password_email" not in src  # não usa mais o SMTP do Supabase
