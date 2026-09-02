@@ -81,7 +81,7 @@ export async function addGroupToHistory(
 ): Promise<void> {
   const entries = await storageGet();
   const group: HistoryGroup = {
-    id: 'hg_' + Math.random().toString(36).slice(2),
+    id: 'hg_' + crypto.randomUUID(),
     question: maskPII(question),
     date: Date.now(),
     favorited: false,

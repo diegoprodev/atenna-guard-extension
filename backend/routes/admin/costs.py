@@ -7,7 +7,7 @@ router = APIRouter()
 SUPABASE_URL       = os.getenv('SUPABASE_URL', 'https://kezbssjmgwtrunqeoyir.supabase.co')
 SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY', '')
 CF_TOKEN           = os.getenv('CF_AIG_TOKEN', '')
-CF_ACCOUNT_ID      = os.getenv('CF_ACCOUNT_ID', 'e6d552f924497f01ac4a986ef8f8c342')
+CF_ACCOUNT_ID      = os.getenv('CF_ACCOUNT_ID', '')
 CF_GATEWAY_ID      = os.getenv('CF_GATEWAY_ID', 'atenna-safe-plugin')
 
 COST_PER_1K = {'gemini': 0.00015, 'openai': 0.00200}

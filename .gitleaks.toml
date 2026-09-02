@@ -1,0 +1,30 @@
+# Config do gitleaks — este é um produto de DLP: o código-fonte CONTÉM, por
+# design, regexes e fixtures com formato de credencial (sk-..., AKIA..., eyJ...,
+# sk_live_...). Elas NÃO são segredos reais — são o que o produto detecta.
+#
+# Segredos reais NUNCA entram aqui: ficam em .env (gitignorado) / secret manager.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Padrões de detecção do DLP + fixtures de teste + exemplos de doc"
+paths = [
+  '''src/dlp/patterns\.ts''',
+  '''src/dlp/.*\.test\.ts''',
+  '''backend/dlp/analyzer\.py''',
+  '''backend/dlp/scanner\.py''',
+  '''backend/dlp/entities\.py''',
+  '''backend/.*/test_.*\.py''',
+  '''backend/tests/.*''',
+  '''tests/e2e/.*\.spec\.ts''',
+  '''docs/.*\.md''',
+  '''CHANGELOG\.md''',
+]
+regexes = [
+  # curl de documentação com placeholder/variável (Bearer $JWT, ${token}, etc.)
+  '''Authorization:\s*Bearer\s+\$\{?[A-Za-z_]+\}?''',
+  '''Bearer \$\(''',
+  # Cloudflare Account ID (identificador público, não credencial)
+  '''e6d552f924497f01ac4a986ef8f8c342''',
+]

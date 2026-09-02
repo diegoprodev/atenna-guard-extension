@@ -80,11 +80,11 @@ function getExtensionVersion(): string {
 }
 
 function genAnonId(): string {
-  return 'anon_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  return 'anon_' + crypto.randomUUID();
 }
 
 function genSessionId(): string {
-  return 'sess_' + Math.random().toString(36).slice(2);
+  return 'sess_' + crypto.randomUUID();
 }
 
 async function getUserId(): Promise<string> {

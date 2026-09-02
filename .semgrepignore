@@ -1,0 +1,15 @@
+# Produto de DLP: fixtures e regexes com formato de credencial são intencionais.
+backend/tests/
+backend/**/test_*.py
+src/**/*.test.ts
+tests/e2e/
+
+# Docs (curl de exemplo com Bearer ${JWT}, etc.) — arquivados/removidos na limpeza de docs
+docs/superpowers/
+docs/fases/
+docs/testing/
+
+# Build output
+dist/
+node_modules/
+admin/node_modules/

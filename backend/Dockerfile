@@ -23,6 +23,12 @@ RUN python -m spacy download pt_core_news_sm && \
 
 COPY . .
 
+# Roda como usuário sem privilégio (não-root)
+RUN useradd --system --uid 10001 --home-dir /app --no-create-home atenna \
+    && mkdir -p /app/data \
+    && chown -R atenna:atenna /app
+USER atenna
+
 EXPOSE 8000
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

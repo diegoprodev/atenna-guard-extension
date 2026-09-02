@@ -87,7 +87,7 @@ export function openUploadFromBadge(): void {
           const baseName = originalName.replace(/\.[^.]+$/, '');
           // Timestamp + random suffix evita deduplicação do ChatGPT (mesmo nome = "já carregou este arquivo")
           const ts = Date.now();
-          const rnd = Math.random().toString(36).slice(2, 6);
+          const rnd = crypto.randomUUID().slice(0, 4);
           const safeFileName = `${baseName}_${ts}_${rnd}.txt`;
           const file = new File([new TextEncoder().encode(text)], safeFileName, { type: 'text/plain;charset=utf-8' });
           const dt = new DataTransfer();

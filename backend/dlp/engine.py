@@ -247,7 +247,8 @@ class DLPEngine:
     def _hash_text(self, text: str) -> str:
         """Create simple hash of text for mismatch tracking."""
         import hashlib
-        return hashlib.md5(text.encode()).hexdigest()[:8]
+        # hash não-criptográfico só para rastrear divergência cliente/servidor
+        return hashlib.md5(text.encode(), usedforsecurity=False).hexdigest()[:8]
 
     def _compare_findings(
         self,

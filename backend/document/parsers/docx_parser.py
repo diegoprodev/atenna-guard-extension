@@ -67,10 +67,10 @@ def _analyze_docx(file_bytes: bytes) -> dict:
 
             # Sample text density from document.xml
             if "word/document.xml" in names:
-                from xml.etree import ElementTree as ET
+                from defusedxml.ElementTree import fromstring as _xml_fromstring  # defesa contra XML bomb/XXE
                 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
                 xml_bytes = zf.read("word/document.xml")
-                root = ET.fromstring(xml_bytes)
+                root = _xml_fromstring(xml_bytes)
                 for para in root.iter("{%s}p" % W):
                     texts = [t.text for t in para.iter("{%s}t" % W) if t.text]
                     text = "".join(texts).strip()
@@ -143,7 +143,7 @@ def _extract_via_python_docx(file_bytes: bytes):
 
 
 def _extract_via_xml(file_bytes: bytes):
-    from xml.etree import ElementTree as ET
+    from defusedxml.ElementTree import fromstring as _xml_fromstring  # defesa contra XML bomb/XXE
 
     W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
     with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
@@ -151,7 +151,7 @@ def _extract_via_xml(file_bytes: bytes):
             raise ValueError("word/document.xml not found")
         xml_bytes = zf.read("word/document.xml")
 
-    root = ET.fromstring(xml_bytes)
+    root = _xml_fromstring(xml_bytes)
     parts, chars, truncated, count = [], 0, False, 0
 
     for para in root.iter("{%s}p" % W):
