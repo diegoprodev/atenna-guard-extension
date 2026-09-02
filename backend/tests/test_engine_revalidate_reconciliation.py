@@ -92,6 +92,32 @@ async def test_E2_strict_mode_reescreve_payload_com_cpf(monkeypatch):
     assert "111.444.777-35" not in res["rewritten_text"], res["rewritten_text"]
 
 
+def test_E6_rewrite_lida_com_spans_sobrepostos():
+    """Bug: 'RG 12.345.678-9' virava '[ORGANIZATION]G]' com spans sobrepostos."""
+    from dlp.enforcement import rewrite_pii_tokens
+    texto = "meu RG 12.345.678-9 aqui"  # "RG 12.345.678-9" = [4:19]
+    # NER marca "RG 12.345.678" como ORG, recognizer marca "RG 12.345.678-9" como RG
+    ents = [
+        {"type": "ORGANIZATION", "start": 4, "end": 16},
+        {"type": "RG", "start": 4, "end": 19},
+    ]
+    out = rewrite_pii_tokens(texto, ents)
+    assert out == "meu [RG] aqui", out
+    assert "12.345.678" not in out
+    assert "]G]" not in out and "]-9" not in out
+
+
+def test_E6_rewrite_multiplos_pii_sem_sobreposicao():
+    from dlp.enforcement import rewrite_pii_tokens
+    texto = "CPF 111.444.777-35 e cartao 4111 1111 1111 1111"
+    ents = [
+        {"type": "BR_CPF", "start": 4, "end": 18},
+        {"type": "CREDIT_CARD", "start": 28, "end": 47},
+    ]
+    out = rewrite_pii_tokens(texto, ents)
+    assert out == "CPF [CPF] e cartao [CARTÃO]", out
+
+
 def test_E3_sem_strict_nao_reescreve(monkeypatch):
     monkeypatch.setenv("STRICT_DLP_MODE", "false")
     import dlp.enforcement as enf

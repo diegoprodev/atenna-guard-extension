@@ -23,44 +23,67 @@ def should_apply_strict_enforcement(risk_level: str) -> bool:
     return risk_level == "HIGH" and is_strict_mode_enabled()
 
 
+_TOKEN_MAP = {
+    "BR_CPF": "[CPF]",
+    "BR_CNPJ": "[CNPJ]",
+    "BR_PHONE": "[TELEFONE]",
+    "PHONE_NUMBER": "[TELEFONE]",
+    "EMAIL_ADDRESS": "[EMAIL]",
+    "EMAIL": "[EMAIL]",
+    "API_KEY": "[CHAVE_API]",
+    "JWT": "[TOKEN_JWT]",
+    "TOKEN": "[TOKEN]",
+    "CREDIT_CARD": "[CARTÃO]",
+    "RG": "[RG]",
+    "CNH": "[CNH]",
+    "OAB": "[OAB]",
+    "CRM": "[CRM]",
+    "PLACA": "[PLACA]",
+    "PERSON": "[PESSOA]",
+    "LOCATION": "[LOCAL]",
+    "ORGANIZATION": "[ORGANIZACAO]",
+}
+
+
 def rewrite_pii_tokens(text: str, entities: list) -> str:
     """
-    Reescreve PII com tokens semânticos.
-    Implementação básica: substitui valores por [TIPO].
+    Reescreve PII com tokens semânticos ([CPF], [CARTÃO], …).
 
-    Futuro: usar semantic tokens de rewriter.ts (PT-BR)
+    Lida com spans SOBREPOSTOS (comum: NER do spaCy + recognizer de regex marcam
+    a mesma região) — funde spans que se tocam/cruzam antes de substituir, para
+    não corromper o texto (bug: "RG 12.345.678-9" virava "[ORGANIZATION]G]").
     """
+    spans = []
+    for e in entities:
+        try:
+            start = int(e.get("start", 0))
+            end = int(e.get("end", 0))
+        except (TypeError, ValueError):
+            continue
+        if end <= start or start < 0 or end > len(text):
+            continue
+        spans.append((start, end, e.get("type", "UNKNOWN")))
+
+    if not spans:
+        return text
+
+    # funde sobreposições: ordena por início, junta o que cruza/toca
+    spans.sort(key=lambda s: (s[0], s[1]))
+    merged: list[list] = []
+    for start, end, etype in spans:
+        if merged and start <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], end)
+            # mantém o tipo mais "forte" (o de credencial/documento ganha do NER genérico)
+            if merged[-1][2] in ("PERSON", "LOCATION", "ORGANIZATION") and etype not in ("PERSON", "LOCATION", "ORGANIZATION"):
+                merged[-1][2] = etype
+        else:
+            merged.append([start, end, etype])
+
+    # substitui de trás pra frente para não deslocar posições
     result = text
-
-    # Ordena por offset descendente para não quebrar posições
-    sorted_entities = sorted(
-        entities,
-        key=lambda e: e.get("start", 0),
-        reverse=True
-    )
-
-    for entity in sorted_entities:
-        entity_type = entity.get("type", "UNKNOWN")
-        start = entity.get("start", 0)
-        end = entity.get("end", len(text))
-
-        # Converte nome da entidade para token PT-BR
-        token_map = {
-            "BR_CPF": "[CPF]",
-            "BR_CNPJ": "[CNPJ]",
-            "EMAIL_ADDRESS": "[EMAIL]",
-            "PHONE_NUMBER": "[TELEFONE]",
-            "API_KEY": "[CHAVE_API]",
-            "JWT": "[TOKEN_JWT]",
-            "CREDIT_CARD": "[CARTÃO]",
-            "BR_PHONE": "[TELEFONE]",
-            "PERSON": "[PESSOA]",
-            "LOCATION": "[LOCAL]",
-        }
-
-        token = token_map.get(entity_type, f"[{entity_type}]")
+    for start, end, etype in reversed(merged):
+        token = _TOKEN_MAP.get(etype, f"[{etype}]")
         result = result[:start] + token + result[end:]
-
     return result
 
 
