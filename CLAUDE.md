@@ -113,6 +113,26 @@ Toda tarefa — por menor que pareça — passa por este ciclo **antes** de comm
 Nunca entregar “parece certo”. Nunca pular etapa “porque é pequeno”. Se o usuário pedir pressa,
 fazer o ciclo mesmo assim e explicar o porquê.
 
+### ROTEIRO ENTERPRISE — a ordem importa (Claude não é o único que decide se está pronto)
+O Claude implementa, mas **outras 4 camadas independentes** validam antes de "pronto":
+
+1. **Claude implementa** — spec + código + testes (a REGRA CANÔNICA acima).
+2. **Playwright testa o navegador** — `npx playwright test` (extensão + api). Fluxo real de usuário,
+   navegador de verdade, não mock. MCP Playwright para inspeção interativa quando travar.
+3. **TestSprite verifica os fluxos** — MCP TestSprite gera/roda testes de fluxo end-to-end e
+   reporta cobertura de caminho crítico. Roda depois do Playwright, antes do review.
+4. **Code Review revisa as alterações** — skill/plugin de code review roda no diff da branch
+   (equivalente ao `/code-review`); complementa o review dos 3 chapéus, não substitui.
+5. **Trail of Bits procura vulnerabilidades** — skills de auditoria de segurança da Trail of Bits
+   varrem o diff atrás de vulnerabilidade (injeção, authz, deserialização, cripto, path traversal,
+   SSRF, secrets). Último portão antes de commit/deploy.
+
+Cada camada que aponta problema **bloqueia** o "pronto" até resolver. `claude-mem` mantém a
+memória de longo prazo do projeto entre sessões (decisões, bugs, contexto — complementa
+`~/.claude/.../memory/`).
+
+Ferramentas: ver `docs/TOOLING_ENTERPRISE.md` (como instalar/rodar cada uma).
+
 ### Antes de qualquer entrega de código
 1. `npx vitest run` — 0 falhas (atualizar número no CLAUDE.md se mudar)
 2. `npm run build` — build limpo sem erros
