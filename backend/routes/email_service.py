@@ -9,7 +9,7 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-FROM_EMAIL     = os.getenv("RENEWAL_FROM_EMAIL", "Atenna Safe Prompt <noreply@atennaia.com.br>")
+FROM_EMAIL     = os.getenv("RENEWAL_FROM_EMAIL", "Atenna Safe Prompt <noreply@pluginmail.atennaia.com.br>")
 LOGO_URL       = "https://api.atennaia.com.br/static/admin/logo.png"
 PRODUCT_NAME   = "Atenna Safe Prompt"
 SITE_URL       = "https://api.atennaia.com.br"
