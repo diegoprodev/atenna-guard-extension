@@ -2,8 +2,20 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# System dependencies: Tesseract OCR (PT-BR + EN) + poppler (backup) + build tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tesseract-ocr \
+    tesseract-ocr-por \
+    tesseract-ocr-eng \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+# Upgrade pip first (fixes CVE-2025-8869, CVE-2026-1703, CVE-2026-3219, CVE-2026-6357)
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Download spaCy NLP models
 RUN python -m spacy download pt_core_news_sm && \

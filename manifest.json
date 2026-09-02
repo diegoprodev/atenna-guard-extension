@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Atenna Safe Prompt",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Proteja seus dados sensíveis e gere prompts melhores com IA no ChatGPT,Perplexity, Claude e Gemini.",
   "homepage_url": "https://api.atennaia.com.br/privacy",
-  "version_name": "2.2.0",
+  "version_name": "2.3.0",
   "permissions": ["storage", "tabs", "identity"],
   "host_permissions": [
     "https://chat.openai.com/*",

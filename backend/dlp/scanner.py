@@ -140,7 +140,7 @@ _PATTERNS: list[dict] = [
         "action": "block",
         # CREDIT_CARD antes de TITULO_ELEITOR: 16 dígitos com Luhn têm prioridade
         # Não usa \b pois espaços entre grupos quebram word boundary
-        "regex": re.compile(r'(?<!\d)(\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{1,4})(?!\d)'),
+        "regex": re.compile(r'(?i)(?:cartao|credito|credit\s+card|visa|mastercard|amex|elo|diners)[^0-9]*(?<!\d)(\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{1,4})(?!\d)'),
         "validator": _luhn_valid,
         "source": "validator",
     },
@@ -153,6 +153,18 @@ _PATTERNS: list[dict] = [
         "source": "validator",
     },
     {
+        # Contextual CPF: preceded by keyword "cpf" — no check-digit validation.
+        # Catches manually typed or OCR-extracted CPFs that may have wrong digits.
+        "entity": EntityType.CPF,
+        "risk": RiskLevel.MEDIUM,
+        "action": "mask",
+        "regex": re.compile(
+            r'(?i)(?:cpf|c\.p\.f)[\s:.\-#]*([\d]{3}[\s.\-]?[\d]{3}[\s.\-]?[\d]{3}[\s.\-]?[\d]{2})'
+        ),
+        "source": "contextual",
+    },
+    {
+        # Validated CPF: no keyword context — requires valid check digits.
         "entity": EntityType.CPF,
         "risk": RiskLevel.MEDIUM,
         "action": "mask",
@@ -181,6 +193,17 @@ _PATTERNS: list[dict] = [
         "source": "validator",
     },
     {
+        # Contextual RG: preceded by keyword "rg" — no separator required.
+        "entity": EntityType.RG,
+        "risk": RiskLevel.HIGH,
+        "action": "mask",
+        "regex": re.compile(
+            r'(?i)(?:^|\s)rg[\s:.\-#]*(\d{7,9})\b'
+        ),
+        "source": "contextual",
+    },
+    {
+        # Formatted RG: with separators (XX.XXX.XXX-X).
         "entity": EntityType.RG,
         "risk": RiskLevel.HIGH,
         "action": "mask",
@@ -247,10 +270,9 @@ _PATTERNS: list[dict] = [
         "risk": RiskLevel.MEDIUM,
         "action": "alert",
         "regex": re.compile(
-            r'(?i)\b(?:réu|ré\b|impetrante|impetrado|exequente|executado'
-            r'|vara\s+(?:cível|criminal|federal|trabalhista)'
-            r'|sentença\s+n[°º]?\s*\d+|acórdão|habeas\s+corpus'
-            r'|mandado\s+de\s+(?:segurança|prisão|busca))\b'
+            r'(?i)(?:mandado\s+de\s+prisão\s+n[°º]?\s*\d+'
+            r'|sentença\s+n[°º]?\s*\d+'
+            r'|habeas\s+corpus\s+n[°º]?\s*\d+)'
         ),
         "source": "heuristic",
     },

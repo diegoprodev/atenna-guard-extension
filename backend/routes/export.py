@@ -39,7 +39,7 @@ async def request_export(
             "expires_in": str
         }
     """
-    user_id = _user.get("sub")
+    user_id = _user.get("id") or _user.get("sub")
     email = _user.get("email")
 
     if not user_id or not email:
@@ -139,7 +139,7 @@ async def get_export_status(
             "note": str
         }
     """
-    user_id = _user.get("sub")
+    user_id = _user.get("id") or _user.get("sub")
 
     manager = get_export_manager()
     status = manager.get_export_status(user_id=user_id)
@@ -177,7 +177,7 @@ async def download_export(
     Returns:
         Stream PDF com headers apropriados
     """
-    user_id = _user.get("sub")
+    user_id = _user.get("id") or _user.get("sub")
 
     logger.info(f"Export download requested by {user_id}")
 

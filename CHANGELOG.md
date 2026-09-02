@@ -4,6 +4,53 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [2.3.0] — 2026-09-02 — FASE 9.0: reconciliação do backend + correção do DLP server-side
+
+### Crítico — o DLP server-side estava quebrado em produção
+Descoberto durante a inspeção que a proteção de PII em prompts **só funcionava no cliente**.
+Três bugs encadeados (todos há meses em produção, com erros engolidos silenciosamente):
+- **`dlp/analyzer.py`** — `class CreditCardRecognizer` colidia com o built-in homônimo do
+  Presidio → `AnalyzerEngine` falhava ao subir → `analyze()` sempre levantava `TypeError`.
+- **`dlp/engine.py`** — `from .analyzer import analyze` era sobrescrito pelo `async def analyze`
+  no fim do módulo → `run_in_executor` rodava a corotina errada → `revalidate()` retornava
+  sempre `UNKNOWN`.
+- **`dlp/enforcement.py`** — `evaluate_strict_enforcement` acessava `RecognizerResult.text`
+  (atributo inexistente) → exceção → `except` devolvia o texto **original** (fail-open). Com
+  `STRICT_DLP_MODE=true` e um cliente que desligasse o DLP local, **PII crua ia para o LLM**.
+
+### Fixed
+- **`analyzer.py`** — adotada a versão FASE 5.2 (`BRCreditCardRecognizer`, `supported_language="pt"`
+  em todos os recognizers, +5 recognizers: RG, CNH, OAB, Placa, CRM). `test_ptbr_recognizers`: 0/11 → 11/11.
+- **`engine.py`** — import com alias (`_run_presidio`) elimina o shadowing.
+- **`enforcement.py`** — fatia o texto por `[start:end]` em vez de `.text`; `except` agora é
+  **fail-safe** (`_fallback_redact()` via `scanner.scan()` — nunca deixa PII crua passar em STRICT).
+- **`pipeline.py`** — adotada a versão async com timeout de 3s; retorna `UNKNOWN` (não `NONE`)
+  em erro/timeout; corrige o `await run()` de `routes/dlp.py` que dava 500.
+- **`services/openai_service.py`** — migração para o SDK oficial `AsyncOpenAI` (erros tipados,
+  retry, `base_url` do Cloudflare AI Gateway). Estava commitado desde `8a57058`, nunca deployado.
+
+### Changed — backend agora versionado em git
+- O `backend/` do repo era um snapshot parcial (`main.py` importava ~9 módulos ausentes). O
+  backend real só existia na VPS, sem git, editado com `nano`. **Reconciliado:** base = estado
+  de produção (41 arquivos novos: rotas `/admin/*`, `middleware/`, `services/geolocation`,
+  `utils/fx_rate`, e-mails, redactors) + as 5 melhorias do repo acima. `docker-compose.yml` e
+  `nginx/default.conf` agora versionados (certs continuam fora do git).
+- `services/quota_service.py` — `FREE_DAILY_LIMIT` corrigido de 10 → 5 (consistente com
+  `dlp/rate_limit.py` e o cliente).
+- `routes/checkout.py`, `security/monitor.py`, `routes/email_service.py` — URLs → `api.atennaia.com.br`.
+
+### Testes
+- Novo harness FASE 9.0 (`backend/tests/test_*_reconciliation*.py`, `test_generate_prompts_e2e.py`)
+  — 51 testes, incluindo E2E provando que cliente mentindo `dlp_risk_level=NONE` + CPF cru
+  resulta em `[CPF]` (não o CPF) chegando ao LLM.
+- Validado em staging isolado na VPS: **+287 testes passam** vs baseline de produção. Zero regressão.
+- `backend/pytest.ini` + `backend/requirements-dev.txt` adicionados.
+
+### Docs
+- `docs/specs/FASE_9.0_BACKEND_RECONCILIACAO_DLP.md` (spec) + `FASE_9.0_CODE_REVIEW.md` (review).
+
+---
+
 ## [2.2.0] — 2026-09-01 — Recuperação de produção + migração de domínio
 
 ### Crítico

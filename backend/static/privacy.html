@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Política de Privacidade — Atenna Guard</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111;background:#fafafa;line-height:1.6}
+  .wrap{max-width:680px;margin:0 auto;padding:48px 24px 80px}
+  h1{font-size:22px;font-weight:700;margin-bottom:8px}
+  .meta{font-size:13px;color:#666;margin-bottom:40px}
+  h2{font-size:15px;font-weight:600;margin:32px 0 8px}
+  p,li{font-size:14px;color:#333;margin-bottom:8px}
+  ul{padding-left:20px}
+  a{color:#0066cc}
+  .badge{display:inline-block;background:#f0f0f0;border-radius:4px;padding:2px 8px;font-size:12px;color:#555;margin-bottom:32px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Política de Privacidade</h1>
+  <p class="meta">Atenna Guard · Última atualização: 14 de maio de 2026</p>
+  <span class="badge">LGPD — Lei nº 13.709/2018</span>
+
+  <h2>1. O que coletamos</h2>
+  <p>A extensão Atenna Guard processa o texto que você decide refinar. Esse texto <strong>nunca é armazenado</strong> em nossos servidores — é usado exclusivamente para gerar as versões otimizadas e descartado imediatamente após o processamento.</p>
+  <ul>
+    <li>Endereço de e-mail (para autenticação via Supabase)</li>
+    <li>Metadados de uso agregados (número de requisições por dia, sem conteúdo)</li>
+    <li>Eventos de analytics anonimizados (tipo de ação, não conteúdo)</li>
+  </ul>
+
+  <h2>2. O que não coletamos</h2>
+  <ul>
+    <li>Conteúdo dos textos refinados</li>
+    <li>Histórico de navegação</li>
+    <li>Dados pessoais além do e-mail de autenticação</li>
+    <li>Identificadores de dispositivo ou fingerprint</li>
+  </ul>
+
+  <h2>3. DLP — Prevenção de Vazamento de Dados</h2>
+  <p>A extensão analisa localmente o texto em busca de dados sensíveis (CPF, e-mails, chaves de API) antes de qualquer envio. Esta análise ocorre no seu navegador. Nenhum dado identificado como sensível é enviado ao servidor sem sua confirmação explícita.</p>
+
+  <h2>4. Seus direitos (LGPD Art. 17-22)</h2>
+  <ul>
+    <li><strong>Acesso:</strong> você pode solicitar um relatório dos dados associados à sua conta nas configurações da extensão.</li>
+    <li><strong>Exclusão:</strong> você pode solicitar a exclusão permanente da sua conta e dados nas configurações. Solicitações possuem período de reversão de 7 dias.</li>
+    <li><strong>Portabilidade:</strong> o relatório de dados é fornecido em formato JSON estruturado.</li>
+  </ul>
+
+  <h2>5. Retenção</h2>
+  <p>Dados de conta são mantidos enquanto a conta estiver ativa. Após solicitação de exclusão, os dados são removidos permanentemente em até 7 dias.</p>
+
+  <h2>6. Compartilhamento</h2>
+  <p>Não vendemos nem compartilhamos dados com terceiros para fins comerciais. Utilizamos:</p>
+  <ul>
+    <li><strong>Supabase</strong> — autenticação e armazenamento de conta</li>
+    <li><strong>Google Gemini / OpenAI</strong> — geração de prompts (apenas o texto submetido, sem dados de conta)</li>
+  </ul>
+
+  <h2>7. Segurança</h2>
+  <p>Toda comunicação usa TLS 1.2+. Tokens JWT são validados server-side a cada requisição. Sem dados sensíveis em logs.</p>
+
+  <h2>8. Contato</h2>
+  <p>Para exercer seus direitos ou reportar incidentes: <a href="mailto:devdiegopro@gmail.com">devdiegopro@gmail.com</a></p>
+</div>
+</body>
+</html>

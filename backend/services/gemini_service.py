@@ -102,19 +102,20 @@ async def generate_prompts_gemini(input_text: str, retry_count: int = 0, max_ret
         data     = response.json()
         raw_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
 
-        if raw_text.startswith("```"):
-            parts = raw_text.split("```")
-            raw_text = parts[1] if len(parts) > 1 else raw_text
-            if raw_text.startswith("json"):
-                raw_text = raw_text[4:]
-            raw_text = raw_text.strip()
-
         validation = validate_output(raw_text, canary)
         if validation.threat != OutputThreat.NONE:
             logger.error("gemini: output suppressed threat=%s", validation.threat)
             return None
 
-        result = json.loads(validation.safe_output or "", strict=False)
+        stripped = validation.safe_output or ""
+        if stripped.startswith('```'):
+            parts = stripped.split('```')
+            stripped = parts[1] if len(parts) > 1 else stripped
+            if stripped.startswith("json"):
+                stripped = stripped[4:]
+            stripped = stripped.strip()
+
+        result = json.loads(stripped, strict=False)
 
         if not all(k in result for k in ("direct", "technical", "structured")):
             raise ValueError("Chaves obrigatórias faltando")

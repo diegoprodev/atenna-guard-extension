@@ -323,8 +323,8 @@ async def usage(creds: HTTPAuthorizationCredentials = Depends(_bearer)):
 async def reset_password(req: ResetRequest):
     try:
         get_admin_client().auth.reset_password_email(req.email)
-    except Exception as e:
-        logger.warning(f"reset_password_email failed for {req.email}: {e}")
+    except Exception:
+        pass
     return {"ok": True}
 
 
@@ -356,3 +356,33 @@ async def cleanup_old_dlp_events() -> dict:
     except Exception as e:
         logger.warning(f'cleanup_old_dlp_events failed: {e}')
         return {'deleted': 0, 'error': str(e)}
+
+class GoogleAuthRequest(BaseModel):
+    code: str
+    redirect_uri: str
+    access_token: str | None = None
+    refresh_token: str | None = None
+    code: str | None = None
+    redirect_uri: str | None = None
+
+@router.post("/google")
+async def google_auth(req: GoogleAuthRequest):
+    try:
+        client = get_admin_client()
+        r = client.auth.exchange_code_for_session({
+            "provider": "google",
+            "code": req.code,
+        })
+    except Exception as e:
+        logger.error(f"Google auth error: {e}")
+        raise HTTPException(401, "Google authentication failed")
+    
+    if not r or not r.session:
+        raise HTTPException(401, "Authentication failed")
+    
+    jwt = r.session.access_token
+    refresh_tok = r.session.refresh_token
+    uid = r.user.id
+    email = r.user.email
+    plan = _get_plan(uid)
+    return _issue_token(jwt, refresh_tok, uid, email, plan)

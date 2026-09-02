@@ -23,7 +23,7 @@ import time
 from typing import Optional
 from dataclasses import dataclass
 
-from .analyzer import analyze
+from .analyzer import analyze as _run_presidio  # alias: evita shadowing pelo `async def analyze` no fim do módulo (FASE 9.0)
 from .scoring import score_results
 from . import telemetry
 
@@ -118,7 +118,7 @@ class DLPEngine:
             # Run Presidio analysis with timeout protection
             loop = asyncio.get_event_loop()
             entities = await asyncio.wait_for(
-                loop.run_in_executor(None, analyze, text),
+                loop.run_in_executor(None, _run_presidio, text),
                 timeout=ANALYSIS_TIMEOUT_SECONDS,
             )
             score, risk_level = score_results(entities)

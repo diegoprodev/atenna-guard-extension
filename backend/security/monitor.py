@@ -150,7 +150,7 @@ async def _send_security_alert(event_type: str, severity: str, entry: dict) -> N
     <tr><td style="color:#888;padding:4px 0">IP</td><td style="color:#aaa">{ip}</td></tr>
   </table>
   <pre style="background:#111;border:1px solid #333;border-radius:4px;padding:12px;font-size:11px;margin-top:16px;overflow-x:auto;color:#22c55e">{json.dumps(data, indent=2, default=str, ensure_ascii=False)}</pre>
-  <p style="color:#555;font-size:11px;margin:16px 0 0">Atenna Guard · {ts} UTC · <a href="https://atennaplugin.maestro-n8n.site/admin/security/events" style="color:#6366f1">Ver logs</a></p>
+  <p style="color:#555;font-size:11px;margin:16px 0 0">Atenna Guard · {ts} UTC · <a href="https://api.atennaia.com.br/admin/security/events" style="color:#6366f1">Ver logs</a></p>
 </div>
 </body></html>"""
 
