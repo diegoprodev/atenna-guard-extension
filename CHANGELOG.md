@@ -71,8 +71,38 @@ Três bugs encadeados (todos há meses em produção, com erros engolidos silenc
   **de produção** com token autenticado real. `tests/e2e/fase-4.2a-*` reescrito para o contrato
   real de `/dlp/scan` (Presidio `ScanResponse`).
 
+### Observabilidade (P5) — "saber do erro antes do usuário"
+- **Error tracking self-hosted: GlitchTip** (Sentry-compatível) na VPS, atrás do nginx em
+  `errors.atennaia.com.br`. Dois projetos: `backend` (DSN interno pela rede docker) e
+  `extension` (DSN público).
+- **`backend/observability.py`** (novo) — inicializa o `sentry-sdk` só se `GLITCHTIP_DSN` estiver
+  no ambiente. `before_send` faz **scrub de PII** antes de sair do processo: CPF, CNPJ, cartão,
+  e-mail, JWT, `sk-`/`re_`/`AKIA`/`AIza`, e cabeçalhos sensíveis (`authorization`, `cookie`,
+  `x-api-key`…). `traces_sample_rate=0` (foco em erros). Decorator `monitor(slug)` faz check-in
+  dos jobs do scheduler — GlitchTip alerta se um cron não rodar (`daily-renewal-30d/7d`,
+  `daily-onboarding-d1`, `daily-upsell`, `daily-dlp-cleanup`).
+- **`src/core/observability.ts`** (novo) — reporter **dependency-free** para o protocolo Sentry
+  envelope (+1 KB gzip, não os +25 KB do `@sentry/browser`). Captura `error` +
+  `unhandledrejection` + `reportError()` manual, com o mesmo scrub de PII e dedupe de rajada.
+  Ativado em `content`, `background`, `popup`, `welcome`. Só passa a reportar quando a v2.3.0
+  for republicada na Chrome Web Store.
+- **`infra/glitchtip/`** — stack versionada (compose + `.env.example` + README + `patches/`).
+  A imagem `glitchtip/glitchtip:v4.2` estava com o handler `POST /api/<id>/envelope/` **sem
+  corpo** (respondia HTTP 200 e descartava o evento — nada era ingerido). Corrigido: subida para
+  `6.2.6` + patch idempotente `01-fix-get_project_auth_info.sql` (a função declarava
+  `organization_id` como `bigint`, mas em PG17/base nova a coluna é `integer` → erro 42804 em
+  todo ingest) + `ALLOWED_HOSTS`. Pipeline validado ponta a ponta:
+  envelope → issue → alerta → **Discord** (`alerts_notification.is_sent = true`).
+- **Uptime externo: UptimeRobot** — 3 monitores HTTP a cada 5 min (`api.atennaia.com.br/health`,
+  `errors.atennaia.com.br`, `plugin.atennaia.com.br`) com alerta por e-mail **e Discord** (`#geral`).
+- **`backend/main.py`** — `/health` passou de `@app.get` para `@app.api_route(methods=["GET","HEAD"])`:
+  monitores de uptime checam com `HEAD` e o FastAPI respondia `405`.
+- Testes: `src/core/__tests__/observability.test.ts` — garante que CPF/e-mail/JWT/cartão/API key
+  **nunca** saem no corpo do envelope e que o destino é o endpoint do GlitchTip.
+
 ### Docs
 - `docs/specs/FASE_9.0_BACKEND_RECONCILIACAO_DLP.md` (spec) + `FASE_9.0_CODE_REVIEW.md` (review).
+- `infra/glitchtip/README.md` — seção "Armadilhas" (os dois bugs do GlitchTip 6.x).
 
 ---
 
