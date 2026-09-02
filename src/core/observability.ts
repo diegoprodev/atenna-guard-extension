@@ -25,7 +25,8 @@ let _lastAt = 0;
 // ── PII scrubbing ───────────────────────────────────────────────────────────
 const RX: Array<[RegExp, string]> = [
   [/\beyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\b/g, '[JWT]'],
-  [/\b(?:sk-[A-Za-z0-9]{16,}|sk_live_[A-Za-z0-9]{10,}|re_[A-Za-z0-9_]{10,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_\-]{35})\b/g, '[KEY]'],
+  [/\bsk-proj-[A-Za-z0-9_\-]{16,}/g, '[KEY]'],
+  [/\b(?:sk-[A-Za-z0-9]{16,}|sk_live_[A-Za-z0-9]{10,}|sk-ant-[A-Za-z0-9_\-]{16,}|re_[A-Za-z0-9_]{10,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_\-]{35})\b/g, '[KEY]'],
   [/(?:bearer\s+)[A-Za-z0-9._\-]+/gi, 'Bearer [TOKEN]'],
   [/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, '[CPF]'],
   [/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g, '[CNPJ]'],
