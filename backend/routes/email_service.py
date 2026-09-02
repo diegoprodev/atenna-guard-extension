@@ -26,41 +26,45 @@ def _base(content: str, preheader: str = "") -> str:
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
 <title>{PRODUCT_NAME}</title>
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
 <style>
+  /* Identidade visual clara — mesma do login/redefinição de senha */
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{ background: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; color: #f0f0f0; -webkit-font-smoothing: antialiased; }}
-  .wrapper {{ background: #0a0a0a; padding: 40px 16px; }}
-  .container {{ max-width: 560px; margin: 0 auto; }}
-  .header {{ text-align: center; padding-bottom: 32px; }}
-  .header img {{ height: 36px; width: auto; }}
-  .card {{ background: #111111; border: 1px solid #1e1e1e; border-radius: 12px; padding: 40px 36px; }}
-  .icon-wrap {{ text-align: center; margin-bottom: 24px; }}
-  .icon-wrap .icon {{ font-size: 48px; line-height: 1; }}
-  h1 {{ font-size: 22px; font-weight: 700; color: #ffffff; line-height: 1.3; margin-bottom: 16px; }}
-  p {{ font-size: 15px; color: #aaaaaa; line-height: 1.7; margin-bottom: 16px; }}
-  p strong, p b {{ color: #f0f0f0; }}
-  .highlight {{ color: #22c55e; font-weight: 600; }}
-  .btn-wrap {{ text-align: center; margin: 32px 0; }}
-  .btn {{ display: inline-block; background: #22c55e; color: #000000 !important; padding: 14px 36px; border-radius: 8px; font-size: 15px; font-weight: 700; text-decoration: none; letter-spacing: -0.2px; }}
+  body {{ background: #f5f6fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #111; -webkit-font-smoothing: antialiased; }}
+  .wrapper {{ background: #f5f6fa; padding: 40px 16px; }}
+  .container {{ max-width: 540px; margin: 0 auto; }}
+  .header {{ text-align: center; padding-bottom: 24px; }}
+  .header img {{ height: 34px; width: auto; }}
+  .card {{ background: #ffffff; border: 1px solid #e8e8e8; border-radius: 14px; padding: 40px 36px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }}
+  .icon-wrap {{ text-align: center; margin-bottom: 22px; }}
+  .icon-wrap .icon {{ font-size: 46px; line-height: 1; }}
+  h1 {{ font-size: 22px; font-weight: 800; color: #111; letter-spacing: -0.02em; line-height: 1.3; margin-bottom: 14px; }}
+  p {{ font-size: 15px; color: #555; line-height: 1.7; margin-bottom: 14px; }}
+  p strong, p b {{ color: #111; }}
+  .highlight {{ color: #16a34a; font-weight: 700; }}
+  .btn-wrap {{ text-align: center; margin: 30px 0; }}
+  .btn {{ display: inline-block; background: #22c55e; color: #ffffff !important; padding: 13px 36px; border-radius: 9px; font-size: 15px; font-weight: 700; text-decoration: none; letter-spacing: -0.2px; box-shadow: 0 2px 8px rgba(34,197,94,0.28); }}
   .btn:hover {{ background: #16a34a; }}
-  .btn-secondary {{ background: transparent; color: #aaaaaa !important; border: 1px solid #333333; }}
-  .btn-secondary:hover {{ border-color: #555; color: #f0f0f0 !important; }}
-  .divider {{ border: none; border-top: 1px solid #1e1e1e; margin: 28px 0; }}
-  .features {{ margin: 24px 0; }}
-  .feature {{ display: flex; align-items: flex-start; margin-bottom: 12px; }}
-  .feature-icon {{ color: #22c55e; font-size: 16px; margin-right: 10px; flex-shrink: 0; margin-top: 2px; }}
-  .feature-text {{ font-size: 14px; color: #aaaaaa; line-height: 1.5; }}
-  .feature-text strong {{ color: #f0f0f0; }}
-  .badge {{ display: inline-block; background: #0d2818; color: #22c55e; border: 1px solid #1a4a2e; border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; margin-bottom: 20px; }}
-  .link-fallback {{ word-break: break-all; font-size: 12px; color: #555555; margin-top: 8px; }}
-  .link-fallback a {{ color: #22c55e; }}
-  .footer {{ text-align: center; padding-top: 28px; }}
-  .footer p {{ font-size: 12px; color: #444444; line-height: 1.6; margin-bottom: 4px; }}
-  .footer a {{ color: #555555; text-decoration: none; }}
-  .footer a:hover {{ color: #888888; }}
+  .btn-secondary {{ background: #ffffff; color: #444 !important; border: 1.5px solid #e5e5e5; box-shadow: none; }}
+  .btn-secondary:hover {{ border-color: #22c55e; color: #16a34a !important; }}
+  .divider {{ border: none; border-top: 1px solid #eee; margin: 26px 0; }}
+  .features {{ margin: 22px 0; }}
+  .feature {{ display: flex; align-items: flex-start; margin-bottom: 11px; }}
+  .feature-icon {{ color: #16a34a; font-size: 16px; margin-right: 10px; flex-shrink: 0; margin-top: 2px; }}
+  .feature-text {{ font-size: 14px; color: #555; line-height: 1.5; }}
+  .feature-text strong {{ color: #111; }}
+  .badge {{ display: inline-block; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; border-radius: 20px; padding: 4px 13px; font-size: 12px; font-weight: 700; margin-bottom: 18px; }}
+  .link-fallback {{ word-break: break-all; font-size: 12px; color: #999; margin-top: 8px; }}
+  .link-fallback a {{ color: #16a34a; }}
+  .fine {{ font-size: 13px; color: #999; }}
+  .fine strong {{ color: #666; }}
+  .footer {{ text-align: center; padding-top: 24px; }}
+  .footer p {{ font-size: 12px; color: #aaa; line-height: 1.6; margin-bottom: 4px; }}
+  .footer a {{ color: #aaa; text-decoration: none; }}
+  .footer a:hover {{ color: #666; }}
   @media (max-width: 600px) {{
     .card {{ padding: 28px 20px; }}
     h1 {{ font-size: 20px; }}
@@ -101,7 +105,7 @@ def render_email_confirmation(confirmation_url: str, email: str) -> str:
   <a href="{confirmation_url}" class="btn">Confirmar meu email →</a>
 </div>
 <hr class="divider">
-<p style="font-size:13px;color:#555">Este link expira em <strong style="color:#888">24 horas</strong>. Se você não criou uma conta, ignore este email.</p>
+<p style="font-size:13px;color:#555">Este link expira em <strong style="color:#666">24 horas</strong>. Se você não criou uma conta, ignore este email.</p>
 <p class="link-fallback">Se o botão não funcionar, copie este link:<br><a href="{confirmation_url}">{confirmation_url[:80]}...</a></p>
 """
     return _base(content, preheader=f"Confirme seu email para ativar sua conta no {PRODUCT_NAME}")
@@ -117,7 +121,7 @@ def render_reset_password(reset_url: str, email: str) -> str:
   <a href="{reset_url}" class="btn">Redefinir minha senha →</a>
 </div>
 <hr class="divider">
-<p style="font-size:13px;color:#555">Este link expira em <strong style="color:#888">1 hora</strong>. Se você não solicitou isso, sua senha continua segura — ignore este email.</p>
+<p style="font-size:13px;color:#555">Este link expira em <strong style="color:#666">1 hora</strong>. Se você não solicitou isso, sua senha continua segura — ignore este email.</p>
 <p class="link-fallback">Se o botão não funcionar, copie este link:<br><a href="{reset_url}">{reset_url[:80]}...</a></p>
 """
     return _base(content, preheader="Redefina sua senha do Atenna Safe Prompt")
@@ -133,7 +137,7 @@ def render_magic_link(magic_url: str, email: str) -> str:
   <a href="{magic_url}" class="btn">Acessar agora →</a>
 </div>
 <hr class="divider">
-<p style="font-size:13px;color:#555">Este link expira em <strong style="color:#888">10 minutos</strong> e só pode ser usado uma vez. Se você não solicitou acesso, ignore este email.</p>
+<p style="font-size:13px;color:#555">Este link expira em <strong style="color:#666">10 minutos</strong> e só pode ser usado uma vez. Se você não solicitou acesso, ignore este email.</p>
 """
     return _base(content, preheader=f"Seu link de acesso ao {PRODUCT_NAME}")
 
@@ -248,7 +252,7 @@ def render_pro_welcome(email: str, plan_key: str, expires_at: str) -> str:
   <a href="https://chromewebstore.google.com/search/Atenna" class="btn">Abrir extensão →</a>
 </div>
 <hr class="divider">
-<p style="font-size:13px;color:#555">Renovação automática em <strong style="color:#888">{exp_str}</strong>. Você receberá um aviso 30 dias antes.</p>
+<p style="font-size:13px;color:#555">Renovação automática em <strong style="color:#666">{exp_str}</strong>. Você receberá um aviso 30 dias antes.</p>
 """
     return _base(content, preheader=f"Bem-vindo ao Pro — seu acesso ilimitado está ativo")
 
@@ -257,10 +261,13 @@ def render_renewal(email: str, days_left: int, renewal_url: str, plan_key: str) 
     """L4 — Lembrete de renovacao 30 dias antes."""
     plan_label  = "Anual" if plan_key == "yearly" else "Mensal"
     price_str   = "10x de R$19,70 no cartão" if plan_key == "yearly" else "R$29,90/mês"
-    urgency_color = "#f59e0b" if days_left <= 7 else "#22c55e"
+    urgent = days_left <= 7
+    urgency_color = "#d97706" if urgent else "#16a34a"
+    badge_bg      = "#fffbeb" if urgent else "#f0fdf4"
+    badge_border  = "#fde68a" if urgent else "#bbf7d0"
     content = f"""
-<div class="icon-wrap"><div class="icon">{"⚠️" if days_left <= 7 else "🔔"}</div></div>
-<div style="text-align:center"><span class="badge" style="background:#1a1200;color:{urgency_color};border-color:#2a2000">Vence em {days_left} dias</span></div>
+<div class="icon-wrap"><div class="icon">{"⚠️" if urgent else "🔔"}</div></div>
+<div style="text-align:center"><span class="badge" style="background:{badge_bg};color:{urgency_color};border-color:{badge_border}">Vence em {days_left} dias</span></div>
 <h1>{"Urgente: sua" if days_left <= 7 else "Sua"} assinatura {PRODUCT_NAME} vence em {days_left} dias</h1>
 <p>Seu plano <strong>Pro {plan_label}</strong> está expirando. Renove agora para continuar com proteção completa.</p>
 <div class="btn-wrap">
@@ -324,26 +331,13 @@ async def send_email(to: str, subject: str, html: str) -> bool:
 
 
 def render_renewal_urgent(email: str, days_left: int, renewal_url: str) -> str:
-    content = (
-        """    <div style="font-size:40px;margin-bottom:20px">&#9888;</div>
-    <h1 style="font-size:22px;font-weight:700;margin:0 0 16px;color:#f0f0f0">
-      Sua assinatura vence em """ + str(days_left) + """ dias
-    </h1>
-    <p style="font-size:15px;color:#888;line-height:1.7;margin:0 0 24px">
-      Nao deixe sua protecao expirar. Apos o vencimento, seu acesso ao
-      <strong style="color:#f0f0f0">Atenna Safe Prompt Pro</strong> sera suspenso
-      e voce perdera o mascaramento LGPD avancado.
-    </p>
-    <p style="font-size:15px;color:#888;line-height:1.7;margin:0 0 28px">
-      Renove agora e mantenha sua protecao ativa sem interrupcao.
-    </p>
-    <a href="""" + renewal_url + """"
-       style="display:inline-block;background:#ef4444;color:#fff;padding:14px 36px;
-              border-radius:8px;font-size:15px;font-weight:700;text-decoration:none;margin-bottom:24px">
-      Renovar agora
-    </a>
-    <p style="font-size:13px;color:#555;margin:0">
-      Apos o pagamento, seu acesso e renovado automaticamente em instantes.
-    </p>"""
-    )
-    return _base(content, preheader=f"Sua assinatura vence em {days_left} dias - aja agora")
+    content = f"""
+    <div class="icon-wrap"><span class="icon">&#9888;&#65039;</span></div>
+    <div style="text-align:center"><span class="badge" style="background:#fffbeb;color:#d97706;border-color:#fde68a">Vence em {days_left} dias</span></div>
+    <h1>Sua assinatura está prestes a vencer</h1>
+    <p>Não deixe sua proteção expirar. Após o vencimento, seu acesso ao
+      <strong>Atenna Safe Prompt Pro</strong> é suspenso e você volta ao plano gratuito
+      (5 prompts/dia).</p>
+    <div class="btn-wrap"><a href="{renewal_url}" class="btn">Renovar agora</a></div>
+    <p class="fine">Após o pagamento, seu acesso é renovado automaticamente em instantes.</p>"""
+    return _base(content, preheader=f"Sua assinatura vence em {days_left} dias — renove agora")
