@@ -78,6 +78,22 @@ app = FastAPI(
     lifespan=_lifespan,
 )
 
+# Métricas Prometheus — latência por rota/método/status, contagem, in-progress.
+# `/metrics` é servido por routes/metrics.py e bloqueado no nginx público.
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+
+    Instrumentator(
+        excluded_handlers=["/metrics", "/health"],
+        should_group_status_codes=False,
+    ).instrument(app)
+except Exception as _e:  # pragma: no cover - dependência ausente não pode quebrar o boot
+    import logging as _logging
+
+    _logging.getLogger(__name__).warning("instrumentator off: %s", _e)
+
+import observability_metrics as _metrics
+
 # TASK 7: Exception Sanitization (prevent PII leakage in error logs)
 app.add_middleware(SanitizationMiddleware)
 
@@ -135,7 +151,10 @@ async def generate(
     if not request.input.strip():
         raise HTTPException(status_code=422, detail="Campo 'input' não pode ser vazio.")
 
-    user_id = _user.get("id") or _user.get("sub")
+    # require_auth (BFF opaque token) devolve {"user_id": ...}. As chaves "id"/"sub"
+    # eram do auth antigo (JSON cru do Supabase) — sem o "user_id" aqui, `user_id`
+    # ficava None e a cota server-side NÃO era aplicada (bug em prod desde 2026-05).
+    user_id = _user.get("user_id") or _user.get("id") or _user.get("sub")
     input_text = request.input
 
     # ─── SERVER-SIDE RATE LIMITING ───────────────────────────────────────────
@@ -144,6 +163,7 @@ async def generate(
     quota = check_rate_limit(user_id, plan) if user_id else {"allowed": True, "count": 0, "limit": 5, "reset_at": None}
 
     if not quota["allowed"]:
+        _metrics.record_quota_block(plan)
         # Audit: log the blocked attempt
         audit_log(
             user_id,
@@ -198,6 +218,7 @@ async def generate(
         dlp_meta,
         session_id=session_id,
     )
+    _metrics.record_dlp_scan(server_analysis.risk_level)
 
     # Log revalidation result
     telemetry.server_revalidated(
@@ -210,6 +231,8 @@ async def generate(
 
     # Log if mismatch detected
     if mismatch.has_mismatch:
+        if getattr(mismatch, "divergence_type", "") == "client_low_server_high":
+            _metrics.record_dlp_divergence()
         print(json.dumps({
             "event": "dlp_client_server_divergence",
             "divergence_type": mismatch.divergence_type,
@@ -242,6 +265,8 @@ async def generate(
     final_input = enforcement_result["rewritten_text"]
 
     # Log enforcement decision
+    if enforcement_result.get("applied"):
+        _metrics.record_strict_rewrite()
     if enforcement_result["would_apply"]:
         print(json.dumps({
             "event": "dlp_strict_evaluated",
@@ -290,9 +315,22 @@ async def privacy_policy():
     return FileResponse(os.path.join(_static_dir, 'privacy.html'))
 
 
-@app.post('/internal/test-generate')
-async def test_generate_internal(request: 'Request'):
-    """Internal test endpoint — VPS only (not exposed via nginx)."""
+# ── Endpoints internos — nginx bloqueia `/internal/` no público; o token é
+#    defesa em profundidade e FAIL-CLOSED: sem INTERNAL_API_TOKEN no ambiente,
+#    todo /internal/* responde 403. ──────────────────────────────────────────
+from fastapi import Header
+from routes.lifecycle_emails import send_welcome as _send_welcome, send_pro_welcome as _send_pro_welcome
+
+_INTERNAL_TOKEN = os.getenv('INTERNAL_API_TOKEN', '')
+
+def _require_internal(x_internal_token: str = Header(default='')):
+    if not _INTERNAL_TOKEN or x_internal_token != _INTERNAL_TOKEN:
+        raise HTTPException(status_code=403, detail='forbidden')
+
+
+@app.post('/internal/test-generate', include_in_schema=False)
+async def test_generate_internal(request: 'Request', _: None = Depends(_require_internal)):
+    """Endpoint de teste — só rede interna + INTERNAL_API_TOKEN."""
     body = await request.json()
     user_id = body.get('user_id', 'test-user')
     text = body.get('text', 'Como escalar minha empresa SaaS?')
@@ -304,15 +342,6 @@ async def test_generate_internal(request: 'Request'):
 
 
 # ── Internal lifecycle email endpoints ──────────────────────────────────────
-
-from fastapi import Header
-from routes.lifecycle_emails import send_welcome as _send_welcome, send_pro_welcome as _send_pro_welcome
-
-_INTERNAL_TOKEN = os.getenv('INTERNAL_API_TOKEN', '')
-
-def _require_internal(x_internal_token: str = Header(default='')):
-    if _INTERNAL_TOKEN and x_internal_token != _INTERNAL_TOKEN:
-        raise HTTPException(status_code=403, detail='forbidden')
 
 @app.post('/internal/email/welcome', include_in_schema=False)
 async def internal_welcome(payload: dict, _: None = Depends(_require_internal)):

@@ -6,6 +6,21 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [2.3.0] — 2026-09-02 — FASE 9.0: reconciliação do backend + correção do DLP server-side
 
+### Crítico — 2 falhas de segurança achadas ao instrumentar as métricas (FASE 9.1)
+- **Cota server-side de `/generate-prompts` estava desligada desde 2026-05.** O handler lia
+  `_user.get("id") or _user.get("sub")`, mas `require_auth` (token opaco BFF) devolve
+  `{"user_id": ...}`. Resultado: `user_id` era sempre `None` → o ramo `else` assumia
+  `{"allowed": True}` e o `check_rate_limit` **nunca rodava**. Qualquer usuário logado gerava
+  prompts sem limite. Corrigido: `_user.get("user_id") or _user.get("id") or _user.get("sub")`.
+  Regressão em `backend/tests/test_metrics.py::test_user_id_do_token_e_repassado_ao_rate_limit`.
+- **`POST /internal/test-generate` estava aberto na internet.** Sem `Depends`, sem token, e o
+  comentário "not exposed via nginx" era falso — respondia `200` no domínio público e chamava
+  o LLM (queima de cota/dinheiro para qualquer anônimo). Os outros `/internal/email/*` tinham
+  guarda de token, mas `_require_internal` **pulava a checagem quando `INTERNAL_API_TOKEN` não
+  estava setado** (e não estava). Corrigido: `_require_internal` agora é **fail-closed** (sem
+  token no ambiente = 403), `/internal/test-generate` ganhou o guard, e o nginx bloqueia todo
+  `location ^~ /internal/` no domínio público. `INTERNAL_API_TOKEN` gerado e setado na VPS.
+
 ### Crítico — o DLP server-side estava quebrado em produção
 Descoberto durante a inspeção que a proteção de PII em prompts **só funcionava no cliente**.
 Três bugs encadeados (todos há meses em produção, com erros engolidos silenciosamente):
@@ -99,6 +114,24 @@ Três bugs encadeados (todos há meses em produção, com erros engolidos silenc
   monitores de uptime checam com `HEAD` e o FastAPI respondia `405`.
 - Testes: `src/core/__tests__/observability.test.ts` — garante que CPF/e-mail/JWT/cartão/API key
   **nunca** saem no corpo do envelope e que o destino é o endpoint do GlitchTip.
+
+#### Métricas Prometheus (FASE 9.1 — parte 1: instrumentação)
+- **`/metrics` real** — antes era um contador in-memory de 4 números **exposto publicamente**
+  (`GET https://api.atennaia.com.br/metrics` = 200 sem auth, vazava volume/erros/falhas de
+  auth). Agora: `prometheus-fastapi-instrumentator` (latência por rota/método/status,
+  contagem, in-progress) + `prometheus_client`. **Bloqueado no nginx** no domínio público
+  (`location = /metrics { return 404; }`); um coletor raspa pela rede docker (`backend:8000`).
+- **`backend/observability_metrics.py`** (novo) — métricas de negócio, todas best-effort:
+  `atenna_dlp_scans_total{risk_level}`, `atenna_dlp_client_server_divergence_total` (cliente
+  sub-reporta risco), `atenna_dlp_strict_rewrites_total`, `atenna_quota_blocks_total{plan}`,
+  `atenna_generate_prompts_total{provider,outcome}`, `atenna_checkout_events_total{type}`,
+  `atenna_auth_failures_total{reason}`, `atenna_bff_session_store` (gauge: 1=Postgres,
+  0=fallback in-memory).
+- `middleware/security_headers.py` — removido o contador manual. `docs/specs/FASE_9.1_METRICAS_GRAFANA.md`.
+- Testes: `backend/tests/test_metrics.py` — formato Prometheus, incremento dos helpers,
+  429 → `atenna_quota_blocks_total`, divergência cliente↔servidor contabilizada.
+- **Em aberto (parte 2):** coletor + painel + alerta de degradação. Decisão pendente:
+  Grafana Cloud (recomendado) vs Prometheus+Grafana self-hosted.
 
 ### Docs
 - `docs/specs/FASE_9.0_BACKEND_RECONCILIACAO_DLP.md` (spec) + `FASE_9.0_CODE_REVIEW.md` (review).

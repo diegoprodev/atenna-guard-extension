@@ -37,6 +37,11 @@ except ImportError:
     def log_security_event(*a, **kw): pass
     def record_auth_failure(*a, **kw): return False
 
+try:
+    from observability_metrics import set_bff_session_store
+except Exception:
+    def set_bff_session_store(*a, **kw): return None
+
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +67,7 @@ def _check_table() -> bool:
         logger.warning("bff_sessions table not found — using in-memory fallback. "
                        "Run the migration SQL in Supabase dashboard to enable persistent sessions.")
         log_security_event("bff_sessions_fallback", {"reason": "table_missing"}, severity="CRITICAL")
+    set_bff_session_store(_table_ok)
     return _table_ok
 
 # Rate limiting for login endpoint — 5 attempts per email per minute

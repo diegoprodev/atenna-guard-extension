@@ -1,7 +1,23 @@
 # FASE 9.1 — Métricas (Prometheus) + Grafana + alerta de degradação
 
-**Status:** em implementação · **Depende de:** FASE 9.0 (backend no repo), P5 GlitchTip
+**Status:** parte 1 (instrumentação) feita · parte 2 (coletor + painel) em aberto
+**Depende de:** FASE 9.0 (backend no repo), P5 GlitchTip
 **Não bloqueia:** republicação da extensão na Chrome Web Store.
+
+## Decisão de rollout (2026-09-02)
+
+Dividido em duas partes:
+
+- **Parte 1 — instrumentação (FEITA):** o backend expõe um `/metrics` Prometheus
+  de verdade (latência p95 por rota via instrumentator + métricas de negócio). Serve
+  para **qualquer** coletor futuro. `/metrics` bloqueado no nginx público.
+- **Parte 2 — coletor + painel + alerta (EM ABERTO):** escolher entre
+  **(a)** self-hosted (Prometheus + Grafana em containers na VPS, como o GlitchTip) ou
+  **(b)** **Grafana Cloud** (free) — integração nativa do Supabase p/ métricas do banco
+  + um agente leve na VPS (`grafana-agent`/`alloy` ou Prometheus em modo `agent` com
+  `remote_write`) empurrando o `/metrics` do backend e o `node_exporter`.
+  Recomendação: **(b)** — menos infra pra manter, sobrevive à VPS cair, ganha as
+  métricas do Postgres de graça. Pendente de decisão do dono.
 
 ## Problema
 

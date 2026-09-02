@@ -349,6 +349,11 @@ async def asaas_webhook(request: Request):
     checkout_obj = body.get("checkout") or {}
 
     logger.info(f"Asaas webhook received: event={event}")
+    try:
+        from observability_metrics import record_checkout_event
+        record_checkout_event(event or "unknown")
+    except Exception:
+        pass
 
     sb = _supabase()
     if not sb:

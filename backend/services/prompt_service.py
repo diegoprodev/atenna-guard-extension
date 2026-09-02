@@ -5,6 +5,12 @@ gpt-4.1-nano: $0.10/1M input, ~4.7s para nosso caso — mais rápido e mesmo pre
 from services.openai_service import generate_prompts_openai
 from services.gemini_service import generate_prompts_gemini
 
+try:
+    from observability_metrics import record_generation
+except Exception:  # pragma: no cover
+    def record_generation(*_a, **_k):
+        return None
+
 
 async def generate_prompts(input_text: str, user_id: str = "") -> dict:
     """
@@ -16,8 +22,11 @@ async def generate_prompts(input_text: str, user_id: str = "") -> dict:
     try:
         result = await generate_prompts_openai(input_text, user_id=user_id)
         if result:
+            record_generation("openai", "ok")
             return result
+        record_generation("openai", "error")
     except Exception as exc:
+        record_generation("openai", "error")
         print(f'[Atenna] OpenAI exception: {type(exc).__name__}: {exc}')
 
     # 2. Gemini fallback
@@ -25,10 +34,14 @@ async def generate_prompts(input_text: str, user_id: str = "") -> dict:
     try:
         result = await generate_prompts_gemini(input_text, user_id=user_id)
         if result:
+            record_generation("gemini", "ok")
             return result
+        record_generation("gemini", "error")
     except Exception as exc:
+        record_generation("gemini", "error")
         print(f'[Atenna] Gemini exception: {type(exc).__name__}: {exc}')
 
     # Ambas falharam
     print('[Atenna] Ambas as APIs falharam')
+    record_generation("none", "fallback")
     return {'_is_fallback': True, 'direct': '', 'technical': '', 'structured': ''}
