@@ -12,13 +12,13 @@ SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 async def auth_callback():
     """
     Callback universal do Supabase.
-    - type=recovery  → exibe formulário de nova senha
-    - qualquer outro → confirma login e fecha a aba
-    Tokens chegam sempre como hash fragment (#access_token=...) nunca como query param.
-    """
-    supabase_url = SUPABASE_URL
-    supabase_anon_key = SUPABASE_ANON_KEY
 
+    Dois modos:
+    - `?token_hash=...&type=recovery` (query) → fluxo PKCE-like: mostra um botão e só
+      chama /auth/v1/verify no CLIQUE do usuário. Isso evita que scanners de e-mail
+      (Gmail/antivírus) consumam o token de uso único ("link expirado").
+    - `#access_token=...&type=...` (hash fragment) → fluxo legado (magic link direto).
+    """
     return f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -34,7 +34,6 @@ async def auth_callback():
     h1{{font-size:22px;color:#111;margin-bottom:8px}}
     p{{color:#666;font-size:14px;line-height:1.5;margin-bottom:12px}}
     .hidden{{display:none!important}}
-    /* Reset form */
     .form-group{{text-align:left;margin-bottom:14px}}
     label{{font-size:13px;font-weight:500;color:#333;display:block;margin-bottom:4px}}
     input[type=password]{{width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;outline:none;transition:border-color .2s}}
@@ -51,14 +50,22 @@ async def auth_callback():
 </head>
 <body>
 <div class="box">
-  <!-- Loading -->
   <div id="v-loading">
     <div class="spinner"></div>
     <h1>Verificando…</h1>
     <p>Aguarde um instante.</p>
   </div>
 
-  <!-- Recovery: nova senha -->
+  <!-- Recovery: passo 1 — confirmar (evita consumo por scanner) -->
+  <div id="v-confirm" class="hidden">
+    <div class="ok-icon">🔑</div>
+    <h1>Redefinir senha</h1>
+    <p>Clique abaixo para continuar a redefinição da senha da sua conta Atenna.</p>
+    <button type="button" class="btn" id="confirmBtn">Continuar</button>
+    <div class="err hidden" id="confirmErr"></div>
+  </div>
+
+  <!-- Recovery: passo 2 — nova senha -->
   <div id="v-reset" class="hidden">
     <div class="ok-icon">🔑</div>
     <h1>Criar nova senha</h1>
@@ -78,7 +85,6 @@ async def auth_callback():
     </form>
   </div>
 
-  <!-- Login confirmado -->
   <div id="v-success" class="hidden">
     <div class="ok-icon">✨</div>
     <h1>Acesso confirmado!</h1>
@@ -86,84 +92,85 @@ async def auth_callback():
     <div class="countdown">Encerrando em <span id="cd-success">5</span>s…</div>
   </div>
 
-  <!-- Senha redefinida -->
   <div id="v-reset-ok" class="hidden">
     <div class="ok-icon">✅</div>
     <h1>Senha redefinida!</h1>
-    <p>Sua senha foi atualizada. Você já está conectado.</p>
-    <p>Pode fechar esta aba e retornar à extensão.</p>
+    <p>Sua senha foi atualizada. Volte à extensão e faça login com a nova senha.</p>
     <div class="countdown">Encerrando em <span id="cd-reset">5</span>s…</div>
   </div>
 
-  <!-- Erro -->
   <div id="v-error" class="hidden">
     <div class="ok-icon">⚠️</div>
-    <h1>Erro</h1>
-    <p id="err-msg">Tente novamente.</p>
-    <p style="font-size:13px;color:#999">Feche esta aba e tente novamente na extensão.</p>
+    <h1>Link inválido ou expirado</h1>
+    <p id="err-msg">Solicite um novo link de redefinição na extensão.</p>
   </div>
 </div>
 
 <script>
-  const SUPABASE_URL = {repr(supabase_url)};
-  const SUPABASE_ANON_KEY = {repr(supabase_anon_key)};
+  const SUPABASE_URL = {repr(SUPABASE_URL)};
+  const SUPABASE_ANON_KEY = {repr(SUPABASE_ANON_KEY)};
 
   const show = id => document.querySelectorAll('[id^="v-"]').forEach(el => el.classList[el.id===id?'remove':'add']('hidden'));
-  const err  = msg => {{ show('v-error'); document.getElementById('err-msg').textContent = msg||'Erro desconhecido.'; }};
+  const err  = msg => {{ show('v-error'); document.getElementById('err-msg').textContent = msg||'Solicite um novo link.'; }};
 
   function countdown(elId, secs) {{
     const el = document.getElementById(elId);
     const t = setInterval(()=>{{ secs--; el.textContent=Math.max(0,secs); if(secs<=0){{clearInterval(t);window.close();}} }},1000);
   }}
-
   function notifyExtension(access_token, refresh_token, expires_in) {{
-    if (window.opener) {{
-      window.opener.postMessage({{type:'ATENNA_AUTH_SUCCESS',access_token,refresh_token,expires_in}}, '*');
-    }}
+    if (window.opener) window.opener.postMessage({{type:'ATENNA_AUTH_SUCCESS',access_token,refresh_token,expires_in}}, '*');
   }}
 
-  // Strength bar
   document.getElementById('pw1')?.addEventListener('input', e => {{
-    const v = e.target.value;
-    let s = 0;
-    if(v.length>=8) s+=25;
-    if(/[A-Z]/.test(v)) s+=25;
-    if(/[0-9]/.test(v)) s+=25;
-    if(/[^A-Za-z0-9]/.test(v)) s+=25;
+    const v = e.target.value; let s = 0;
+    if(v.length>=8) s+=25; if(/[A-Z]/.test(v)) s+=25; if(/[0-9]/.test(v)) s+=25; if(/[^A-Za-z0-9]/.test(v)) s+=25;
     const bar = document.getElementById('sbar');
     bar.style.width = s+'%';
     bar.style.background = s<=25?'#ef4444':s<=50?'#f59e0b':s<=75?'#3b82f6':'#22c55e';
   }});
 
-  // Password reset submit
+  async function verifyTokenHash(token_hash) {{
+    const res = await fetch(SUPABASE_URL+'/auth/v1/verify', {{
+      method: 'POST',
+      headers: {{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY}},
+      body: JSON.stringify({{type:'recovery', token_hash}}),
+    }});
+    if(!res.ok) {{
+      const d = await res.json().catch(()=>({{}}));
+      throw new Error(d.msg || d.error_description || d.message || 'expirado');
+    }}
+    return res.json();
+  }}
+
+  document.getElementById('confirmBtn')?.addEventListener('click', async () => {{
+    const btn = document.getElementById('confirmBtn');
+    btn.disabled = true; btn.textContent = 'Verificando…';
+    try {{
+      const s = await verifyTokenHash(window._tokenHash);
+      window._recoveryToken = s.access_token;
+      window._recoveryRefresh = s.refresh_token;
+      show('v-reset');
+    }} catch(ex) {{
+      err('Este link expirou ou já foi usado. Solicite um novo na extensão.');
+    }}
+  }});
+
   document.getElementById('resetForm')?.addEventListener('submit', async e => {{
     e.preventDefault();
-    const pw1 = document.getElementById('pw1').value;
-    const pw2 = document.getElementById('pw2').value;
+    const pw1 = document.getElementById('pw1').value, pw2 = document.getElementById('pw2').value;
     const formErr = document.getElementById('formErr');
-
     if(pw1.length < 8) {{ formErr.textContent='Senha deve ter pelo menos 8 caracteres.'; formErr.classList.remove('hidden'); return; }}
     if(pw1 !== pw2) {{ formErr.textContent='As senhas não coincidem.'; formErr.classList.remove('hidden'); return; }}
     formErr.classList.add('hidden');
-
     const btn = document.getElementById('submitBtn');
     btn.disabled = true; btn.textContent = 'Salvando…';
-
     try {{
       const res = await fetch(SUPABASE_URL+'/auth/v1/user', {{
         method: 'PUT',
-        headers: {{
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer '+window._recoveryToken,
-        }},
+        headers: {{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+window._recoveryToken}},
         body: JSON.stringify({{password: pw1}}),
       }});
-      if(!res.ok) {{
-        const d = await res.json().catch(()=>({{}}));
-        throw new Error(d.msg || d.message || 'Erro ao atualizar senha.');
-      }}
-      notifyExtension(window._recoveryToken, window._recoveryRefresh, 3600);
+      if(!res.ok) {{ const d = await res.json().catch(()=>({{}})); throw new Error(d.msg || d.message || 'Erro ao atualizar senha.'); }}
       show('v-reset-ok');
       countdown('cd-reset', 5);
     }} catch(ex) {{
@@ -173,26 +180,29 @@ async def auth_callback():
     }}
   }});
 
-  // Parse hash
   (function() {{
-    const hash = window.location.hash.substring(1);
-    const p = new URLSearchParams(hash);
-    const access_token = p.get('access_token');
-    const refresh_token = p.get('refresh_token');
-    const expires_in = p.get('expires_in');
-    const type = p.get('type');
-    const error = p.get('error');
-    const error_desc = p.get('error_description');
+    const q = new URLSearchParams(window.location.search);
+    const h = new URLSearchParams(window.location.hash.substring(1));
 
-    if(error) {{ err(error_desc||error); return; }}
-    if(!access_token) {{ err('Token não recebido. Tente novamente na extensão.'); return; }}
+    // Modo novo: ?token_hash=...&type=recovery  → botão, verify só no clique
+    const th = q.get('token_hash');
+    if (th && q.get('type') === 'recovery') {{
+      window._tokenHash = th;
+      show('v-confirm');
+      return;
+    }}
 
-    if(type === 'recovery') {{
+    // Modo legado: #access_token=...
+    const error = h.get('error');
+    if(error) {{ err(h.get('error_description')||error); return; }}
+    const access_token = h.get('access_token');
+    if(!access_token) {{ err('Link inválido. Solicite um novo na extensão.'); return; }}
+    if(h.get('type') === 'recovery') {{
       window._recoveryToken = access_token;
-      window._recoveryRefresh = refresh_token;
+      window._recoveryRefresh = h.get('refresh_token');
       show('v-reset');
     }} else {{
-      notifyExtension(access_token, refresh_token, expires_in);
+      notifyExtension(access_token, h.get('refresh_token'), h.get('expires_in'));
       show('v-success');
       countdown('cd-success', 5);
     }}

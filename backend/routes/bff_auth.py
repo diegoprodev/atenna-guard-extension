@@ -390,17 +390,21 @@ async def reset_password(req: ResetRequest):
             "options": {"redirect_to": "https://api.atennaia.com.br/auth/callback"},
         })
         props = getattr(r, "properties", None)
-        action_link = (
-            getattr(props, "action_link", None)
-            if props is not None
-            else (r.get("properties", {}) if isinstance(r, dict) else {}).get("action_link")
+        token_hash = getattr(props, "hashed_token", None) if props is not None else (
+            (r.get("properties", {}) if isinstance(r, dict) else {}).get("hashed_token")
         )
-        if action_link:
+        if token_hash:
+            # Link para NOSSA página com o token_hash — o /auth/v1/verify só é
+            # chamado no clique do usuário (não quando um scanner de e-mail abre o link).
+            reset_url = (
+                "https://api.atennaia.com.br/auth/callback"
+                f"?token_hash={token_hash}&type=recovery"
+            )
             from routes.email_service import render_reset_password, send_email
             await send_email(
                 req.email,
                 "Redefina sua senha — Atenna Safe Prompt",
-                render_reset_password(action_link, req.email),
+                render_reset_password(reset_url, req.email),
             )
     except Exception as e:
         # e-mail inexistente → generate_link lança; não é erro pro cliente
