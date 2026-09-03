@@ -18,3 +18,6 @@ router.include_router(plans.router)
 
 from routes.admin import compliance
 router.include_router(compliance.router)
+
+from routes.admin import subscriptions
+router.include_router(subscriptions.router)
