@@ -12,6 +12,7 @@ import { trackEvent } from '../core/analytics';
 // All imports are statically inlined. Lazy-loading modal would require changing
 // the build format to ES modules, which is a separate architectural decision.
 import { openSettingsOverlay, generateFromBadge, openUploadFromBadge } from '../ui/modal';
+import { icon } from '../ui/icons';
 
 const INJECTED_ATTR      = 'data-atenna-injected';
 const BTN_ID             = 'atenna-guard-btn';
@@ -375,9 +376,7 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   // Ação 1: Abrir modal (aba edição — sem geração automática)
   const promptBtn = makeAction(
     'Abrir Atenna',
-    `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-3 2v-2H3a1 1 0 0 1-1-1V3z"/>
-    </svg>`,
+    icon('sparkles', { size: 15, stroke: 1.8 }),
     () => {
       void trackEvent('badge_action_prompt');
       onToggle();
@@ -387,12 +386,7 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   // Ação 2: Varinha mágica — gera prompt diretamente se input tiver conteúdo mínimo
   const wandBtn = makeAction(
     'Gerar prompt',
-    `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <line x1="3.5" y1="12.5" x2="10" y2="6"/>
-      <path d="M10 2l.8 1.7 1.7.8-1.7.8L10 7l-.8-1.7L7.5 4.5l1.7-.8L10 2z"/>
-      <line x1="2" y1="6" x2="2.8" y2="6"/><line x1="6" y1="2" x2="6" y2="2.8"/>
-      <line x1="4.2" y1="4.2" x2="4.8" y2="4.8"/>
-    </svg>`,
+    icon('wand', { size: 15, stroke: 1.8 }),
     () => {
       const currentInput = document.querySelector(config.inputSelector) as HTMLElement | null;
       const text = currentInput ? getInputText(currentInput).trim() : '';
@@ -412,10 +406,7 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   // Ação 3: Analisar arquivo — gated por feature flag
   const uploadBtn = makeAction(
     'Analisar arquivo',
-    `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-      <line x1="8" y1="2" x2="8" y2="11"/><polyline points="5,5 8,2 11,5"/>
-      <path d="M3 13h10"/>
-    </svg>`,
+    icon('upload', { size: 15, stroke: 1.8 }),
     () => {
       void trackEvent('upload_entry_clicked');
       openUploadFromBadge();
@@ -425,10 +416,7 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
   // Ação 4: Configurações (engrenagem real, não sol)
   const settingsBtn = makeAction(
     'Configurações',
-    `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6.5 1.5h3l.4 1.4a4.5 4.5 0 0 1 1.1.65l1.4-.45 1.5 2.6-1 1a4.5 4.5 0 0 1 0 1.3l1 1-1.5 2.6-1.4-.45a4.5 4.5 0 0 1-1.1.65l-.4 1.4h-3l-.4-1.4a4.5 4.5 0 0 1-1.1-.65l-1.4.45L2.1 9.95l1-1a4.5 4.5 0 0 1 0-1.3l-1-1 1.5-2.6 1.4.45A4.5 4.5 0 0 1 6.1 2.9L6.5 1.5z"/>
-      <circle cx="8" cy="8" r="1.8"/>
-    </svg>`,
+    icon('settings', { size: 15, stroke: 1.8 }),
     () => {
       void trackEvent('badge_action_settings');
       void openSettingsOverlay();

@@ -63,10 +63,10 @@ export function renderPlansModal(trigger: string): void {
     <div style="font-size:24px;font-weight:700;color:#fff;line-height:1;">R$${MONTHLY_PRICE.toFixed(2).replace('.',',')} <span style="font-size:11px;font-weight:400;color:#666;">/mês</span></div>
     <div style="font-size:10px;color:#555;margin:2px 0 10px;">Cartão · Cancele quando quiser</div>
     <div style="font-size:11px;color:#aaa;line-height:1.7;flex:1;">
-      ✓ Prompts ilimitados<br>
-      ✓ Proteção de dados automática<br>
-      ✓ Histórico completo<br>
-      ✓ PDF, DOCX, Excel
+      – Prompts ilimitados<br>
+      – Proteção de dados automática<br>
+      – Histórico completo<br>
+      – PDF, DOCX, Excel
     </div>
   `;
   const btnMonth = document.createElement('button');
@@ -102,11 +102,11 @@ export function renderPlansModal(trigger: string): void {
     </div>
     <div style="font-size:10px;color:#888;margin-bottom:10px;">PIX ou cartão · Um pagamento</div>
     <div style="font-size:11px;color:#aaa;line-height:1.7;flex:1;">
-      ✓ Prompts ilimitados<br>
-      ✓ Proteção de dados automática<br>
-      ✓ Histórico completo<br>
-      ✓ PDF, DOCX, Excel<br>
-      <span style="color:#6366f1;">✓ 300 gerações garantidas/mês</span>
+      – Prompts ilimitados<br>
+      – Proteção de dados automática<br>
+      – Histórico completo<br>
+      – PDF, DOCX, Excel<br>
+      <span style="color:#6366f1;">– 300 gerações garantidas/mês</span>
     </div>
   `;
   const btnYear = document.createElement('button');
@@ -197,7 +197,7 @@ export function renderUpgradeModal(onClose: () => void): HTMLElement {
 
     const check = document.createElement('div');
     check.className = 'atenna-upgrade-modal__feature-check';
-    check.textContent = '✓';
+    check.textContent = '–';
 
     const text = document.createElement('div');
     text.className = 'atenna-upgrade-modal__feature-text';
@@ -249,18 +249,17 @@ export function renderPricingCards(container: HTMLElement, source: string): void
   const cardPix = document.createElement('div');
   cardPix.style.cssText = 'background:linear-gradient(135deg,#0d1f12 0%,#0a1a1a 100%);border:1.5px solid #22c55e;border-radius:10px;padding:14px 16px;cursor:pointer;position:relative;';
   cardPix.innerHTML = `
-    <div style="position:absolute;top:-10px;right:14px;background:#22c55e;color:#000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:0.5px;">🏆 MELHOR OPÇÃO</div>
+    <div style="position:absolute;top:-10px;right:14px;background:#22c55e;color:#000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:0.5px;">MELHOR OPÇÃO</div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-      <span style="font-size:14px;">⚡</span>
       <div style="font-size:12px;font-weight:700;color:#22c55e;">PIX Anual — Pague à vista</div>
     </div>
     <div style="font-size:24px;font-weight:800;color:#fff;line-height:1;">R$197 <span style="font-size:12px;font-weight:400;color:#888;">/ano</span></div>
     <div style="font-size:10px;color:#22c55e;margin:2px 0 8px;font-weight:500;">~R$16,40/mês · sem juros · aprovação instantânea</div>
-    <div style="font-size:11px;color:var(--at-muted,#aaa);line-height:1.6;">✓ Prompts ilimitados todos os dias &nbsp;·&nbsp; ✓ DLP avançado &nbsp;·&nbsp; ✓ PDF, DOCX, Excel</div>
+    <div style="font-size:11px;color:var(--at-muted,#aaa);line-height:1.6;">Prompts ilimitados &nbsp;·&nbsp; DLP avançado &nbsp;·&nbsp; PDF, DOCX, Excel</div>
   `;
   const btnPix = document.createElement('button');
   btnPix.style.cssText = 'margin-top:10px;width:100%;padding:10px;background:#22c55e;color:#000;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;';
-  btnPix.innerHTML = '<span style="font-size:15px;">⚡</span> Pagar com PIX agora';
+  btnPix.textContent = 'Pagar com PIX agora';
   btnPix.dataset.label = 'Pagar com PIX agora';
   btnPix.addEventListener('click', () => void openCheckout(source, btnPix, 'pix_yearly'));
   cardPix.appendChild(btnPix);
@@ -276,7 +275,7 @@ export function renderPricingCards(container: HTMLElement, source: string): void
   const cardYear = document.createElement('div');
   cardYear.style.cssText = 'background:var(--at-surface,#1a1a1a);border:1.5px solid #6366f1;border-radius:10px;padding:14px 16px;cursor:pointer;position:relative;';
   cardYear.innerHTML = `
-    <div style="font-size:12px;font-weight:600;color:var(--at-text,#e8e8e8);margin-bottom:4px;">💳 Pro Anual — Cartão</div>
+    <div style="font-size:12px;font-weight:600;color:var(--at-text,#e8e8e8);margin-bottom:4px;">Pro Anual — Cartão</div>
     <div style="font-size:22px;font-weight:700;color:#fff;line-height:1;">R$197 <span style="font-size:12px;font-weight:400;color:#888;">/ano</span></div>
     <div style="font-size:10px;color:#6366f1;margin:2px 0 8px;">Cobrado anualmente · ~R$16,40/mês · Renovação automática</div>
     <div style="font-size:11px;color:var(--at-muted,#888);line-height:1.6;">Prompts ilimitados · DLP avançado · PDF, DOCX, Excel</div>
@@ -293,7 +292,7 @@ export function renderPricingCards(container: HTMLElement, source: string): void
   const cardMonth = document.createElement('div');
   cardMonth.style.cssText = 'background:var(--at-surface,#1a1a1a);border:1px solid var(--at-border,#2a2a2a);border-radius:10px;padding:12px 16px;cursor:pointer;';
   cardMonth.innerHTML = `
-    <div style="font-size:12px;font-weight:600;color:var(--at-text,#e8e8e8);margin-bottom:4px;">💳 Pro Mensal — Cartão</div>
+    <div style="font-size:12px;font-weight:600;color:var(--at-text,#e8e8e8);margin-bottom:4px;">Pro Mensal — Cartão</div>
     <div style="font-size:20px;font-weight:700;color:#fff;line-height:1;">R$29,90 <span style="font-size:12px;font-weight:400;color:#888;">/mês</span></div>
     <div style="font-size:10px;color:#888;margin:2px 0 8px;">Renovação automática · Cancele quando quiser</div>
   `;

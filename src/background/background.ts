@@ -24,10 +24,12 @@ async function getBffToken(): Promise<string | null> {
   } catch { return null; }
 }
 
-chrome.runtime.onInstalled.addListener((details) => {
-  if (details.reason === 'install') {
-    chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
-  }
+chrome.runtime.onInstalled.addListener(async (details) => {
+  if (details.reason !== 'install') return;
+  const { atenna_welcomed } = await chrome.storage.local.get('atenna_welcomed');
+  if (atenna_welcomed) return;
+  await chrome.storage.local.set({ atenna_welcomed: true });
+  chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {

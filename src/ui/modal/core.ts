@@ -17,7 +17,7 @@ import { renderPlansModal, renderUpgradeModal } from './plans-modal';
 import { renderSettingsPage, updateUsageBadge } from './settings';
 import { renderLoginView, renderSignupView, renderResetView } from './auth-views';
 import {
-  showDlpAdvisory, renderPostLoginOnboarding, renderPreLoginOnboarding, showProWelcomeOverlay,
+  showDlpAdvisory, renderPreLoginOnboarding, showProWelcomeOverlay,
 } from './onboarding-views';
 import {
   makeVariantRow, renderMeusPrompts, renderSuggestion, getBuilderVal,
@@ -175,14 +175,10 @@ async function openModal(autoGenerate = false): Promise<void> {
     return;
   }
 
-  // ── Professional post-login onboarding (server-driven flag) ──────
-  // Check if user has seen onboarding — flag stored in Supabase user profile
-  const hasSeenOnboarding = me.onboarding_seen === true; // server returns this
-  if (!hasSeenOnboarding) {
-    renderPostLoginOnboarding(modal, close);
-    modal.querySelector('.atenna-modal__close')?.addEventListener('click', close);
-    return;
-  }
+  // FASE 10.7: sem wizard de onboarding no modal in-page. O onboarding é a
+  // welcome.html (pós-instalação) + o 1º-run do popup. Um 3º onboarding de 5
+  // slides aqui só bloqueava o acesso ao painel (e travava quando o mark
+  // server-side falhava). Modal sempre abre direto no Refinar.
 
   const platformInput = getCurrentInput();
   const userText      = platformInput ? getInputText(platformInput).trim() : '';
@@ -197,7 +193,7 @@ async function openModal(autoGenerate = false): Promise<void> {
   const editSelected    = 'true';
   const promptsSelected = 'false';
 
-  const builderLogoImg = logoUrl ? `<img src="${logoUrl}" width="14" height="14" alt="" aria-hidden="true" style="border-radius:50%;vertical-align:middle;filter:none;opacity:0.9;"/>` : '✦';
+  const builderLogoImg = logoUrl ? `<img src="${logoUrl}" width="14" height="14" alt="" aria-hidden="true" style="border-radius:50%;vertical-align:middle;filter:none;opacity:0.9;"/>` : '';
 
   modal.innerHTML = `
     <div class="atenna-modal__header">
@@ -504,7 +500,7 @@ async function runFlow(
     // Milestone tracking
     if (newTotalCount === 1) {
       void trackEvent('first_prompt_generated');
-      showToast('🎉 Primeiro prompt criado!', 'success');
+      showToast('Primeiro prompt criado', 'success');
     } else if (newTotalCount === 3) {
       void trackEvent('third_prompt_generated');
     } else if (newTotalCount === 5) {

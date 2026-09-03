@@ -1,3 +1,4 @@
+import { icon as iconSvg } from '../icons';
 // ─── Prompt States — empty/loading/success/limit views ────────────────────────
 // Extracted from modal.ts. Renders the four main result-area states.
 
@@ -170,10 +171,10 @@ export function renderLimitReached(container: HTMLElement, limitType: 'daily' | 
   wrap.className = 'atenna-modal__limit-reached';
   wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px 16px 8px;gap:6px;';
 
-  // Icon
+  // Icon — relógio (limite temporal), traço consistente
   const icon = document.createElement('div');
-  icon.style.cssText = 'font-size:32px;margin-bottom:2px;';
-  icon.textContent = isMonthly ? '📅' : '⚡';
+  icon.style.cssText = 'margin-bottom:2px;color:var(--at-muted,#888);';
+  icon.innerHTML = iconSvg('clock', { size: 30, stroke: 1.8 });
   wrap.appendChild(icon);
 
   // Title
@@ -194,9 +195,9 @@ export function renderLimitReached(container: HTMLElement, limitType: 'daily' | 
   const bullets = document.createElement('div');
   bullets.style.cssText = 'background:var(--at-surface,#1a1a1a);border:1px solid var(--at-border,#2a2a2a);border-radius:8px;padding:10px 14px;text-align:left;width:100%;margin-bottom:4px;';
   bullets.innerHTML = [
-    '✨ Prompts ilimitados todos os dias',
-    '🛡️ Proteção de dados sem restrição',
-    '📄 Arquivos PDF, DOCX e Excel',
+    'Prompts ilimitados todos os dias',
+    'Proteção de dados sem restrição',
+    'Arquivos PDF, DOCX e Excel',
   ].map(b => `<div style="font-size:11px;color:var(--at-muted,#aaa);padding:3px 0;">${b}</div>`).join('');
   wrap.appendChild(bullets);
 

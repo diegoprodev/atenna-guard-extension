@@ -90,12 +90,12 @@ export function renderSettingsPage(
 
   const backBtn = document.createElement('button');
   backBtn.className = 'atenna-settings__back';
-  backBtn.innerHTML = '← Voltar';
+  backBtn.innerHTML = '&#8592; Voltar';
   backBtn.addEventListener('click', onBack);
 
   const logoutBtn = document.createElement('button');
   logoutBtn.className = 'atenna-settings__logout';
-  logoutBtn.innerHTML = '⎋&nbsp;Sair';
+  logoutBtn.textContent = 'Sair';
   logoutBtn.addEventListener('click', async () => {
     void trackEvent('logout_clicked');
     const { signOut } = await import('../../core/auth');
@@ -125,7 +125,7 @@ export function renderSettingsPage(
 
   const planBadge = document.createElement('span');
   planBadge.className = `atenna-settings__plan-badge${pro ? ' atenna-settings__plan-badge--pro' : ''}`;
-  planBadge.textContent = pro ? 'Pro ✓' : 'Grátis';
+  planBadge.textContent = pro ? 'Pro' : 'Grátis';
 
   userInfo.appendChild(emailEl);
   userInfo.appendChild(planBadge);
@@ -180,7 +180,7 @@ export function renderSettingsPage(
       skeleton.remove();
 
       // ── Seção: Uso de Prompts ──────────────────────────
-      body.appendChild(makeSectionTitle('📊 Uso de Prompts'));
+      body.appendChild(makeSectionTitle('Uso de prompts'));
 
       const S_SECTION = `background:${dark ? '#2a2a2a' : '#f0f0f0'};border:1px solid rgba(128,128,128,0.15);border-radius:10px;overflow:hidden;display:block;box-sizing:border-box;`;
       const usageSection = document.createElement('div');
@@ -220,7 +220,7 @@ export function renderSettingsPage(
       body.appendChild(usageSection);
 
       // ── Seção: LGPD & Proteção ────────────────────────
-      body.appendChild(makeSectionTitle('🛡 LGPD & Proteção de Dados'));
+      body.appendChild(makeSectionTitle('LGPD e proteção de dados'));
 
       const dlpSection = document.createElement('div');
       dlpSection.className = 'atenna-settings__section';
@@ -262,7 +262,7 @@ export function renderSettingsPage(
       body.appendChild(dlpSection);
 
       // ── Seção: Personalização ─────────────────────────
-      body.appendChild(makeSectionTitle('⚙ Personalização'));
+      body.appendChild(makeSectionTitle('Personalização'));
 
       const personalSection = document.createElement('div');
       personalSection.className = 'atenna-settings__section';
@@ -302,7 +302,7 @@ export function renderSettingsPage(
             if (avatarEl) avatarEl.textContent = val[0].toUpperCase();
             const emailEl2 = document.querySelector('.atenna-settings__user-email') as HTMLElement | null;
             if (emailEl2) emailEl2.textContent = val;
-            saveNameBtn.textContent = 'Salvo ✓';
+            saveNameBtn.textContent = 'Salvo';
             setTimeout(() => { saveNameBtn.disabled = false; saveNameBtn.textContent = 'Salvar'; }, 1500);
           } catch {
             saveNameBtn.disabled = false;
@@ -348,7 +348,7 @@ export function renderSettingsPage(
 
         const savedFeedback = document.createElement('span');
         savedFeedback.style.cssText = 'font-size:11px;color:#22c55e;font-weight:500;opacity:0;transition:opacity 200ms ease;white-space:nowrap;';
-        savedFeedback.textContent = 'Salvo ✓';
+        savedFeedback.textContent = 'Salvo';
 
         COLORS.forEach(({ id, label, bg }) => {
           const sw = document.createElement('button');
@@ -420,7 +420,7 @@ export function renderSettingsPage(
       // ── Seção: Documentos (FASE 4.1 Multimodal) ───────────
       const multimodalEnabled = await getFlag('MULTIMODAL_ENABLED');
       if (multimodalEnabled) {
-        body.appendChild(makeSectionTitle('📎 Documentos'));
+        body.appendChild(makeSectionTitle('Documentos'));
 
         const docSection = document.createElement('div');
         docSection.className = 'atenna-settings__section';
@@ -551,7 +551,7 @@ export function renderSettingsPage(
             }),
           });
           if (resp.ok) {
-            reportProblemBtn.textContent = '✓ Enviado';
+            reportProblemBtn.textContent = 'Enviado';
           } else {
             throw new Error('failed');
           }

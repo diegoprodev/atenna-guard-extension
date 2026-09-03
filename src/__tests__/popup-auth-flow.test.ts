@@ -42,6 +42,7 @@ vi.stubGlobal('chrome', {
     sendMessage: vi.fn((_m: unknown, cb?: () => void) => cb?.()) },
   tabs: {
     query: (_q: unknown, cb: (t: unknown[]) => void) => cb(queryTabs),
+    create: vi.fn(),
     sendMessage: vi.fn((tabId: number, msg: unknown, cb?: () => void) => { sentMessages.push({ tabId, msg }); cb?.(); }),
   },
 });

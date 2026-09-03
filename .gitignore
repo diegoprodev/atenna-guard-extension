@@ -52,3 +52,4 @@ debug_*.py
 tests/e2e/perplexity-debug.spec.ts
 test-results/
 playwright-report/data/
+.keys/

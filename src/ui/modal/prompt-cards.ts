@@ -1,6 +1,7 @@
 // ─── Modal Prompt Cards — card rendering extracted from modal.ts ──────────────
 
 import { showToast, fallbackCopy, clearMsgInterval, COPY_SVG } from './utils';
+import { icon } from '../icons';
 import { modalState, UPGRADE_TRIGGER } from './state';
 import type { PromptData } from './state';
 import { renderUpgradeTrigger } from './plans-modal';
@@ -9,6 +10,11 @@ import { toggleFavorite, isGroup, getHistory } from '../../core/history';
 import type { HistoryGroup, PromptEntry } from '../../core/history';
 import { track, trackEvent } from '../../core/analytics';
 import type { PromptOrigin, PromptType } from '../../core/analytics';
+
+/** Estrela de favorito — ícone desenhado (não glifo ★/☆). */
+function starSvg(filled: boolean): string {
+  return icon('star', { size: 14, stroke: 1.8, fill: filled });
+}
 
 export function makeVariantRow(
   label: string,
@@ -103,11 +109,11 @@ export async function renderMeusPrompts(
 
       const arrow = document.createElement('span');
       arrow.className = 'atenna-modal__history-arrow';
-      arrow.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+      arrow.innerHTML = icon('chevronDown', { size: 18, stroke: 2.5 });
 
       const starBtn = document.createElement('button');
       starBtn.className = g.favorited ? 'atenna-modal__history-star atenna-modal__history-star--active' : 'atenna-modal__history-star';
-      starBtn.textContent = g.favorited ? '★' : '☆';
+      starBtn.innerHTML = starSvg(g.favorited);
       starBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         await toggleFavorite(g.id);
@@ -163,7 +169,7 @@ export async function renderMeusPrompts(
 
       const starBtn = document.createElement('button');
       starBtn.className = e.favorited ? 'atenna-modal__history-star atenna-modal__history-star--active' : 'atenna-modal__history-star';
-      starBtn.textContent = e.favorited ? '★' : '☆';
+      starBtn.innerHTML = starSvg(e.favorited);
       starBtn.addEventListener('click', async () => {
         await toggleFavorite(e.id);
         await renderMeusPrompts(container, platformInput, overlay);

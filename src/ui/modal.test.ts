@@ -622,7 +622,7 @@ describe('renderSignupView — email confirmation screen', () => {
 describe('badge color picker — saved feedback', () => {
   it('source contains Salvo feedback logic with 1500ms timeout', async () => {
     const src = await import('fs').then(fs => fs.readFileSync('src/ui/modal/settings.ts', 'utf-8'));
-    expect(src).toContain('Salvo ✓');
+    expect(src).toContain("'Salvo'");
     expect(src).toContain('savedFeedback');
     expect(src).toContain('1500');
     expect(src).toContain("opacity = '1'");
@@ -633,7 +633,7 @@ describe('settings — save name loading state', () => {
   it('source contains Salvando… loading state and Salvo ✓ success state', () => {
     const src = fs.readFileSync('src/ui/modal/settings.ts', 'utf-8');
     expect(src).toContain('Salvando…');
-    expect(src).toContain('Salvo ✓');
+    expect(src).toContain("'Salvo'");
   });
 });
 

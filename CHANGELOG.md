@@ -6,6 +6,50 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.7 — validação real E2E + correções do uso real
+- **REGRA nova (`CLAUDE.md`):** screenshot de `<style>` isolado / harness stubado / http-server
+  **não valida**. Popup/content/background/welcome/modal/auth só é "pronto" depois de
+  `playwright test --project=extension` (carrega o `dist/` real no Chromium) + 1 teste E2E novo +
+  `npm run test:e2e` com o número real reportado. O que não dá pra automatizar (OAuth Google
+  real), dizer explicitamente.
+- **Login Google** — (a) `launchWebAuthFlow` com timeout de 120s (`launchAuthFlowWithTimeout`)
+  — não trava mais o botão; (b) **`"key"` no `manifest.json`** → ID da extensão sem compactação
+  agora é fixo (`eeejlbiagiieioangpmhhfjlnpphljao`). Falta 1 paste do dono: adicionar
+  `https://eeejlbiagiieioangpmhhfjlnpphljao.chromiumapp.org/` em Supabase → Auth → Redirect URLs.
+  Chave privada em `.keys/` (gitignored).
+- **Ícone da extensão deslogado** → login **com mensagem amigável de valor** ("faça login para
+  liberar a proteção de dados e a geração de prompts"), troca no signup.
+- **Onboarding travado no modal — CORRIGIDO.** O modal in-page tinha um 3º onboarding
+  (wizard de 5 slides com emoji e ícone-estrela) que só marcava `onboarding_seen` no servidor —
+  quando o POST falhava, ele aparecia **pra sempre** e bloqueava "Abrir Atenna" / "Gerar prompt"
+  ("Começar" não fazia nada). **Wizard removido**: o modal abre direto no Refinar. Onboarding
+  vive na welcome.html + no 1º-run do popup, não num 3º lugar.
+- **Welcome robusto** — `background.ts` abre o welcome no `install` de forma idempotente
+  (flag `atenna_welcomed`). Em dev: **remover e re-adicionar** a extensão (recarregar = `update`,
+  não dispara `install`).
+- **On-page deslogado continua sem nada** (decisão do dono — o caminho de login é o ícone).
+- E2E: **`full-flow.spec` (F1–F5)** — deslogado → login → badge → modal Refinar (sem wizard) →
+  gerar (3 cards) → configurações → sair, tudo com a extensão carregada de verdade.
+  `welcome.spec` W7 reescrito (signup → auto-login) + W7b; `extension.spec` P1/P2/P3.
+  `add-localhost-e2e.mjs` agora inclui `web_accessible_resources` (logo carrega no fixture).
+- **Validação:** `npm run test:e2e` → **32 ✓ / 0 ✗ / 1 skip**; `vitest` 317 ✓; build limpo.
+- **Modal in-page — varredura de emoji (10.3-a).** Removidos de settings (📊 📎 🛡 ⚙, "Pro ✓",
+  "⎋ Sair", "Salvo ✓" → "Salvo"), plans-modal (✓ bullets → travessão, 🏆 ⚡ 💳),
+  prompt-states (📅 ⚡ ✨ 🛡 📄 → SVG relógio + texto), prompt-cards (★/☆ → estrela desenhada),
+  pro-welcome (✓ → SVG check), toasts (🎉). Wizard de onboarding morto + `ONB_STEPS`
+  (com os 💡) **deletados** do `onboarding-views.ts`.
+- **Ícones — biblioteca Lucide (10.3-a).** Fim dos SVGs desenhados à mão. `src/ui/icons.ts`
+  = ~30 ícones do **Lucide** (MIT), um traço e um peso, via `icon(name, {size, stroke, fill})`.
+  Trocados em: `popup.ts` (shield/sparkles/file/globe/eye/eye-off/mail/check-circle/clock/
+  settings/log-out), badge do content script (`injectButton.ts` — as 4 ações), `modal/utils`
+  (`COPY_SVG`/`CHECK_SVG`), `prompt-cards` (estrela de favorito, chevron), `prompt-states`
+  (relógio), `onboarding-views` (shield + wizard icons + checks), `welcome.html`/`welcome.ts`
+  (eye toggle, check-circle). devDep `lucide-static` + `scripts/gen-icons.mjs` p/ regenerar.
+  Marcas (Google, ChatGPT, etc.) continuam com o SVG oficial da marca.
+- **Ainda pendente (FASE 10.3-b):** o redesign de cor/tipo do modal (tema escuro, tokens,
+  serif, indigo `#6366f1` do checkout) — `modal.css` tem 4293 linhas, é fase própria.
+- Spec: `docs/specs/FASE_10.7_VALIDACAO_REAL_E_CORRECOES.md`.
+
 ### Bug — popup "abre skeleton e some" (sem login)
 - `popup.initPopup()` sem sessão: site suportado → `sendMessage(OPEN_LOGIN_MODAL)` +
   `window.close()`; site qualquer → "site não suportado" (sem login). `renderLogin()` existia

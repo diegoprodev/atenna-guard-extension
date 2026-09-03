@@ -1,3 +1,4 @@
+import { icon } from '../icons';
 // ─── Modal Utils — pure helpers and constants ─────────────────────────────────
 // Extracted from modal.ts. No imports from other modal/* files (except state).
 
@@ -13,17 +14,9 @@ export const LOADING_MESSAGES = [
 ];
 
 // Static SVGs — never contain user content, safe for innerHTML
-export const CHECK_SVG = `<svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <circle cx="26" cy="26" r="25" stroke="#22c55e" stroke-width="2"/>
-  <polyline points="14,27 22,35 38,17" stroke="#22c55e" stroke-width="3"
-    stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
+export const CHECK_SVG = icon('checkCircle', { size: 44, stroke: 2, cls: 'atenna-check-ok' });
 
-export const COPY_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-  <rect x="9" y="9" width="13" height="13" rx="2"/>
-  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-</svg>`;
+export const COPY_SVG = icon('copy', { size: 14 });
 
 // ─── Input analysis ──────────────────────────────────────
 
