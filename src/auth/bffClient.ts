@@ -141,16 +141,25 @@ export async function bffResetPassword(email: string): Promise<void> {
   }).catch(() => {});
 }
 
+// Timeout defensivo: se o redirect nunca casar (ex.: extensão sem compactação com
+// ID fora da allowlist do Supabase), launchWebAuthFlow fica pendurado e o botão
+// trava em "Aguardando Google…" pra sempre.
+function launchAuthFlowWithTimeout(url: string, ms = 120_000): Promise<string | undefined> {
+  return Promise.race([
+    new Promise<string | undefined>(resolve =>
+      chrome.identity.launchWebAuthFlow({ url, interactive: true }, resolve),
+    ),
+    new Promise<undefined>(resolve => setTimeout(() => resolve(undefined), ms)),
+  ]);
+}
+
 export async function bffGoogleLogin(): Promise<Session> {
   const redirectUri = `https://${chrome.runtime.id}.chromiumapp.org/`;
   const authUrl =
     `https://${SUPABASE_PROJECT_REF}.supabase.co/auth/v1/authorize` +
     `?provider=google&redirect_to=${encodeURIComponent(redirectUri)}`;
 
-  const redirectUrl = await new Promise<string | undefined>(resolve => {
-    chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, resolve);
-  });
-
+  const redirectUrl = await launchAuthFlowWithTimeout(authUrl);
   if (!redirectUrl) throw new AppError(E.NETWORK);
 
   // Supabase OAuth uses implicit flow by default:

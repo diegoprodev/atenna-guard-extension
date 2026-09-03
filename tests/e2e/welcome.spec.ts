@@ -196,7 +196,7 @@ test('W6: eye button toggles password field visibility', async ({ context, exten
 
 // ─── W7: Fluxo de signup → tela de sucesso de criação ──────────────────────
 
-test('W7: signup with valid data shows signup success screen', async ({ context, extensionId }) => {
+test('W7: signup com dados válidos cai logado direto (auto-login, FASE 10 O1)', async ({ context, extensionId }) => {
   const page = await openWelcomePage(context, extensionId);
   await page.click('#tab-signup');
 
@@ -206,24 +206,39 @@ test('W7: signup with valid data shows signup success screen', async ({ context,
 
   await page.click('#signup-btn');
 
-  // Aguarda tela de sucesso de signup
-  await page.waitForSelector('#w-signup-success', { state: 'visible', timeout: 5000 });
+  // O backend cria a conta confirmada → welcome.ts faz bffLogin logo em seguida
+  // → cai direto na tela de "Proteção ativada" (sem passo "agora faça login").
+  await page.waitForSelector('#w-success', { state: 'visible', timeout: 5000 });
+  await expect(page.locator('#w-title')).toHaveText('Proteção ativada');
 
-  // Tela deve mostrar mensagem de sucesso
-  await expect(page.locator('#w-title')).toHaveText('Conta criada');
-  await expect(page.locator('#w-sub')).toHaveText('Agora faça login para começar.');
-
-  // Formulário e tabs devem estar ocultos
+  // Tabs / form / Google ocultos no estado de sucesso
   await expect(page.locator('#form-signup')).toBeHidden();
   await expect(page.locator('#w-tabs')).toBeHidden();
   await expect(page.locator('#w-google-btn')).toBeHidden();
 
-  // Botão "Voltar ao login" funciona
-  await page.click('#signup-success-back');
-  await expect(page.locator('#w-signup-success')).toBeHidden();
-  await expect(page.locator('#form-login')).toBeVisible();
-  await expect(page.locator('#w-tabs')).toBeVisible();
+  // Links de plataforma presentes
+  await expect(page.locator('.w-plat-link')).toHaveCount(4);
 
+  await page.close();
+});
+
+test('W7b: signup mostra fallback manual se o auto-login falhar', async ({ context, extensionId }) => {
+  const page = await openWelcomePage(context, extensionId);
+  // Sobrescreve o mock de login para falhar → força o caminho de fallback
+  await page.route('**/api.atennaia.com.br/auth/login', (route) =>
+    route.fulfill({ status: 401, contentType: 'application/json', body: '{}' })
+  );
+  await page.click('#tab-signup');
+  await page.fill('#signup-name', 'Diego Atenna');
+  await page.fill('#signup-email', 'novo2@atenna.ai');
+  await page.fill('#signup-pass', 'senha123');
+  await page.click('#signup-btn');
+
+  await page.waitForSelector('#w-signup-success', { state: 'visible', timeout: 5000 });
+  await expect(page.locator('#w-title')).toHaveText('Conta criada');
+
+  await page.click('#signup-success-back');
+  await expect(page.locator('#form-login')).toBeVisible();
   await page.close();
 });
 

@@ -6,6 +6,27 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.7 — validação real E2E + correções do uso real
+- **REGRA nova (`CLAUDE.md`):** screenshot de `<style>` isolado / harness stubado / http-server
+  **não valida**. Popup/content/background/welcome/modal/auth só é "pronto" depois de
+  `playwright test --project=extension` (carrega o `dist/` real no Chromium) + 1 teste E2E novo +
+  `npm run test:e2e` com o número real reportado. O que não dá pra automatizar (OAuth Google
+  real), dizer explicitamente.
+- **Login Google não pendura mais** — `launchWebAuthFlow` com timeout de 120s
+  (`bffClient.launchAuthFlowWithTimeout`). O botão trava pra sempre quando a extensão está
+  sem compactação (ID aleatório fora da allowlist do Supabase). Fix definitivo = `"key"` no
+  `manifest.json` (pendente: dono pega no CWS).
+- **Ícone da extensão deslogado** → login **com mensagem amigável de valor** ("faça login para
+  liberar a proteção de dados e a geração de prompts"), troca no signup.
+- **Welcome robusto** — `background.ts` abre o welcome no `install` de forma idempotente
+  (flag `atenna_welcomed`); o popup abre o welcome uma vez se a 1ª abertura sem sessão nunca
+  o viu (reload em dev / update do Chrome perdem o `onInstalled`).
+- **On-page deslogado continua sem nada** (decisão do dono — o caminho de login é o ícone).
+- E2E: `welcome.spec` W7 reescrito (signup → auto-login) + W7b (fallback manual);
+  `extension.spec` P1/P2/P3 (popup no Chromium real).
+- **Validação:** `npm run test:e2e` → **27 ✓ / 0 ✗ / 1 skip**; `vitest` 317 ✓; build limpo.
+- Spec: `docs/specs/FASE_10.7_VALIDACAO_REAL_E_CORRECOES.md`.
+
 ### Bug — popup "abre skeleton e some" (sem login)
 - `popup.initPopup()` sem sessão: site suportado → `sendMessage(OPEN_LOGIN_MODAL)` +
   `window.close()`; site qualquer → "site não suportado" (sem login). `renderLogin()` existia

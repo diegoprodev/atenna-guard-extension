@@ -139,6 +139,31 @@ Ferramentas: ver `docs/TOOLING_ENTERPRISE.md` (como instalar/rodar cada uma).
 3. Reload manual da extensão e smoke test do fluxo principal
 4. Para qualquer tela nova: abrir no Chrome e validar visualmente antes de reportar como pronto
 
+### REGRA — validação REAL ponta a ponta (não "renderizou, tá pronto")
+Screenshot de `<style>` isolado, harness com `chrome`/`fetch` stubados, ou "abri o HTML
+no http-server" **NÃO é validação**. Prova que o CSS pinta — não prova que o fluxo funciona.
+Já quebrou assim: Google login travado, welcome que não abre, página de IA sem opção de login,
+popup escuro — tudo passou no "renderizou" e falhou no uso real.
+
+**Toda mudança que toca popup / content script / background / welcome / modal / auth SÓ é
+"pronta" depois de:**
+1. `npm run build` e **carregar o `dist/` real** — via `npx playwright test --project=extension`
+   (carrega a extensão de verdade no Chromium, dirige o fluxo, valida o DOM injetado) **OU**
+   reload manual no `chrome://extensions` + percorrer o caminho crítico à mão.
+2. Um **teste E2E novo por comportamento novo** em `tests/e2e/` (não um teste de unidade,
+   não um grep de string). Ele carrega a extensão e exercita: instalar → welcome →
+   login/signup → sessão → badge na página → logout.
+3. Rodar `npm run test:e2e` e **reportar o número real de testes que passaram** — igual ao
+   harness do backend. Se algum caminho não dá pra automatizar (OAuth Google real, e-mail real),
+   dizer explicitamente "isto NÃO foi testado E2E e por quê", nunca deixar implícito.
+4. Nunca falar em "mergear" ou "publicar" antes de 1–3. Se o dono pedir pressa, fazer 1–3
+   mesmo assim e explicar por quê.
+
+**OAuth Google só funciona se o ID da extensão bater com o registrado no Supabase.** Extensão
+"sem compactação" recebe ID aleatório → o `redirect_to` (`https://<id>.chromiumapp.org/`) não
+está na allowlist → trava. Fix: `"key"` no `manifest.json` (pega em CWS → Package → View public
+key) para ID local == publicado. Sem isso, `--project=extension` não cobre o login Google.
+
 ### Para qualquer UX/UI front-end — 5 Leis de UX obrigatórias
 1. **Lei de Fitts** — botões/links com padding generoso (mín. 44px de altura em mobile), nenhum alvo clicável abaixo de 32px
 2. **Lei de Hick** — máximo 3–4 opções visíveis por vez; remova o que não é essencial; não mostre dois CTAs de mesmo peso

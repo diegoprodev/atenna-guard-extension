@@ -78,6 +78,16 @@ export async function initPopup(): Promise<void> {
   const [me, tabInfo, tabId] = await Promise.all([bffMe(), getActiveTabInfo(), getActiveTabId()]);
 
   if (!me) {
+    // Primeira vez sem sessão → garante que a tela de boas-vindas apareça pelo
+    // menos uma vez (o onInstalled pode ter perdido: reload em dev, update do
+    // Chrome, instalação sem foco).
+    const welcomedStore = await new Promise<Record<string, unknown>>(resolve => {
+      chrome.storage.local.get('atenna_welcomed', resolve);
+    });
+    if (welcomedStore['atenna_welcomed'] !== true) {
+      chrome.storage.local.set({ atenna_welcomed: true });
+      chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
+    }
     // Sem sessão → login DENTRO do popup (não depender do content script nem
     // fechar o popup — bug "abre skeleton e some").
     renderLogin(container, tabId, tabInfo?.supported ?? false);
@@ -191,6 +201,7 @@ function renderLogin(container: HTMLElement, tabId: number | null, tabSupported 
         <img src="${logoUrl}" alt="Atenna" width="52" height="52"/>
       </div>
       <div class="ap-login-title" id="ap-login-title">Entrar na sua conta</div>
+      <p class="ap-login-sub" id="ap-login-sub">Faça login para liberar a proteção de dados e a geração de prompts da Atenna Safe Prompt.</p>
       <div id="ap-login-err" class="ap-login-err" style="display:none"></div>
       <div class="ap-login-form">
         <input id="ap-name" type="text" placeholder="Seu nome" autocomplete="name" style="display:none"/>
@@ -234,6 +245,10 @@ function renderLogin(container: HTMLElement, tabId: number | null, tabSupported 
     mode = mode === 'signup' ? 'login' : 'signup';
     const isSignup = mode === 'signup';
     titleEl.textContent = isSignup ? 'Criar conta grátis' : 'Entrar na sua conta';
+    const subEl = document.getElementById('ap-login-sub');
+    if (subEl) subEl.textContent = isSignup
+      ? 'Leva 30 segundos. Sem cartão. Você já sai protegido.'
+      : 'Faça login para liberar a proteção de dados e a geração de prompts da Atenna Safe Prompt.';
     nameEl.style.display = isSignup ? '' : 'none';
     passEl.style.display = '';
     btn.textContent = isSignup ? 'Criar conta' : 'Entrar';

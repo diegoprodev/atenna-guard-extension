@@ -390,3 +390,69 @@ test.skip('DIAG: perplexity.ai protect button diagnostic', async ({ context }) =
 
   await page.close();
 });
+
+// ─── P1–P3: Popup — o ícone da extensão SEMPRE tem que dar caminho de login ──
+
+async function clearPopupSession(context: import('@playwright/test').BrowserContext) {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  await sw.evaluate(() => new Promise<void>(r =>
+    chrome.storage.local.remove(['atenna_session', 'atenna_jwt', 'atenna_welcomed'], () => r())
+  ));
+}
+
+test('P1: popup deslogado mostra login + mensagem amigável (não some, não fecha)', async ({ context, extensionId }) => {
+  await clearPopupSession(context);
+  const page = await context.newPage();
+  await page.route('**/auth/me', (r) => r.fulfill({ status: 401, body: '{}' }));
+  await page.goto(`chrome-extension://${extensionId}/popup.html`, { waitUntil: 'domcontentloaded' });
+
+  // form de login visível
+  await page.waitForSelector('#ap-login-btn', { timeout: 10_000 });
+  await expect(page.locator('#ap-email')).toBeVisible();
+  await expect(page.locator('#ap-google-btn')).toBeVisible();
+
+  // mensagem amigável de valor
+  const sub = await page.locator('#ap-login-sub').textContent();
+  expect(sub?.toLowerCase()).toMatch(/prote|libera|prompt/);
+
+  // não é um skeleton que some — o botão continua lá depois de 2s
+  await page.waitForTimeout(2000);
+  await expect(page.locator('#ap-login-btn')).toBeVisible();
+  await page.close();
+});
+
+test('P2: popup logado mostra a home (header + abrir Atenna)', async ({ context, extensionId }) => {
+  await injectSession(context);
+  // onboarding já visto → cai direto na home
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  await sw.evaluate(() => new Promise<void>((r) => chrome.storage.local.set({ atenna_onboarded: true }, () => r())));
+  await new Promise((r) => setTimeout(r, 1000));
+  const page = await context.newPage();
+  await page.route('**/auth/me', (r) => r.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ user_id: 'e2e-user-id', email: 'e2e@atenna.ai', plan: 'free', expires_at: 9999999999, onboarding_seen: true }),
+  }));
+  await page.route('**/auth/v1/user**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'e2e-user-id', email: 'e2e@atenna.ai' }) }));
+  await page.goto(`chrome-extension://${extensionId}/popup.html`, { waitUntil: 'domcontentloaded' });
+
+  await page.waitForSelector('.ap-header', { timeout: 10_000 });
+  await expect(page.locator('.ap-header__email')).toContainText('e2e@atenna.ai');
+  await expect(page.locator('#ap-open-modal')).toBeVisible();
+  await page.close();
+});
+
+test('P3: signup no popup troca a mensagem amigável', async ({ context, extensionId }) => {
+  await clearPopupSession(context);
+  const page = await context.newPage();
+  await page.route('**/auth/me', (r) => r.fulfill({ status: 401, body: '{}' }));
+  await page.goto(`chrome-extension://${extensionId}/popup.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#ap-signup-link', { timeout: 10_000 });
+  const before = await page.locator('#ap-login-sub').textContent();
+  await page.click('#ap-signup-link');
+  await expect(page.locator('#ap-login-title')).toHaveText('Criar conta grátis');
+  const after = await page.locator('#ap-login-sub').textContent();
+  expect(after).not.toEqual(before);
+  await page.close();
+});
