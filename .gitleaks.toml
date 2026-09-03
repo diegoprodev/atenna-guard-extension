@@ -10,6 +10,9 @@ useDefault = true
 [allowlist]
 description = "Padrões de detecção do DLP + fixtures de teste + exemplos de doc"
 paths = [
+  # manifest.json "key" = chave PÚBLICA da extensão (vai em toda extensão
+  # instalada; fixa o ID sem compactação). Não é segredo.
+  '''manifest\.json''',
   '''src/dlp/patterns\.ts''',
   '''src/dlp/.*\.test\.ts''',
   '''backend/dlp/analyzer\.py''',
