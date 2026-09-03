@@ -21,3 +21,6 @@ router.include_router(compliance.router)
 
 from routes.admin import subscriptions
 router.include_router(subscriptions.router)
+
+from routes.admin import uninstall_feedback
+router.include_router(uninstall_feedback.router)

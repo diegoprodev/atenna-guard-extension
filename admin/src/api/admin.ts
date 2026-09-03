@@ -66,6 +66,8 @@ export const api = {
   system: (t: string) => get<SystemInfo>('/admin/system', t),
   dlp: (t: string) => get<DlpStats>('/admin/dlp', t),
   errors: (t: string, page = 1) => get<ErrorsResponse>(`/admin/errors?page=${page}`, t),
+  feedback: (t: string, page = 1) => get<FeedbackResponse>(`/admin/uninstall-feedback?page=${page}`, t),
+  feedbackSummary: (t: string) => get<FeedbackSummary>(`/admin/uninstall-feedback/summary`, t),
   audit: (t: string, page = 1) => get<AuditResponse>(`/admin/audit?page=${page}`, t),
   costs: (t: string) => get<CostSummary>('/admin/costs', t),
   usage: (t: string, search = '', sort = 'cost_desc') =>
@@ -220,6 +222,17 @@ export interface ErrorEvent {
 }
 
 export interface ErrorsResponse { data: ErrorEvent[]; total: number; }
+
+export interface FeedbackRow {
+  id: string;
+  reason: string;
+  detail: string | null;
+  email: string | null;
+  ext_version: string | null;
+  created_at: string;
+}
+export interface FeedbackResponse { data: FeedbackRow[]; total: number; }
+export interface FeedbackSummary { by_reason: Record<string, number>; total: number; }
 
 export interface AuditEvent {
   id: string;

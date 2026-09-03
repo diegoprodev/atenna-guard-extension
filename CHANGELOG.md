@@ -6,6 +6,15 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.6.1 — página de desinstalação + admin vê o feedback
+- **Página `/desinstalado` consertada:** fundo branco puro, **logo da Atenna** no topo +
+  marca d'água leve da coruja, card **centralizado**, e o layout agora **rola** — o botão
+  "Enviar feedback" some da tela em notebooks de 14" antes, agora sempre acessível.
+- **Admin vê as respostas:** `GET /admin/uninstall-feedback` (+ `/summary` por motivo) e uma
+  página **Feedback (churn)** no admin React — lista + gráfico de barras por motivo.
+- `backend/static/atenna-logo.png` (cópia do `icon128`). Teste do endpoint admin no pytest.
+
+
 ### FASE 10.8 — bugs de plano/UX que o dono achou no uso
 - **PRO via upsell — CORRIGIDO (era grave).** Usuário Pro via "Quero prompts ilimitados…"
   no modal e o gatilho de upgrade após 3 prompts. Agora `renderOnboarding` e
