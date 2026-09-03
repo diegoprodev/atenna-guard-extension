@@ -62,9 +62,15 @@ def rewrite_pii_tokens(text: str, entities: list) -> str:
         except (TypeError, ValueError):
             continue
         # clampa em vez de descartar: um offset levemente fora nunca pode deixar PII passar
+        raw_len = end - start
         start = max(0, min(start, n))
         end = max(0, min(end, n))
         if end <= start:
+            continue
+        # blast radius: nenhuma entidade real de PII (CPF, e-mail, nome, cartão) passa
+        # de ~200 chars. Um span gigante = offsets calculados contra outro texto → ignora
+        # (o fail-safe de evaluate_strict_enforcement reescreve via scanner de qualquer jeito).
+        if (end - start) > 200 or raw_len > 200:
             continue
         spans.append((start, end, e.get("type", "UNKNOWN")))
 

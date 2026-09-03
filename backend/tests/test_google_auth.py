@@ -62,6 +62,18 @@ def test_google_code_valido_retorna_token_opaco(client):
     assert "expires_at" in data and "plan" in data
 
 
+def test_google_sessao_sem_user_e_401_nao_500(client):
+    """Regressão (code review FASE 9.2): r.session presente mas r.user None → 401 limpo."""
+    mock = _mock_auth_client(ok=True)
+    mock.auth.exchange_code_for_session.return_value = MagicMock(
+        session=MagicMock(access_token="j", refresh_token="r"), user=None,
+    )
+    with patch("routes.bff_auth.get_auth_client", return_value=mock), \
+         patch("routes.bff_auth.get_admin_client", return_value=mock):
+        r = client.post("/auth/google", json={"code": "x", "redirect_uri": "https://x/cb"})
+    assert r.status_code == 401
+
+
 def test_google_fluxo_implicito_access_token(client):
     """bffClient manda {access_token, refresh_token} no fluxo implícito do Supabase."""
     mock = _mock_auth_client(ok=True)

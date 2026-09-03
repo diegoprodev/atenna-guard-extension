@@ -109,6 +109,20 @@ class TestPIIRewriting:
         assert "050.423.674-11" not in result
         assert "diego@example.com" not in result
 
+    def test_offset_fora_do_texto_e_clampado_nao_descartado(self):
+        """Regressão: end > len(text) -> clampa (mascara), não descarta (vazaria)."""
+        text = "email diego@x.com"
+        result = rewrite_pii_tokens(text, [{"type": "EMAIL_ADDRESS", "start": 6, "end": 99}])
+        assert "diego@x.com" not in result
+        assert "[EMAIL]" in result
+
+    def test_span_gigante_e_ignorado(self):
+        """Regressão (code review FASE 9.2): span > 200 chars = offsets contra outro
+        texto -> ignora (não mascara metade do prompt)."""
+        text = "um prompt normal de trabalho sobre arquitetura de software"
+        result = rewrite_pii_tokens(text, [{"type": "PERSON", "start": 0, "end": 5000}])
+        assert result == text
+
     def test_rewrite_api_key(self):
         """Reescreve chave de API."""
         text = "Api key: sk-abc123xyz789"

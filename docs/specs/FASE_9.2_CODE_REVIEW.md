@@ -43,7 +43,29 @@ Resultado: `pytest` no container de produção **454 passed, 0 failed** (baselin
 ## PM / estrategista
 - Tudo aqui é dívida técnica do próprio núcleo. Nada implementa capacidade da Plataforma. Alinhado.
 
+## 2ª passada — `/code-review` (plugin) rodou no diff `da4f84c^..9ca4d9e`
+
+8 achados. Triados e resolvidos (commit seguinte):
+
+| Achado do reviewer | Verdict | Ação |
+|---|---|---|
+| Regex de cartão "solto" (16 díg.) → ~10% FP por Luhn → `block` trava o prompt | CONFIRMED | Removido. Só o fix de acento (`cart[aã]o`) fica. Presidio cobre cartão sem rótulo no `/generate-prompts`. Teste de regressão. |
+| `[\s\-]` no separador do cartão casa `\n`/`\t` → cola 4 números de linhas vizinhas | CONFIRMED | `[ \-]` (só espaço/hífen). Teste. |
+| `LEGAL_CONTEXT` casa `sentença`/`processo`/`ação` soltos → FP pra dev | CONFIRMED | Apertado p/ termos inequívocos (`mandado de prisão`, `habeas corpus`, `vara criminal/cível`, `réu`, `foi condenado a/na`, `petição inicial`, …). Teste. |
+| Clamp em `rewrite_pii_tokens` pode mascarar metade do prompt | PLAUSIBLE | + guarda de blast radius: span > 200 chars = offsets contra outro texto → ignora (o fail-safe via scanner reescreve). Teste. |
+| `google_auth`: `r.user` None → 500 | CONFIRMED | Guard `or not getattr(r, "user", None)` → 401 limpo. Teste. |
+| Métrica de auth: tudo vira `no_session` | CONFIRMED (menor) | Separa `expired` de `invalid_session` via `he.detail`. |
+| nginx `^~ /internal/` bloqueia webhook Supabase de welcome | CONFIRMED → **sem regressão** | O welcome hoje é enviado **in-process pelo `/auth/signup`** (`send_welcome`, FASE 9.0) e o pro-welcome por `_promote_to_pro`. `/internal/email/*` é legado de Auth Hooks antigos; se algum hook do Supabase ainda usa, era fail-open (sem token) — agora exige token + rede interna. FASE 9.3: remover os endpoints legados ou allowlistar 1 path com token. |
+| `INTERNAL_API_TOKEN=` vazio no `.env.example` → deploy novo dá 403 em `/internal/*` | CONFIRMED (menor) | Comentário no `.env.example` (gerar com `openssl rand -hex 32`); já setado na VPS. |
+
+Novos testes de regressão: `test_cartao_16_digitos_sem_contexto_nao_e_cartao`,
+`test_cartao_nao_cola_numeros_de_linhas_vizinhas`, `test_contexto_juridico_nao_dispara_em_termo_tecnico`,
+`test_offset_fora_do_texto_e_clampado_nao_descartado`, `test_span_gigante_e_ignorado`,
+`test_google_sessao_sem_user_e_401_nao_500`. Harness: **460 passed, 0 failed**.
+
 ## Follow-ups (FASE 9.3)
 - Validar Google login real na extensão (B7).
 - `/auth/google` com PKCE precisa do `code_verifier` (hoje só o fluxo implícito funciona ponta a ponta).
+- Remover os endpoints `/internal/email/*` legados (ou allowlistar 1 path com token se um hook do Supabase os usa).
 - Warning `coroutine 'slow_analyze' was never awaited` em `dlp/test_timeout.py` — cosmético, limpar.
+- `test_divergencia...` era flaky (Presidio timeout sob carga) → mockado `engine.revalidate`.

@@ -44,8 +44,9 @@ def require_auth(
             "email":   session["email"],
             "plan":    session["plan"],
         }
-    except HTTPException:
-        record_auth_failure("no_session")
+    except HTTPException as he:
+        detail = str(getattr(he, "detail", "")).lower()
+        record_auth_failure("expired" if "token expired" in detail else "invalid_session")
         raise
     except Exception as e:
         record_auth_failure("error")

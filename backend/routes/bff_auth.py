@@ -476,9 +476,9 @@ async def google_auth(req: GoogleAuthRequest):
         logger.error(f"Google auth error: {e}")
         raise HTTPException(401, "Google authentication failed")
     
-    if not r or not r.session:
+    if not r or not r.session or not getattr(r, "user", None):
         raise HTTPException(401, "Authentication failed")
-    
+
     jwt = r.session.access_token
     refresh_tok = r.session.refresh_token
     uid = r.user.id

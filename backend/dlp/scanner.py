@@ -138,20 +138,12 @@ _PATTERNS: list[dict] = [
         "entity": EntityType.CREDIT_CARD,
         "risk": RiskLevel.HIGH,
         "action": "block",
-        # CREDIT_CARD antes de TITULO_ELEITOR: 16 dígitos com Luhn têm prioridade
-        # Não usa \b pois espaços entre grupos quebram word boundary
-        # cart[aã]o / cr[eé]dito: tolera acento ("Cartão", "Crédito")
-        "regex": re.compile(r'(?i)(?:cart[aã]o|cr[eé]dito|credit\s+card|visa|mastercard|amex|elo|diners)[^0-9]*(?<!\d)(\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{1,4})(?!\d)'),
-        "validator": _luhn_valid,
-        "source": "validator",
-    },
-    {
-        # Cartão "solto" (sem palavra de contexto): só entra se passar Luhn — baixo
-        # falso-positivo. Cobre PDFs/planilhas onde o número aparece sem rótulo.
-        "entity": EntityType.CREDIT_CARD,
-        "risk": RiskLevel.HIGH,
-        "action": "block",
-        "regex": re.compile(r'(?<!\d)(\d{4}[\s\-]\d{4}[\s\-]\d{4}[\s\-]\d{4}|\d{16})(?!\d)'),
+        # CREDIT_CARD antes de TITULO_ELEITOR: 16 dígitos com Luhn têm prioridade.
+        # Exige palavra de contexto (cart[aã]o/cr[eé]dito/bandeira) — 16 dígitos "soltos"
+        # dão ~10% de falso-positivo por Luhn (order id, transaction ref) e action=block
+        # trava o prompt inteiro. Presidio cobre cartão sem rótulo no /generate-prompts.
+        # Separador ` \-` (não `\s`) para não colar 4 números de linhas/células vizinhas.
+        "regex": re.compile(r'(?i)(?:cart[aã]o|cr[eé]dito|credit\s+card|visa|mastercard|amex|elo|diners)[^0-9]*(?<!\d)(\d{4}[ \-]?\d{4}[ \-]?\d{4}[ \-]?\d{1,4})(?!\d)'),
         "validator": _luhn_valid,
         "source": "validator",
     },
@@ -280,17 +272,19 @@ _PATTERNS: list[dict] = [
         "entity": EntityType.LEGAL_CONTEXT,
         "risk": RiskLevel.MEDIUM,
         "action": "alert",
+        # Termos jurídicos inequívocos. Evita `sentença` (SQL/lógica), `processo` (build),
+        # `ação` (botão) soltos — a base de usuários é dev.
         "regex": re.compile(
             r'(?i)(?:'
-            r'mandado\s+de\s+pris[aã]o(?:\s+n[°º]?\s*\d+)?'
-            r'|senten[çc]a(?:\s+n[°º]?\s*\d+)?'
+            r'mandado\s+de\s+pris[aã]o'
             r'|habeas\s+corpus'
             r'|vara\s+(?:c[íi]vel|criminal|federal|do\s+trabalho|de\s+fam[íi]lia)'
-            r'|a[çc][aã]o\s+(?:penal|judicial|trabalhista|de\s+indeniza[çc][aã]o)'
+            r'|a[çc][aã]o\s+(?:penal|trabalhista|de\s+indeniza[çc][aã]o)'
             r'|\br[ée]u\b|autor(?:a)?\s+da\s+a[çc][aã]o'
-            r'|foi\s+condenad[oa]|condenad[oa]\s+(?:na|no|pelo|pela)'
-            r'|inqu[ée]rito\s+policial|processo\s+n[°º]?\s*\d'
-            r'|intima[çc][aã]o\s+judicial|peti[çc][aã]o\s+inicial|ac[óo]rd[aã]o'
+            r'|foi\s+condenad[oa]\s+(?:a|na|no|pelo|pela|por)'
+            r'|inqu[ée]rito\s+policial|n[úu]mero\s+do\s+processo'
+            r'|intima[çc][aã]o\s+judicial|peti[çc][aã]o\s+inicial'
+            r'|ac[óo]rd[aã]o\s+n[°º]?\s*\d|senten[çc]a\s+judicial'
             r')'
         ),
         "source": "heuristic",

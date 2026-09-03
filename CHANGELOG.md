@@ -153,6 +153,16 @@ vermelho (não era só teste velho):
 - Infra de teste: `tests/conftest.py` + `dlp/conftest.py` (reset de estado de módulo + limpa env
   de Supabase); mocks de `bff_auth`/`auth_middleware` atualizados p/ o `get_auth_client` da 9.0;
   `test_google_auth` reescrito; `test_pdf_parser_v2.py` removido.
+- **Pipeline enterprise:** `/code-review` (plugin) rodou no diff e achou 8 coisas — 6 regressões
+  introduzidas na própria 9.1/9.2, todas corrigidas com teste de regressão:
+  - regex de cartão "solto" (16 díg.) tinha ~10% de FP por Luhn → `block` travava prompt legítimo → removida (fica só o fix de acento);
+  - separador `[\s]` colava números de linhas vizinhas → `[ \-]`;
+  - `LEGAL_CONTEXT` casava `sentença`/`processo`/`ação` (termos de dev) → apertado;
+  - clamp de offset em `rewrite_pii_tokens` podia mascarar meio prompt → guarda de 200 chars;
+  - `google_auth` com `r.user` nulo → 500 → 401 limpo;
+  - métrica de auth misturava `expired` com `invalid_session`.
+  - nginx `/internal/` block: **sem regressão** — welcome é in-process desde a 9.0.
+  Harness: **454 → 460 passed** (`docs/TOOLING_ENTERPRISE.md`).
 - Specs: `docs/specs/FASE_9.2_HARNESS_VERDE.md` + `FASE_9.2_CODE_REVIEW.md`.
 
 ### Docs

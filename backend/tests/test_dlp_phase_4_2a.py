@@ -112,6 +112,22 @@ def test_cartao_luhn_invalido():
     assert not any(f.entity_type == EntityType.CREDIT_CARD for f in r.findings)
 
 
+def test_cartao_16_digitos_sem_contexto_nao_e_cartao():
+    """
+    Regressão (code review FASE 9.2): 16 dígitos Luhn-válidos SEM palavra de
+    contexto não podem virar CREDIT_CARD (action=block) — ~10% dos ids de pedido
+    passam Luhn e travariam o prompt inteiro.
+    """
+    r = scan("número do pedido 4111111111111111 confirmado")
+    assert not any(f.entity_type == EntityType.CREDIT_CARD for f in r.findings)
+
+
+def test_cartao_nao_cola_numeros_de_linhas_vizinhas():
+    """Regressão: separador ` \\-` (não `\\s`) — não junta 4 números em linhas separadas."""
+    r = scan("Cartão referência:\n2020\n4040\n6161\n8282")
+    assert not any(f.entity_type == EntityType.CREDIT_CARD for f in r.findings)
+
+
 # ─── Scanner: Email ───────────────────────────────────────────────────────────
 
 def test_email_detectado():
@@ -221,6 +237,16 @@ def test_ano_nao_e_placa():
 def test_contexto_juridico():
     r = scan("O réu foi condenado na vara criminal")
     assert any(f.entity_type == EntityType.LEGAL_CONTEXT for f in r.findings)
+
+
+def test_contexto_juridico_nao_dispara_em_termo_tecnico():
+    """Regressão (code review FASE 9.2): base de usuários é dev — 'sentença SQL',
+    'processo do build', 'ação do botão' não podem virar LEGAL_CONTEXT."""
+    for txt in ("a sentença SQL retornou erro",
+                "o processo 3 do build travou",
+                "a ação do botão não dispara o evento"):
+        r = scan(txt)
+        assert not any(f.entity_type == EntityType.LEGAL_CONTEXT for f in r.findings), txt
 
 
 def test_contexto_medico():

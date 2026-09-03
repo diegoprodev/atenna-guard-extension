@@ -125,13 +125,41 @@ def test_user_id_do_token_e_repassado_ao_rate_limit(client, monkeypatch):
     assert seen.get("uid") == "test-metrics"
 
 
-def test_divergencia_cliente_servidor_incrementa_metric(client):
-    """Cliente diz NONE + CPF cru → servidor acha HIGH → divergência contabilizada."""
+def test_divergencia_cliente_servidor_incrementa_metric(client, monkeypatch):
+    """
+    Divergência client_low_server_high → a métrica incrementa.
+    Mocka engine.revalidate (Presidio é lento/flaky sob carga de teste — a
+    detecção real de CPF já é coberta em test_generate_prompts_e2e).
+    """
+    import main
+
+    class _Analysis:
+        risk_level = "HIGH"
+        entities = []
+        entity_types = ["BR_CPF"]
+        was_rewritten = False
+        text_hash = "abc123"
+        protected_tokens_detected = False
+
+    class _Mismatch:
+        has_mismatch = True
+        divergence_type = "client_low_server_high"
+        client_risk = "NONE"
+        server_risk = "HIGH"
+        client_entity_count = 0
+        server_entity_count = 1
+        confidence = 0.9
+
+    async def fake_revalidate(text, meta, session_id=None):
+        return _Analysis(), _Mismatch()
+
+    monkeypatch.setattr(main.engine, "revalidate", fake_revalidate)
+
     before = _sample("atenna_dlp_client_server_divergence_total") or 0.0
     r = client.post("/generate-prompts", json={
-        "input": "meu CPF é 111.444.777-35, me ajude a escrever um email",
+        "input": "meu CPF é 111.444.777-35",
         "dlp": {"dlp_risk_level": "NONE", "dlp_entity_count": 0, "dlp_entity_types": []},
     })
     assert r.status_code == 200, r.text
     after = _sample("atenna_dlp_client_server_divergence_total") or 0.0
-    assert after >= before + 1
+    assert after == before + 1

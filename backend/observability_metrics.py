@@ -55,7 +55,7 @@ if _ENABLED:
     auth_failures_total = Counter(
         "atenna_auth_failures_total",
         "Falhas de autenticação no BFF, por motivo",
-        ["reason"],  # raw_jwt | expired | no_session | malformed
+        ["reason"],  # raw_jwt | expired | invalid_session | error
     )
     bff_session_store = Gauge(
         "atenna_bff_session_store",
