@@ -153,7 +153,7 @@ function renderOnboarding(container: HTMLElement): void {
     <div class="ap-state">
       <div class="ap-state__icon">${SVG_CHECK_CIRCLE}</div>
       <div class="ap-state__title">Tudo pronto</div>
-      <p class="ap-state__text">Abra uma das plataformas abaixo.<br>O badge Atenna aparece sozinho no campo de texto.</p>
+      <p class="ap-state__text">Abra uma das plataformas abaixo.<br>O botão da Atenna aparece sozinho no campo de mensagem.</p>
       <div class="ap-links">${platformLinksHtml()}</div>
       <button id="ap-onboarding-cta" class="ap-cta">Continuar</button>
     </div>
