@@ -27,17 +27,17 @@ export function renderPlansModal(trigger: string): void {
   const box = document.createElement('div');
   box.style.cssText = [
     // tokens Atenna (FASE 10.3b) — o overlay não herda de .atenna-modal
-    '--at-accent:#0B6E4B;--at-accent-press:#095B3E;--at-accent-2:#6FD3A6',
-    '--at-card-bg:#0F3B2D;--at-surface:#0F3B2D;--at-border:rgba(244,243,238,.14)',
-    'background:#0A2E23;border:1px solid rgba(244,243,238,.12);border-radius:16px',
+    '--at-accent:#0B6E4B;--at-accent-press:#095B3E;--at-accent-2:#34c98a',
+    '--at-card-bg:#26262a;--at-surface:#26262a;--at-border:rgba(255,255,255,.10)',
+    'background:#161618;border:1px solid rgba(255,255,255,.10);border-radius:16px',
     'width:100%;max-width:560px;padding:28px 24px 24px',
     'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
-    'position:relative;color:#F4F3EE',
+    'position:relative;color:#f1f1ef',
   ].join(';');
 
   // Close
   const closeBtn = document.createElement('button');
-  closeBtn.style.cssText = 'position:absolute;top:14px;right:16px;background:none;border:none;color:#9DB5AC;font-size:18px;cursor:pointer;line-height:1;padding:4px 6px;';
+  closeBtn.style.cssText = 'position:absolute;top:14px;right:16px;background:none;border:none;color:#9a9a98;font-size:18px;cursor:pointer;line-height:1;padding:4px 6px;';
   closeBtn.textContent = '×';
   closeBtn.addEventListener('click', () => overlay.remove());
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
