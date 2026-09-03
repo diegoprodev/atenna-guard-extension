@@ -6,6 +6,15 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.3b-fix — modal in-page volta a ser NEUTRO (não verde)
+- O dono rejeitou o fundo verde-pinho do modal: o modal vive **dentro** do ChatGPT/Claude,
+  então deve **acompanhar o tema do site** — branco no claro, **cinza escuro `#1c1c1e`** no
+  escuro. Verde-pinho é identidade das **páginas próprias** (welcome/popup), não do modal.
+- O verde `--at-accent` fica **só** no botão de CTA e no anel de foco.
+- Mantido da 10.3b: **serif** nos títulos, **fim do indigo** `#6366f1` (agora verde-escuro),
+  fim do emoji, pill de uso neutra. Modal de planos também neutro (`#161618`).
+
+
 ### FASE 10.6.1 — página de desinstalação + admin vê o feedback
 - **Página `/desinstalado` consertada:** fundo branco puro, **logo da Atenna** no topo +
   marca d'água leve da coruja, card **centralizado**, e o layout agora **rola** — o botão

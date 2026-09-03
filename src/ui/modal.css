@@ -97,18 +97,21 @@
 /* ── Modal box ───────────────────────────────────────────── */
 
 .atenna-modal {
-  /* FASE 10.3b — identidade Atenna (mesma paleta do welcome/popup) */
+  /* O modal in-page é NEUTRO e acompanha o tema do site (branco no claro, cinza
+     escuro no escuro). O verde é só o acento do CTA/foco — nunca o fundo.
+     Verde-pinho é identidade das PÁGINAS próprias (welcome/popup), não do modal
+     que vive dentro do ChatGPT/Claude. */
   --at-accent:       #0B6E4B;   /* CTA principal — texto branco 5.9:1 */
   --at-accent-press: #095B3E;
-  --at-accent-2:     #0A2E23;   /* plano anual / secundário (era indigo var(--at-accent-2)) */
+  --at-accent-2:     #0B6E4B;   /* plano anual / secundário (era indigo — agora verde-escuro) */
   --at-focus:        #12986A;
   --at-green:        var(--at-accent);   /* alias de compat */
   --at-bg:         #ffffff;
-  --at-surface:    #FBFAF7;
-  --at-text:       #1A2B24;
-  --at-text-muted: #5B6B63;
-  --at-border:     #E7E3DA;
-  --at-card-bg:    #FBFAF7;
+  --at-surface:    #f7f7f6;
+  --at-text:       #14161a;
+  --at-text-muted: #6b6f76;
+  --at-border:     rgba(0, 0, 0, 0.10);
+  --at-card-bg:    #f7f7f6;
   --at-header-bg:  #ffffff;
   --at-serif:      'Iowan Old Style', 'Palatino Linotype', Palatino, Charter, Georgia, serif;
 
@@ -152,15 +155,14 @@
 }
 
 .atenna-modal--dark {
-  --at-bg:         #0A2E23;   /* verde-pinho — não mais cinza genérico */
-  --at-surface:    #0F3B2D;
-  --at-text:       #F4F3EE;
-  --at-text-muted: #9DB5AC;
-  --at-border:     rgba(244, 243, 238, 0.14);
-  --at-card-bg:    #0F3B2D;
-  --at-header-bg:  #0A2E23;
-  /* acento fica o mesmo — o verde funciona nos dois temas */
-  --at-accent-2:   #6FD3A6;   /* no escuro, o secundário clareia p/ legibilidade */
+  --at-bg:         #1c1c1e;   /* cinza escuro neutro — acompanha o tema do site */
+  --at-surface:    #26262a;
+  --at-text:       #f1f1ef;
+  --at-text-muted: #9a9a98;
+  --at-border:     rgba(255, 255, 255, 0.10);
+  --at-card-bg:    #26262a;
+  --at-header-bg:  #1c1c1e;
+  --at-accent-2:   #34c98a;   /* verde clareia no escuro p/ legibilidade */
 }
 
 /* ── Sticky header ───────────────────────────────────────── */
