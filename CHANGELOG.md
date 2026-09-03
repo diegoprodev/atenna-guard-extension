@@ -19,6 +19,27 @@ All notable changes to **Atenna Guard Extension** are documented here.
   após o signup (fallback p/ login manual se falhar).
 - Nota atual do onboarding: **6.5/10** — achados em `docs/specs/FASE_10_DESIGN_ONBOARDING.md`.
 
+### Design — welcome/login sem "cara de IA" (FASE 10.1)
+- **O que era:** `welcome.html` com os tells de UI gerada — gradiente verde diagonal
+  `linear-gradient(150deg,#16a34a,#15803d,#14532d)`, emoji em heading (🛡️ ✨ 📋 🎉), 3 cards
+  de feature com emoji-ícone, pílulas glassy `rgba(255,255,255,.12)`, "Bem-vindo!" genérico,
+  centenas de `style=` inline, sombra-halo verde no botão.
+- **O que mudou:** mundo visual próprio — fundo verde-pinho chapado (`--ink #0A2E23`) + papel
+  quente (`--paper #FBFAF7`), headline serif com ênfase em itálico ("Seus dados sensíveis
+  *nunca vão vazar* para a IA"), **1 ideia** no painel (demo da tarja de censura sobre dados
+  reais, `Nome ▉▉▉ · CPF ▉▉▉`, animação única com `prefers-reduced-motion`) no lugar dos 3
+  cards, abas com sublinhado (não pílula iOS), ícones desenhados (SVG stroke) no lugar de emoji,
+  marcas das plataformas monocromáticas no rodapé. Logo/marca d'água da Atenna mantidas.
+- **Tokens** (`:root` no `<style>` do welcome): `--ink/--paper/--accent/--focus/--line/--serif…`
+  — canônicos; o popup migra para um `_tokens.css` compartilhado na FASE 10.2.
+- **Acessibilidade:** `--accent #0B6E4B` (texto branco 5.9:1), foco `--focus #12986A` com anel,
+  `caret-color`, `::selection` e scrollbar tematizados, alvos ≥ 44px.
+- **Contrato preservado:** todos os `id` que `welcome.ts` usa; abas/estados/validação inalterados.
+- Copy: sem exclamação genérica ("Entrar na sua conta" / "Criar conta grátis" / "Redefinir senha");
+  emoji removido dos títulos setados via JS. Estado de sucesso sem heading duplicado.
+- **Validação:** `vitest` 317 ✓; build limpo; `impeccable` detector 0 achados; hook de design 0;
+  screenshots desktop (login + sucesso) + mobile + `welcome.spec.ts` (W1–W2 atualizados).
+
 ### Specs
 - `FASE_10_DESIGN_ONBOARDING.md` — auditoria da "cara de IA", plano do design system único
   (welcome → popup → modal → admin → e-mails), dirigido pelo `impeccable`.
