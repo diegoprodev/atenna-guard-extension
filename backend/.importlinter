@@ -1,0 +1,38 @@
+[importlinter]
+root_packages =
+    routes
+    middleware
+    services
+    document
+    security
+    dlp
+    utils
+    schemas
+# Dívida legada (issue FASE 9.4): security.monitor manda e-mail de alerta via
+# routes.email_service. Fix = mover email_service (transporte) -> services/.
+ignore_imports =
+    security.monitor -> routes.email_service
+
+[importlinter:contract:camadas]
+name = Camadas (web -> serviços -> motor -> util)
+type = layers
+layers =
+    routes
+    middleware
+    services
+    document | security
+    dlp
+    utils | schemas
+exhaustive = false
+ignore_imports =
+    security.monitor -> routes.email_service
+
+[importlinter:contract:dlp-isolado]
+name = DLP não importa rotas/middleware
+type = forbidden
+source_modules =
+    dlp
+forbidden_modules =
+    routes
+    middleware
+allow_indirect_imports = false

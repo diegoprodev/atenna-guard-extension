@@ -28,8 +28,12 @@ jobs:
       - name: tsc --noEmit (informativo — limpeza = FASE 9.3)
         run: npx tsc --noEmit
         continue-on-error: true
-      - name: vitest (bloqueante)
-        run: npx vitest run
+      - name: vitest + cobertura (ratchet)
+        run: |
+          npx vitest run --coverage.enabled --coverage.provider=v8 \
+            --coverage.reporter=json-summary --coverage.reporter=text
+          PCT=$(node -e "console.log(require('./coverage/coverage-summary.json').total.lines.pct)")
+          node scripts/coverage-ratchet.mjs "$PCT" .coverage-baseline-front
       - name: build (bloqueante)
         run: npm run build
       - name: dist/ completo?
@@ -67,10 +71,17 @@ jobs:
         run: |
           python -m spacy download pt_core_news_sm
           python -m spacy download en_core_web_sm
-      - name: pytest (bloqueante — 0 falhas)
+      - name: pytest + cobertura (ratchet)
         env:
           STRICT_DLP_MODE: "true"
-        run: python -m pytest -q -p no:cacheprovider
+        run: |
+          python -m pytest -q -p no:cacheprovider --cov=. --cov-report=term --cov-report=json
+          PCT=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
+          node "$GITHUB_WORKSPACE/scripts/coverage-ratchet.mjs" "$PCT" "$GITHUB_WORKSPACE/.coverage-baseline"
+      - name: "estrutura de dependência (import-linter)"
+        run: python -c "from importlinter.cli import lint_imports_command as m; import sys; sys.argv=['x']; m()"
+      - name: "complexidade (xenon, teto = estado atual)"
+        run: xenon --max-absolute F --max-modules E --max-average C . || true
 
   # ── Segredos: gitleaks ─────────────────────────────────────────────────
   secrets:

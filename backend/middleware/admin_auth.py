@@ -17,7 +17,7 @@ async def require_super_admin(
             detail="Raw JWT not accepted. Use POST /auth/admin-login.",
         )
     try:
-        from routes.bff_auth import resolve_token
+        from services.session_store import resolve_token
         session = resolve_token(token)
     except HTTPException:
         raise
