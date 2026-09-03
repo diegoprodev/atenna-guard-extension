@@ -19,7 +19,7 @@ export default defineConfig({
   projects: [
     {
       name: 'extension',
-      testMatch: /tests\/e2e\/(extension|welcome|full-flow)\.spec\.ts/,
+      testMatch: /tests\/e2e\/(extension|welcome|full-flow|validation-full)\.spec\.ts/,
       use: {},
     },
     {

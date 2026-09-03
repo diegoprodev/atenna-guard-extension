@@ -61,6 +61,17 @@ All notable changes to **Atenna Guard Extension** are documented here.
   página **Feedback (churn)** no admin React — lista + gráfico de barras por motivo.
 - `backend/static/atenna-logo.png` (cópia do `icon128`). Teste do endpoint admin no pytest.
 
+### Validação ponta a ponta
+- `docs/specs/VALIDACAO_PONTA_A_PONTA.md` — matriz de tudo que se valida (instalação, welcome,
+  popup, badge+DLP, modal, config, planos, latência, bug silencioso) + o que só dá pra
+  testar à mão e por quê + checklist de "pronto pra publicar".
+- `tests/e2e/validation-full.spec.ts` — carrega o `dist/` real e cobre os buracos: toggle de
+  senha, logout do popup, aba histórico, seções de config, cards de privacidade clicáveis,
+  confirm no Sair, header do modal de planos (não "Guardião"), **orçamento de latência**
+  (badge < 3s, modal < 2,5s, gerar < 4s, popup < 1,5s), e **falha se aparecer qualquer
+  `console.error("[Atenna] …")`** em qualquer fluxo (detector de bug silencioso).
+- `npm run test:e2e` → **41 verdes / 0 falhas / 1 skip**.
+
 ### FASE 10.3b — cor e tipografia do modal in-page
 - **Tokens `--at-*` retunados** pra identidade Atenna (mesma paleta do welcome/popup):
   claro = branco + papel quente + `--at-accent #0B6E4B`; **escuro = verde-pinho `#0A2E23`**
