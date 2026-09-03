@@ -3,6 +3,9 @@
 **Status:** em implementação · **Skills:** `impeccable`, `frontend-design`, `artifact-design`
 **Não bloqueia:** republicar (mas o dono quer isto antes de divulgar)
 
+**Progresso:** Parte 0 (bug popup) ✓ · Parte 1.1 (welcome/login redesenhado) ✓ — PR à parte ·
+Parte 1.2–1.5 (auth/callback, popup, modal, admin, e-mails) pendentes.
+
 ---
 
 ## Parte 0 — Bug corrigido (pré-requisito, já feito)
@@ -38,18 +41,19 @@ de plataforma) → 1º clique no ícone numa IA → `popup.renderOnboarding` (co
 
 ## Parte 2 — Auditoria de design (a "cara de IA")
 
-O login (`welcome.html`) tem os tells clássicos de UI gerada:
+O login (`welcome.html`) tinha os tells clássicos de UI gerada. **Status por item** (`welcome`
+resolvido na 10.1; demais superfícies pendentes):
 
-| Tell | Onde | Fix |
-|---|---|---|
-| **Split hero + form** genérico (painel colorido à esquerda, form à direita) | welcome | manter o split, mas dar personalidade: tipografia com caráter, o painel conta 1 ideia forte (não 3 bullets), grão/textura sutil da marca |
-| **Gradiente verde padrão** `linear-gradient(150deg,#16a34a,#15803d,#14532d)` | welcome, auth/callback | paleta própria: verde Atenna + 1 neutro quente; gradiente mais sutil ou cor chapada + 1 acento |
-| **Emoji em headings** (🛡️ 🎉 ✉️) | welcome, popup, e-mails | trocar por ícone SVG do sistema ou nada |
-| **3 bullets com emoji-ícone** no rodapé do painel | welcome | 1 prova social ou 1 frase de valor, não lista |
-| **"Bem-vindo!" + subtítulo** genérico | welcome, popup login | headline específica ("Seus dados nunca vão pra IA" já é boa — usar ELA) |
-| **Popup dark** (`#1a1a1a`/`#000`) vs **welcome light** | popup vs welcome | um sistema só: tokens compartilhados (`admin/src/styles` + popup + modal + welcome) |
-| Botão verde com **texto preto** (`color:#000`) | popup | contraste/أcessibilidade — texto branco ou verde-escuro |
-| Inline `style=` por todo lado (centenas) | popup.ts, welcome.html | classes + tokens; o Impeccable não consegue iterar em inline |
+| Tell | Onde | Fix | Status |
+|---|---|---|---|
+| **Split hero + form** genérico | welcome | manter o split, mas dar caráter: serif com ênfase, 1 ideia forte (demo da tarja), textura de régua sutil | ✓ welcome |
+| **Gradiente verde padrão** `linear-gradient(150deg,#16a34a,#15803d,#14532d)` | welcome, auth/callback | cor chapada `--ink #0A2E23` + papel quente `--paper` + 1 acento `--accent` | ✓ welcome · ⧗ callback |
+| **Emoji em headings** (🛡️ 🎉 ✉️) | welcome, popup, e-mails | ícone SVG stroke desenhado | ✓ welcome · ⧗ popup/e-mails |
+| **3 bullets com emoji-ícone** no rodapé do painel | welcome | 1 demo de valor (tarja de censura), não lista | ✓ welcome |
+| **"Bem-vindo!" + subtítulo** genérico | welcome, popup login | headline específica "Seus dados sensíveis nunca vão vazar para a IA" | ✓ welcome · ⧗ popup |
+| **Popup dark** (`#1a1a1a`/`#000`) vs **welcome light** | popup vs welcome | um sistema só: `_tokens.css` compartilhado | ⧗ 10.2 |
+| Botão verde com **texto preto** (`color:#000`) | popup | texto branco sobre `--accent` (5.9:1) | ⧗ popup (padrão já definido no welcome) |
+| Inline `style=` por todo lado (centenas) | popup.ts, welcome.html | classes + tokens | ✓ welcome · ⧗ popup |
 
 ---
 
