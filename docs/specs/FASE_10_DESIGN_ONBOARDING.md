@@ -3,8 +3,8 @@
 **Status:** em implementação · **Skills:** `impeccable`, `frontend-design`, `artifact-design`
 **Não bloqueia:** republicar (mas o dono quer isto antes de divulgar)
 
-**Progresso:** Parte 0 (bug popup) ✓ · Parte 1.1 (welcome/login redesenhado) ✓ — PR à parte ·
-Parte 1.2–1.5 (auth/callback, popup, modal, admin, e-mails) pendentes.
+**Progresso:** Parte 0 (bug popup) ✓ · 1.1 welcome/login ✓ (#31) · 1.2 popup + `tokens.css` ✓ ·
+1.3–1.5 (auth/callback, modal, admin, e-mails) pendentes.
 
 ---
 
