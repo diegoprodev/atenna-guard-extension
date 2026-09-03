@@ -89,6 +89,8 @@ export async function bffLogout(): Promise<void> {
 }
 
 export async function bffMe(): Promise<MeResponse | null> {
+  // sem sessão local → não faz round trip (evita o flash de skeleton no popup)
+  if (!(await getSession())) return null;
   try {
     return await bffFetch<MeResponse>('/auth/me');
   } catch {

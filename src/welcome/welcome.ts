@@ -160,7 +160,16 @@ async function submitSignup() {
     setErr(result.error);
     return;
   }
-  showSignupSuccess(email);
+  // O backend já cria a conta confirmada (email_confirm=True) — loga direto,
+  // sem o passo extra "agora faça login".
+  try {
+    const session = await bffLogin(email, pass);
+    showSuccess(session.email ?? email);
+    void notifyBadgeInject();
+  } catch {
+    btn.disabled = false; btn.textContent = 'Criar conta grátis';
+    showSignupSuccess(email);  // fallback: pede login manual
+  }
 }
 
 // ── Forgot password ───────────────────────────────────────────────────────────

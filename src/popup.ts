@@ -78,17 +78,9 @@ export async function initPopup(): Promise<void> {
   const [me, tabInfo, tabId] = await Promise.all([bffMe(), getActiveTabInfo(), getActiveTabId()]);
 
   if (!me) {
-    // User is not logged in
-    if (!tabInfo?.supported) {
-      // Not on a supported site — show friendly message
-      renderUnsupportedSiteMessage(container);
-      return;
-    }
-    // On a supported site — open login modal in active tab
-    if (tabId) {
-      chrome.tabs.sendMessage(tabId, { type: 'OPEN_LOGIN_MODAL' }, () => void chrome.runtime.lastError);
-    }
-    window.close();
+    // Sem sessão → login DENTRO do popup (não depender do content script nem
+    // fechar o popup — bug "abre skeleton e some").
+    renderLogin(container, tabId, tabInfo?.supported ?? false);
     return;
   }
 
