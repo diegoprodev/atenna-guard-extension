@@ -143,8 +143,10 @@ describe('toggleModal', () => {
     });
     // bffMe: modal now calls this instead of getActiveSession
     vi.mocked(bffClient.bffMe).mockResolvedValue({
+      user_id: 'test-user-id',
       email: 'test@example.com',
       plan: 'free',
+      expires_at: 9999999999,
       onboarding_seen: true,
     });
     vi.spyOn(planManager, 'syncPlanFromSupabase').mockResolvedValue(undefined);
@@ -367,7 +369,7 @@ describe('toggleModal', () => {
 
   it('shows limit UI when daily count is at 5', async () => {
     addTextarea('algum texto');
-    chromeStore['atenna_usage'] = {
+    chromeStore['atenna_usage__test-user-id'] = {
       count: 5,
       resetDate: Date.now() + 24 * 60 * 60 * 1000,
     };
@@ -378,7 +380,7 @@ describe('toggleModal', () => {
 
   it('usage badge shows danger class at limit', async () => {
     addTextarea('algum texto');
-    chromeStore['atenna_usage'] = {
+    chromeStore['atenna_usage__test-user-id'] = {
       count: 15,
       resetDate: Date.now() + 30 * 24 * 60 * 60 * 1000,
     };
@@ -480,8 +482,10 @@ describe('DLP protection flow', () => {
       expires_at: Math.floor(Date.now() / 1000) + 3600,
     });
     vi.mocked(bffClient.bffMe).mockResolvedValue({
+      user_id: 'test-user-id',
       email: 'test@example.com',
       plan: 'free',
+      expires_at: 9999999999,
       onboarding_seen: true,
     });
     vi.spyOn(planManager, 'syncPlanFromSupabase').mockResolvedValue(undefined);

@@ -54,9 +54,10 @@ export async function getStoredSession(): Promise<Session | null> {
   });
 }
 
-export async function storeSession(session: Session): Promise<void> {
-  // No longer stores raw JWT — use bffSetSession for BFF sessions
-  setStorageUser(session.email);
+export async function storeSession(_session: Session): Promise<void> {
+  // No-op mantido por compat. O namespace de storage é fixado por user_id
+  // (getActiveSession / signInWithPassword / o modal), NUNCA por email —
+  // email como escopo causava chave inconsistente entre caminhos → vazamento.
 }
 
 export async function clearSession(): Promise<void> {

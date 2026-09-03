@@ -20,12 +20,15 @@ export function getStorageUser(): string | null {
 }
 
 /**
- * Returns `${base}__${uid}` when authenticated, or `${base}` otherwise.
- * Never call this from code that runs before session load — the uid will be null
- * and you'll write to the global key, which leaks across accounts.
+ * Returns `${base}__${uid}` when authenticated, or `${base}__nouser` otherwise.
+ *
+ * SEGURANÇA: NUNCA cai na chave global crua — se `_uid` está null, os dados vão
+ * para um namespace `__nouser` que nenhum usuário real lê. Assim um usuário nunca
+ * enxerga dados escritos sob outra identidade (ou sem identidade). Todo ponto de
+ * entrada que lê dado de usuário DEVE chamar setStorageUser(me.user_id) antes.
  */
 export function sk(base: string): string {
-  return _uid ? `${base}__${_uid}` : base;
+  return `${base}__${_uid ?? 'nouser'}`;
 }
 
 /**

@@ -208,3 +208,50 @@ test('F7: usuário FREE VÊ o upsell no modal (contraprova)', async ({ context }
   expect(await page.locator('.atenna-modal__onb-cta-green').count()).toBe(1);
   await page.close();
 });
+
+test('F8 [SEGURANÇA]: histórico NÃO vaza entre contas na mesma máquina', async ({ context }) => {
+  await clearAll(context);
+
+  // ── Usuário A gera um prompt ──
+  await injectSession(context, 'free', 'user-A-id', 'a@atenna.ai');
+  await new Promise((r) => setTimeout(r, 1200));
+  await context.route('**/api.atennaia.com.br/auth/me**', (r) => r.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ user_id: 'user-A-id', email: 'a@atenna.ai', plan: 'free', expires_at: 9999999999 }),
+  }));
+  await context.route('**/generate-prompts', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { direct: 'PROMPT SECRETO DE A', technical: 'x', structured: 'y' } }) }));
+  await context.route('**/auth/v1/user**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'user-A-id', email: 'a@atenna.ai' }) }));
+
+  let page = await openFixturePage(context);
+  await page.route('**/auth/me', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user_id: 'user-A-id', email: 'a@atenna.ai', plan: 'free', expires_at: 9999999999 }) }));
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 30_000 });
+  await page.click('#atenna-guard-btn');
+  await page.waitForSelector('.atenna-modal__editor', { timeout: 8000 });
+  await page.fill('.atenna-modal__editor', 'segredo do usuario A sobre a empresa dele');
+  await page.click('.atenna-modal__regen');
+  await page.waitForSelector('.atenna-modal__card', { timeout: 15_000 });
+  await page.close();
+
+  // ── Usuário B loga na mesma máquina, abre o modal ──
+  await context.unroute('**/api.atennaia.com.br/auth/me**');
+  await injectSession(context, 'free', 'user-B-id', 'b@atenna.ai');
+  await new Promise((r) => setTimeout(r, 1200));
+  await context.route('**/api.atennaia.com.br/auth/me**', (r) => r.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ user_id: 'user-B-id', email: 'b@atenna.ai', plan: 'free', expires_at: 9999999999 }),
+  }));
+  await context.route('**/auth/v1/user**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'user-B-id', email: 'b@atenna.ai' }) }));
+
+  page = await openFixturePage(context);
+  await page.route('**/auth/me', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user_id: 'user-B-id', email: 'b@atenna.ai', plan: 'free', expires_at: 9999999999 }) }));
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 30_000 });
+  await page.click('#atenna-guard-btn');
+  await page.waitForSelector('.atenna-modal__tab', { timeout: 8000 });
+  await page.click('.atenna-modal__tab[data-tab="history"]');
+  await page.waitForTimeout(1500);
+
+  const txt = (await page.locator('#atenna-modal-overlay').textContent()) ?? '';
+  expect(txt).not.toContain('segredo do usuario A');
+  expect(txt).not.toContain('PROMPT SECRETO DE A');
+  await page.close();
+});

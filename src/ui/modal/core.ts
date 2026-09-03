@@ -48,7 +48,7 @@ import { scan } from '../../dlp/detector';
 import { buildAdvisory } from '../../dlp/advisory';
 import { updateBadgeDotRisk, setAutoBanner, getDlpMetadata } from '../../content/injectButton';
 import { getFlag } from '../../core/featureFlags';
-import { sk } from '../../core/scopedStorage';
+import { sk, setStorageUser } from '../../core/scopedStorage';
 
 export { clearPromptCache };
 
@@ -79,6 +79,7 @@ export async function openSettingsOverlay(): Promise<void> {
 
   const me = await bffMe();
   if (!me) return;
+  setStorageUser(me.user_id); // fixa o namespace no usuário desta sessão
 
   // Always sync plan from BFF before rendering — ensures pro users see correct badge
   await syncPlanFromBff(me);
@@ -167,6 +168,11 @@ async function openModal(autoGenerate = false): Promise<void> {
     modal.querySelector('.atenna-modal__close')!.addEventListener('click', close);
     return;
   }
+
+  // ── SEGURANÇA: fixa o namespace de storage no usuário DESTA sessão antes de
+  //    ler qualquer dado (histórico, plano, uso). Sem isto o `_uid` do content
+  //    script podia estar velho (usuário anterior) → histórico vazava entre contas.
+  setStorageUser(me.user_id);
 
   // ── Session exists: sync plan ──────────
   const { upgradedToPro } = await syncPlanFromBff(me);

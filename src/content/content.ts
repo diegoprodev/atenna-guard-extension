@@ -104,11 +104,16 @@ async function init(): Promise<void> {
 
       const newSession = changes['atenna_session']?.newValue ?? changes['atenna_jwt']?.newValue;
       if (newSession && !_isAuthenticated) {
-        // Storage has a token — validate it before showing badge
+        // Storage has a token — re-resolve o usuário (pode ser OUTRA conta) antes de injetar
         void checkAuth().then(authed => { if (authed) tryInject(); });
+      } else if (newSession && _isAuthenticated) {
+        // token trocou com a extensão já autenticada → possível troca de conta.
+        // Re-resolve o namespace de storage pra não misturar dados entre contas.
+        void checkAuth();
       } else if (!newSession && _isAuthenticated) {
-        // User logged out — remove badge
+        // User logged out — remove badge + zera o namespace de storage
         _isAuthenticated = false;
+        setStorageUser(null);
         const config = detectPlatform();
         if (config) removeButton(config.inputSelector);
       }
