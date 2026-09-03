@@ -200,7 +200,7 @@ export function Plans({ token }: { token: string }) {
 
       {/* Saúde das assinaturas — P3.5 */}
       {health && (
-        <div className="admin-card" style={{ marginBottom: 20, borderLeft: `3px solid ${health.ok ? 'var(--green)' : 'var(--red)'}` }}>
+        <div className="admin-card" style={{ marginBottom: 20 }}>
           <div className="admin-card__header">
             <span className="admin-card__title">Saúde das assinaturas</span>
             <span style={{ fontSize: 12, color: health.ok ? 'var(--green)' : 'var(--red)' }}>
