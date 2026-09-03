@@ -7,6 +7,7 @@ import { System } from './pages/System';
 import { DLP } from './pages/DLP';
 import { Costs } from './pages/Costs';
 import { Errors } from './pages/Errors';
+import { Feedback } from './pages/Feedback';
 import { Audit } from './pages/Audit';
 import { UsageCosts } from './pages/UsageCosts';
 import { Plans } from './pages/Plans';
@@ -49,6 +50,7 @@ export default function App() {
     system:   <System token={token} />,
     flags:    <FeatureFlags token={token} />,
     errors:   <Errors token={token} />,
+    feedback: <Feedback token={token} />,
     audit:    <Audit token={token} />,
     usage:    <UsageCosts token={token} />,
     plans:      <Plans token={token} />,

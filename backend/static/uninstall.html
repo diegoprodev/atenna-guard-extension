@@ -6,41 +6,58 @@
 <title>Atenna Safe Prompt — até logo</title>
 <style>
   :root{
-    --ink:#0A2E23;--paper:#FBFAF7;--paper-2:#fff;--line:#E7E3DA;
+    --bg:#fff;--surface:#fff;--line:#E7E3DA;
     --text:#1A2B24;--text-soft:#5B6B63;--accent:#0B6E4B;--accent-press:#095B3E;--focus:#12986A;
     --serif:'Iowan Old Style','Palatino Linotype',Palatino,Charter,Georgia,serif;
     --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:var(--sans);background:var(--paper);color:var(--text);line-height:1.55;
-    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 20px}
+  html,body{background:var(--bg)}
+  body{
+    font-family:var(--sans);color:var(--text);line-height:1.55;
+    padding:40px 20px 72px;position:relative;overflow-x:hidden;
+  }
+  /* marca d'água — meia-logo esmaecida no canto inferior direito */
+  body::after{
+    content:"";position:fixed;right:-90px;bottom:-90px;width:340px;height:340px;
+    background:url('/static/atenna-logo.png') center/contain no-repeat;
+    opacity:.05;pointer-events:none;z-index:0;
+  }
   ::selection{background:rgba(18,152,106,.18)}
   :focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:3px}
-  .card{width:100%;max-width:440px}
-  .brand{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--text-soft);margin-bottom:20px}
+
+  .card{width:100%;max-width:440px;margin:0 auto;position:relative;z-index:1}
+  .logo{width:44px;height:44px;border-radius:10px;display:block;margin-bottom:16px}
+  .brand{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--text-soft);margin-bottom:14px}
   h1{font-family:var(--serif);font-weight:500;font-size:26px;letter-spacing:-.015em;line-height:1.2;margin-bottom:8px}
   .sub{font-size:13.5px;color:var(--text-soft);margin-bottom:26px}
+
   fieldset{border:none;margin-bottom:16px}
   legend{font-size:13px;font-weight:600;margin-bottom:9px}
   .opt{display:flex;align-items:flex-start;gap:9px;padding:8px 0;font-size:13.5px;cursor:pointer}
   .opt input{margin-top:2px;accent-color:var(--accent);flex-shrink:0}
+
   label.fld{display:block;font-size:12px;font-weight:600;margin:14px 0 6px}
   textarea,input[type=email]{
-    width:100%;font-family:inherit;font-size:14px;color:var(--text);background:var(--paper-2);
+    width:100%;font-family:inherit;font-size:14px;color:var(--text);background:#FAFAF8;
     border:1px solid var(--line);border-radius:7px;padding:10px 12px;outline:none;caret-color:var(--focus);
     transition:border-color .14s,box-shadow .14s;
   }
   textarea{min-height:78px;resize:vertical}
-  textarea:focus,input[type=email]:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(18,152,106,.12)}
+  textarea:focus,input[type=email]:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(18,152,106,.12);background:#fff}
+
   .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+
   button{
-    margin-top:20px;width:100%;padding:12px;border:none;border-radius:7px;
+    margin-top:22px;width:100%;padding:13px;border:none;border-radius:7px;
     background:var(--accent);color:#fff;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
     box-shadow:0 1px 2px rgba(10,46,35,.14);transition:background .13s;
   }
   button:hover:not(:disabled){background:var(--accent-press)}
   button:disabled{background:#CFCABC;color:#F4F3EE;box-shadow:none;cursor:not-allowed}
-  .done{text-align:center;padding:12px 0}
+
+  .done{text-align:center;padding:40px 0}
+  .done .logo{margin:0 auto 16px}
   .done h1{margin-bottom:10px}
   .err{font-size:12px;color:#B23A30;margin-top:8px;display:none}
 </style>
@@ -48,6 +65,7 @@
 <body>
 <div class="card">
   <div id="form-view">
+    <img class="logo" src="/static/atenna-logo.png" alt="Atenna" width="44" height="44">
     <div class="brand">Atenna Safe Prompt</div>
     <h1>Que pena que você foi</h1>
     <p class="sub">30 segundos: por que você desinstalou? A gente lê todas as respostas.</p>
@@ -78,7 +96,7 @@
   </div>
 
   <div id="done-view" class="done" hidden>
-    <div class="brand">Atenna Safe Prompt</div>
+    <img class="logo" src="/static/atenna-logo.png" alt="Atenna" width="44" height="44">
     <h1>Obrigado</h1>
     <p class="sub">Sua resposta chegou. Pode fechar esta aba.</p>
   </div>
@@ -113,6 +131,7 @@
       if (!r.ok) throw new Error(String(r.status));
       document.getElementById('form-view').hidden = true;
       document.getElementById('done-view').hidden = false;
+      window.scrollTo(0, 0);
     }).catch(function () {
       btn.disabled = false;
       btn.textContent = 'Enviar feedback';

@@ -90,6 +90,7 @@ const SECTIONS: Array<{ title: string; items: NavItem[] }> = [
     items: [
       { id: 'flags',  label: 'Feature Flags', icon: <IconFlag /> },
       { id: 'errors', label: 'Erros',         icon: <IconAlert /> },
+      { id: 'feedback', label: 'Feedback (churn)', icon: <IconLog /> },
       { id: 'audit',      label: 'Auditoria',  icon: <IconLog /> },
       { id: 'compliance', label: 'Compliance', icon: <IconCompliance /> },
     ],
