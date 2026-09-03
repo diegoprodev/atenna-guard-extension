@@ -6,6 +6,20 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE P3: CI/CD
 
+### P3.4 — backup do banco (Supabase Postgres)
+- Descoberta: a VPS tem IPv6 global e `pg_dump` 17.11 conecta **direto** no Postgres do Supabase
+  (`db.<ref>.supabase.co:5432`) do host — sem pooler, sem add-on IPv4. (De dentro de container não
+  vai — container não tem IPv6.)
+- `infra/backup/`: `backup-supabase.sh` (`pg_dump --format=custom | age` → local + Cloudflare R2,
+  retenção 14 diários / 8 semanais → check-in GlitchTip), `restore-test.sh` (restaura num DB
+  descartável e confere linhas), `restore.sh` (emergência, confirma 2×), README + `crontab.example`.
+- O `.dump` cru **nunca** toca o disco sem cifra (pipe `pg_dump | age`).
+- VPS: `age`+`rclone` instalados, chave `age` gerada, cron `03:30` diário + `restore-test` domingo.
+  Backup local + restore-test **testados** (316 KB cifrado; restore = 9 `profiles`).
+- Pendente do dono: bucket R2 + API token; 2 cron monitors no GlitchTip; **guardar a chave `age`
+  privada no cofre** (sem ela o backup é inútil). Spec: `docs/specs/FASE_P3.4_BACKUP_BANCO.md`.
+
+
 ### P3 — configuração do repositório (via `gh api`)
 - **Branch protection em `main`**: PR obrigatório, status check `ci-ok` verde + up-to-date,
   histórico linear, sem force-push, conversas resolvidas. (admin não forçado — hotfix solo.)
@@ -15,7 +29,10 @@ All notable changes to **Atenna Guard Extension** are documented here.
 - Secret `VPS_DEPLOY_KEY` + variável `DISCORD_WEBHOOK`.
 - `gitleaks` no CI precisava de `GITHUB_TOKEN` p/ escanear PR (fix).
 
-### P3.2 — deploy automático do backend (fim da dança manual)
+### P3.2 — deploy automático do backend (fim da dança manual) — ✅ testado ponta a ponta
+Fluxo validado: merge no `main` → CI verde → `deploy.yml` → rsync → `docker compose up -d --build`
+→ **`DEPLOY OK — /health 200`** → Discord `#geral`. Environment `production` sem reviewer
+(dev solo — a revisão independente é no PR, não no deploy).
 - `.github/workflows/deploy.yml` — dispara quando o **CI passa em `main`**, com **aprovação
   manual** (GitHub Environment `production`). rsync do `backend/` p/ a VPS (sem `--delete`,
   exclui `.env`/`data`/`nginx/certs`/`static/admin`) → `backend/deploy.sh`.
