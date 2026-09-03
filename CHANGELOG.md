@@ -4,6 +4,27 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
+
+### Bug — popup "abre skeleton e some" (sem login)
+- `popup.initPopup()` sem sessão: site suportado → `sendMessage(OPEN_LOGIN_MODAL)` +
+  `window.close()`; site qualquer → "site não suportado" (sem login). `renderLogin()` existia
+  mas nunca era chamado. **Fix:** `!me` → `renderLogin()` **dentro do popup**, sem fechar.
+- `bffMe()` retorna `null` na hora se não há sessão local — mata o round trip → mata o flash.
+- Repro: `src/__tests__/popup-auth-flow.test.ts` (2 casos, falhavam antes).
+
+### Onboarding
+- **Signup vira login direto.** O backend já cria a conta confirmada (`email_confirm=True`) —
+  o passo "conta criada, agora faça login" era desnecessário. `welcome.ts` faz `bffLogin`
+  após o signup (fallback p/ login manual se falhar).
+- Nota atual do onboarding: **6.5/10** — achados em `docs/specs/FASE_10_DESIGN_ONBOARDING.md`.
+
+### Specs
+- `FASE_10_DESIGN_ONBOARDING.md` — auditoria da "cara de IA", plano do design system único
+  (welcome → popup → modal → admin → e-mails), dirigido pelo `impeccable`.
+- `FASE_P3.6_P3.7_STAGING_MUTACAO_CARGA.md` — staging (schema isolado + CD por tag),
+  mutação (`mutmut`/`Stryker`), carga (`k6`), contrato cliente↔servidor.
+
 ## [Unreleased] — FASE P3: CI/CD
 
 ### P3.3 — portões de qualidade no CI
