@@ -1,13 +1,11 @@
+import { icon } from '../icons';
 import { clearMsgInterval, getLogoUrl } from './utils';
 import { trackEvent } from '../../core/analytics';
 import type { Advisory } from '../../dlp/types';
 
 // ─── DLP Advisory (Layer 3 UX) ────────────────────────────────
 
-export const SHIELD_SVG = `<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <path d="M8 1L2 3.5V8C2 11.3 4.7 14.3 8 15C11.3 14.3 14 11.3 14 8V3.5L8 1Z"
-    stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" fill="none"/>
-</svg>`;
+export const SHIELD_SVG = icon('shield', { size: 16, stroke: 1.6 });
 
 /**
  * Shows DLP advisory above the content area.
@@ -88,9 +86,9 @@ export function showDlpAdvisory(
 }
 
 
-const ONB_ICON_CLARITY = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>`;
-const ONB_ICON_SHIELD  = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
-const ONB_ICON_FLOW    = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`;
+const ONB_ICON_CLARITY = icon('clock', { size: 20 });
+const ONB_ICON_SHIELD  = icon('shield', { size: 20 });
+const ONB_ICON_FLOW    = icon('sparkles', { size: 20 });
 
 export function renderPreLoginOnboarding(container: HTMLElement, switchView: (view: string) => void): void {
   void trackEvent('onboarding_shown');
@@ -241,10 +239,10 @@ export function showProWelcomeOverlay(session: { email: string; display_name?: s
     <div class="atenna-pro-welcome__title">Parabéns, ${name}!</div>
     <div class="atenna-pro-welcome__sub">Você agora é Atenna Pro.</div>
     <ul class="atenna-pro-welcome__perks">
-      <li><span class="atenna-pro-welcome__check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> 300 refinamentos de prompt por mês</li>
-      <li><span class="atenna-pro-welcome__check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Proteção DLP ilimitada em documentos</li>
-      <li><span class="atenna-pro-welcome__check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Análise de PDF, DOCX e Excel sem cotas</li>
-      <li><span class="atenna-pro-welcome__check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Histórico completo de prompts</li>
+      <li><span class="atenna-pro-welcome__check">${icon('check', { size: 12, stroke: 3 })}</span> 300 refinamentos de prompt por mês</li>
+      <li><span class="atenna-pro-welcome__check">${icon('check', { size: 12, stroke: 3 })}</span> Proteção DLP ilimitada em documentos</li>
+      <li><span class="atenna-pro-welcome__check">${icon('check', { size: 12, stroke: 3 })}</span> Análise de PDF, DOCX e Excel sem cotas</li>
+      <li><span class="atenna-pro-welcome__check">${icon('check', { size: 12, stroke: 3 })}</span> Histórico completo de prompts</li>
     </ul>
     <button class="atenna-pro-welcome__btn">Começar agora</button>
   `;

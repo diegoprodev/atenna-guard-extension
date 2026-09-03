@@ -38,6 +38,14 @@ All notable changes to **Atenna Guard Extension** are documented here.
   prompt-states (📅 ⚡ ✨ 🛡 📄 → SVG relógio + texto), prompt-cards (★/☆ → estrela desenhada),
   pro-welcome (✓ → SVG check), toasts (🎉). Wizard de onboarding morto + `ONB_STEPS`
   (com os 💡) **deletados** do `onboarding-views.ts`.
+- **Ícones — biblioteca Lucide (10.3-a).** Fim dos SVGs desenhados à mão. `src/ui/icons.ts`
+  = ~30 ícones do **Lucide** (MIT), um traço e um peso, via `icon(name, {size, stroke, fill})`.
+  Trocados em: `popup.ts` (shield/sparkles/file/globe/eye/eye-off/mail/check-circle/clock/
+  settings/log-out), badge do content script (`injectButton.ts` — as 4 ações), `modal/utils`
+  (`COPY_SVG`/`CHECK_SVG`), `prompt-cards` (estrela de favorito, chevron), `prompt-states`
+  (relógio), `onboarding-views` (shield + wizard icons + checks), `welcome.html`/`welcome.ts`
+  (eye toggle, check-circle). devDep `lucide-static` + `scripts/gen-icons.mjs` p/ regenerar.
+  Marcas (Google, ChatGPT, etc.) continuam com o SVG oficial da marca.
 - **Ainda pendente (FASE 10.3-b):** o redesign de cor/tipo do modal (tema escuro, tokens,
   serif, indigo `#6366f1` do checkout) — `modal.css` tem 4293 linhas, é fase própria.
 - Spec: `docs/specs/FASE_10.7_VALIDACAO_REAL_E_CORRECOES.md`.

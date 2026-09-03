@@ -1,3 +1,4 @@
+import { icon as iconSvg } from '../icons';
 // ─── Prompt States — empty/loading/success/limit views ────────────────────────
 // Extracted from modal.ts. Renders the four main result-area states.
 
@@ -173,7 +174,7 @@ export function renderLimitReached(container: HTMLElement, limitType: 'daily' | 
   // Icon — relógio (limite temporal), traço consistente
   const icon = document.createElement('div');
   icon.style.cssText = 'margin-bottom:2px;color:var(--at-muted,#888);';
-  icon.innerHTML = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  icon.innerHTML = iconSvg('clock', { size: 30, stroke: 1.8 });
   wrap.appendChild(icon);
 
   // Title
