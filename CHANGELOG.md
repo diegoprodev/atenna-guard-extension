@@ -4,6 +4,21 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
+## [Unreleased] — FASE P3: CI/CD
+
+### P3.1 — CI mínimo (GitHub Actions) — ✅ verde no 1º run
+- `.github/workflows/ci.yml` roda em todo push/PR:
+  - **frontend**: `npm ci` → `tsc --noEmit` (informativo — 52 erros de tipo pré-existentes,
+    limpeza = FASE 9.3) → `vitest run` (315, bloqueante) → `npm run build` + valida `dist/`.
+  - **backend**: Python 3.12 + tesseract + `requirements-dev.txt` + modelos spaCy →
+    `pytest` (460, bloqueante).
+  - **secrets**: `gitleaks` nos commits novos (a chave Gemini antiga no histórico é purga à parte).
+  - **ci-ok**: gate único (todos verdes) — vira o *required status check* da branch protection.
+- `.nvmrc` (24), `.github/pull_request_template.md` (checklist canônico 9.5), `.github/CODEOWNERS`.
+- Pendente do dono: branch protection em `main` + secret scanning/push protection no repo.
+
+---
+
 ## [2.3.0] — 2026-09-02 — FASE 9.0: reconciliação do backend + correção do DLP server-side
 
 ### Crítico — 2 falhas de segurança achadas ao instrumentar as métricas (FASE 9.1)
