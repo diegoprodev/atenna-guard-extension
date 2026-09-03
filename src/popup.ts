@@ -103,74 +103,62 @@ const EYE_CLOSE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" s
 export function renderPasswordResetConfirmation(container: HTMLElement, email: string): void {
   container.innerHTML = '';
   const wrap = document.createElement('div');
-  wrap.className = 'ap-root ap-root--login';
+  wrap.className = 'ap-state';
 
   const icon = document.createElement('div');
-  icon.style.cssText = 'font-size:32px;text-align:center;margin-bottom:8px';
-  icon.textContent = '✉️';
+  icon.className = 'ap-state__icon';
+  icon.innerHTML = SVG_MAIL;
 
-  const title = document.createElement('h2');
-  title.className = 'ap-title';
-  title.textContent = 'Email enviado';
+  const title = document.createElement('div');
+  title.className = 'ap-state__title';
+  title.textContent = 'Link enviado';
 
   const body = document.createElement('p');
-  body.className = 'ap-subtitle';
-  body.textContent = `Verifique sua caixa de entrada em ${email} e clique no link para redefinir a senha.`;
+  body.className = 'ap-state__text';
+  body.append('Abra o email em ');
+  const strong = document.createElement('strong');
+  strong.textContent = email;
+  body.append(strong, ' e clique no link para redefinir a senha.');
 
   const backBtn = document.createElement('button');
   backBtn.className = 'ap-link-btn';
-  backBtn.textContent = '← Voltar ao login';
+  backBtn.textContent = 'Voltar ao login';
   backBtn.addEventListener('click', () => renderLogin(container, null));
 
   wrap.append(icon, title, body, backBtn);
   container.appendChild(wrap);
 }
 
+const PLATFORMS = [
+  { id: 'ob-chatgpt',    name: 'ChatGPT',    url: 'https://chatgpt.com',        host: 'chatgpt.com',        icon: 'icons/openai.svg' },
+  { id: 'ob-claude',     name: 'Claude',     url: 'https://claude.ai',          host: 'claude.ai',          icon: 'icons/anthropic.svg' },
+  { id: 'ob-gemini',     name: 'Gemini',     url: 'https://gemini.google.com',  host: 'gemini.google.com',  icon: 'icons/gemini.svg' },
+  { id: 'ob-perplexity', name: 'Perplexity', url: 'https://www.perplexity.ai',  host: 'perplexity.ai',      icon: 'icons/perplexity.svg' },
+];
+
+function platformLinksHtml(): string {
+  return PLATFORMS.map(p => `
+      <a id="${p.id}" class="ap-link-row" href="${p.url}" target="_blank" rel="noopener noreferrer">
+        <span class="ap-link-row__ico"><img src="${chrome.runtime.getURL(p.icon)}" width="16" height="16" alt=""></span>
+        ${p.name}
+        <span class="ap-link-row__host">${p.host}</span>
+      </a>`).join('');
+}
+
+const SVG_CHECK_CIRCLE = `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>`;
+const SVG_MAIL = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>`;
+
 function renderOnboarding(container: HTMLElement): void {
-  container.innerHTML = '';
-  const wrap = document.createElement('div');
-  wrap.className = 'ap-root ap-root--login';
-  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px 20px;text-align:center;';
-
-  wrap.innerHTML = `
-    <div class="ap-onboarding__slide" style="width:56px;height:56px;border-radius:50%;background:rgba(34,197,94,0.15);display:flex;align-items:center;justify-content:center;">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+  container.innerHTML = `
+    <div class="ap-state">
+      <div class="ap-state__icon">${SVG_CHECK_CIRCLE}</div>
+      <div class="ap-state__title">Tudo pronto</div>
+      <p class="ap-state__text">Abra uma das plataformas abaixo.<br>O badge Atenna aparece sozinho no campo de texto.</p>
+      <div class="ap-links">${platformLinksHtml()}</div>
+      <button id="ap-onboarding-cta" class="ap-cta">Continuar</button>
     </div>
-    <h3 class="ap-onboarding__slide" style="margin:0;font-size:16px;font-weight:700;color:#f0f0f0;">Você está protegido! 🛡️</h3>
-    <p class="ap-onboarding__slide" style="margin:0;font-size:13px;color:#888;line-height:1.6;">
-      Abra uma das plataformas abaixo.<br/>
-      O badge Atenna aparecerá automaticamente no campo de texto.
-    </p>
-    <div style="display:flex;flex-direction:column;gap:8px;width:100%;">
-      <a id="ob-chatgpt" href="https://chatgpt.com" target="_blank" rel="noopener noreferrer"
-         style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;background:#1a1a1a;border:1px solid #2a2a2a;text-decoration:none;color:#f0f0f0;font-size:13px;font-weight:500;cursor:pointer;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10a37f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        Abrir ChatGPT
-        <span style="margin-left:auto;color:#555;font-size:11px;">chatgpt.com</span>
-      </a>
-      <a id="ob-claude" href="https://claude.ai" target="_blank" rel="noopener noreferrer"
-         style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;background:#1a1a1a;border:1px solid #2a2a2a;text-decoration:none;color:#f0f0f0;font-size:13px;font-weight:500;cursor:pointer;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#cc785c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
-        Abrir Claude.ai
-        <span style="margin-left:auto;color:#555;font-size:11px;">claude.ai</span>
-      </a>
-      <a id="ob-gemini" href="https://gemini.google.com" target="_blank" rel="noopener noreferrer"
-         style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;background:#1a1a1a;border:1px solid #2a2a2a;text-decoration:none;color:#f0f0f0;font-size:13px;font-weight:500;cursor:pointer;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4285f4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-        Abrir Gemini
-        <span style="margin-left:auto;color:#555;font-size:11px;">gemini.google.com</span>
-      </a>
-      <a id="ob-perplexity" href="https://www.perplexity.ai" target="_blank" rel="noopener noreferrer"
-         style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;background:#1a1a1a;border:1px solid #2a2a2a;text-decoration:none;color:#f0f0f0;font-size:13px;font-weight:500;cursor:pointer;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#20b2aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        Abrir Perplexity
-        <span style="margin-left:auto;color:#555;font-size:11px;">perplexity.ai</span>
-      </a>
-    </div>
-    <button id="ap-onboarding-cta" style="padding:10px 20px;border-radius:8px;background:#22c55e;border:none;color:#000;font-weight:600;cursor:pointer;">Continuar</button>
   `;
-
-  container.appendChild(wrap);
+  const wrap = container.firstElementChild as HTMLElement;
 
   // Mark onboarding as seen when CTA is clicked
   const ctaBtn = wrap.querySelector('#ap-onboarding-cta') as HTMLButtonElement;
@@ -186,56 +174,13 @@ function renderOnboarding(container: HTMLElement): void {
   }
 
   // Close popup when user clicks any platform link
-  ['ob-chatgpt', 'ob-claude', 'ob-gemini', 'ob-perplexity'].forEach(id => {
+  PLATFORMS.forEach(({ id }) => {
     wrap.querySelector(`#${id}`)?.addEventListener('click', () => {
+      // marca onboarding como visto também ao abrir uma plataforma (não só no CTA)
+      chrome.storage.local.set({ atenna_onboarded: true });
       setTimeout(() => window.close(), 300);
     });
   });
-}
-
-function renderUnsupportedSiteMessage(container: HTMLElement): void {
-  container.innerHTML = '';
-  const wrap = document.createElement('div');
-  wrap.className = 'ap-root ap-root--login';
-  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px 20px;text-align:center;';
-
-  const icon = document.createElement('div');
-  icon.style.cssText = 'font-size:40px';
-  icon.textContent = '🔒';
-
-  const title = document.createElement('h2');
-  title.className = 'ap-title';
-  title.style.cssText = 'margin:0;font-size:16px;color:#f0f0f0';
-  title.textContent = 'Site não suportado';
-
-  const desc = document.createElement('p');
-  desc.style.cssText = 'margin:0;font-size:13px;color:#999;line-height:1.5';
-  desc.innerHTML = 'A Atenna Safe Prompt funciona apenas em:<br/><br/><strong style="color:#ddd">• ChatGPT<br/>• Claude<br/>• Google Gemini<br/>• Perplexity</strong><br/><br/>Abra uma dessas plataformas para usar a extensão.';
-
-  const linksDiv = document.createElement('div');
-  linksDiv.style.cssText = 'display:flex;flex-direction:column;gap:8px;width:100%;margin-top:12px';
-
-  const links = [
-    { name: 'ChatGPT', url: 'https://chatgpt.com', emoji: '💬' },
-    { name: 'Claude', url: 'https://claude.ai', emoji: '✨' },
-    { name: 'Gemini', url: 'https://gemini.google.com', emoji: '🤖' },
-    { name: 'Perplexity', url: 'https://www.perplexity.ai', emoji: '🔍' },
-  ];
-
-  links.forEach(({ name, url, emoji }) => {
-    const btn = document.createElement('a');
-    btn.href = url;
-    btn.target = '_blank';
-    btn.rel = 'noopener noreferrer';
-    btn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:8px;background:#1a1a1a;border:1px solid #2a2a2a;text-decoration:none;color:#f0f0f0;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s';
-    btn.textContent = `${emoji} ${name}`;
-    btn.addEventListener('mouseover', () => btn.style.background = '#262626');
-    btn.addEventListener('mouseout', () => btn.style.background = '#1a1a1a');
-    linksDiv.appendChild(btn);
-  });
-
-  wrap.append(icon, title, desc, linksDiv);
-  container.appendChild(wrap);
 }
 
 function renderLogin(container: HTMLElement, tabId: number | null, tabSupported = false): void {
@@ -243,9 +188,9 @@ function renderLogin(container: HTMLElement, tabId: number | null, tabSupported 
   container.innerHTML = `
     <div class="ap-root ap-root--login">
       <div class="ap-login-logo">
-        <img src="${logoUrl}" alt="Atenna" style="width:56px;height:56px;"/>
+        <img src="${logoUrl}" alt="Atenna" width="52" height="52"/>
       </div>
-      <div class="ap-login-title" id="ap-login-title">Bem-vindo ao Atenna</div>
+      <div class="ap-login-title" id="ap-login-title">Entrar na sua conta</div>
       <div id="ap-login-err" class="ap-login-err" style="display:none"></div>
       <div class="ap-login-form">
         <input id="ap-name" type="text" placeholder="Seu nome" autocomplete="name" style="display:none"/>
@@ -263,7 +208,7 @@ function renderLogin(container: HTMLElement, tabId: number | null, tabSupported 
       </button>
       <div class="ap-login-links">
         <button class="ap-link-btn" id="ap-signup-link">Criar conta</button>
-        <span style="color:#ccc">·</span>
+        <span aria-hidden="true">·</span>
         <button class="ap-link-btn" id="ap-forgot-link">Esqueci minha senha</button>
       </div>
     </div>
@@ -288,10 +233,9 @@ function renderLogin(container: HTMLElement, tabId: number | null, tabSupported 
   document.getElementById('ap-signup-link')!.addEventListener('click', () => {
     mode = mode === 'signup' ? 'login' : 'signup';
     const isSignup = mode === 'signup';
-    titleEl.textContent = isSignup ? 'Criar conta' : 'Bem-vindo ao Atenna';
+    titleEl.textContent = isSignup ? 'Criar conta grátis' : 'Entrar na sua conta';
     nameEl.style.display = isSignup ? '' : 'none';
     passEl.style.display = '';
-    document.getElementById('ap-pass-wrap' as string)?.style;
     btn.textContent = isSignup ? 'Criar conta' : 'Entrar';
     errEl.style.display = 'none';
     (document.getElementById('ap-signup-link') as HTMLButtonElement).textContent = isSignup ? 'Já tenho conta' : 'Criar conta';
@@ -324,45 +268,32 @@ function renderLogin(container: HTMLElement, tabId: number | null, tabSupported 
         const name = nameEl.value.trim();
         const { error } = await signUpWithPassword(email, pass, name || undefined);
         if (error) throw new Error(error);
-        // Build confirmation screen with DOM APIs — never interpolate user data into innerHTML
+        // Tela de confirmação — DOM APIs, nunca interpolar dado do usuário em innerHTML
         container.innerHTML = '';
         const confirmWrapper = document.createElement('div');
-        confirmWrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px 20px;text-align:center;';
+        confirmWrapper.className = 'ap-state';
 
         const iconWrap = document.createElement('div');
-        iconWrap.style.cssText = 'width:56px;height:56px;border-radius:50%;background:rgba(59,130,246,0.12);display:flex;align-items:center;justify-content:center;';
-        iconWrap.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>';
+        iconWrap.className = 'ap-state__icon';
+        iconWrap.innerHTML = SVG_MAIL;
         confirmWrapper.appendChild(iconWrap);
 
-        const h3 = document.createElement('h3');
-        h3.style.cssText = 'margin:0;font-size:15px;font-weight:600;color:#1a1a2e;';
-        h3.textContent = 'Verifique seu email';
+        const h3 = document.createElement('div');
+        h3.className = 'ap-state__title';
+        h3.textContent = 'Confirme seu email';
         confirmWrapper.appendChild(h3);
 
         const p = document.createElement('p');
-        p.style.cssText = 'margin:0;font-size:12px;color:#666;line-height:1.5;';
-        p.appendChild(document.createTextNode('Enviamos um link de confirmação para'));
-        p.appendChild(document.createElement('br'));
+        p.className = 'ap-state__text';
+        p.append('Enviamos um link de confirmação para ');
         const strong = document.createElement('strong');
-        strong.textContent = email; // textContent = safe, never executes HTML
-        p.appendChild(strong);
-        p.appendChild(document.createTextNode('.'));
-        p.appendChild(document.createElement('br'));
-        p.appendChild(document.createTextNode('Clique no link para ativar sua conta.'));
+        strong.textContent = email; // textContent = seguro, nunca executa HTML
+        p.append(strong, '. Clique no link para ativar a conta.');
         confirmWrapper.appendChild(p);
-
-        const gmailLink = document.createElement('a');
-        gmailLink.href = 'https://mail.google.com/';
-        gmailLink.target = '_blank';
-        gmailLink.rel = 'noopener noreferrer';
-        gmailLink.style.cssText = 'display:flex;align-items:center;gap:6px;background:#3b82f6;color:#fff;padding:9px 18px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:500;';
-        gmailLink.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>';
-        gmailLink.appendChild(document.createTextNode('Abrir Gmail'));
-        confirmWrapper.appendChild(gmailLink);
 
         const backBtn = document.createElement('button');
         backBtn.id = 'ap-back-to-login';
-        backBtn.style.cssText = 'background:none;border:none;color:#3b82f6;cursor:pointer;font-size:12px;text-decoration:underline;';
+        backBtn.className = 'ap-link-btn';
         backBtn.textContent = 'Voltar ao login';
         confirmWrapper.appendChild(backBtn);
 
@@ -438,7 +369,7 @@ function renderHome(
           <div class="ap-header__name">Atenna Safe</div>
           <div class="ap-header__email" id="ap-header-email"></div>
         </div>
-        <span class="ap-badge ap-badge--${isPro ? 'pro' : 'free'}">${isPro ? 'PRO ✓' : 'FREE'}</span>
+        <span class="ap-badge ap-badge--${isPro ? 'pro' : 'free'}">${isPro ? 'PRO' : 'FREE'}</span>
       </div>
 
       <div class="ap-platform ap-platform--${supported ? 'ok' : 'warn'}">

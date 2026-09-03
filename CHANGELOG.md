@@ -37,6 +37,23 @@ All notable changes to **Atenna Guard Extension** are documented here.
 - **Contrato preservado:** todos os `id` que `welcome.ts` usa; abas/estados/validação inalterados.
 - Copy: sem exclamação genérica ("Entrar na sua conta" / "Criar conta grátis" / "Redefinir senha");
   emoji removido dos títulos setados via JS. Estado de sucesso sem heading duplicado.
+
+### Design — popup no mesmo sistema (FASE 10.2)
+- **O que era:** `popup.html`/`popup.ts` com sobras do tema escuro sobre fundo branco —
+  telas de onboarding, "site não suportado" e confirmação de signup com `background:#1a1a1a`
+  / `color:#f0f0f0` (ilegíveis), emoji em toda parte (🛡️ ✉️ 🔒 💬 ✨ 🤖 🔍, "PRO ✓"),
+  caixa de dicas índigo `#4f46e5`, sombra-halo verde no botão, skeleton `#2a2a2a`,
+  ~18 blocos de `style=` inline no `.ts`.
+- **`src/ui/tokens.css`** — fonte única de tokens (cor/tipo/espaço/raio). `welcome.html` e
+  `popup.html` linkam via `viteStaticCopy`; welcome deixou de duplicar o `:root`.
+- **popup redesenhado** com os tokens: paleta clara consistente com o welcome, título serif,
+  botão `--accent` (texto branco 5.9:1) sem halo, skeleton claro, caixa de dicas neutra,
+  linhas de plataforma com marca real + host em mono, ícones SVG stroke — **zero emoji**.
+- `renderUnsupportedSiteMessage` (código morto desde o fix do #29) **removido**.
+- `renderOnboarding` marca `atenna_onboarded` também ao abrir uma plataforma (achado O7).
+- Popup 520px → **420px** (largura de popup de verdade).
+- `popup.test.ts` atualizado (sem "Abrir Gmail"; onboarding via `.ap-link-row`).
+- **Validação:** `vitest` 317 ✓; build limpo; screenshots (login / home / onboarding) via harness.
 - **Validação:** `vitest` 317 ✓; build limpo; `impeccable` detector 0 achados; hook de design 0;
   screenshots desktop (login + sucesso) + mobile + `welcome.spec.ts` (W1–W2 atualizados).
 

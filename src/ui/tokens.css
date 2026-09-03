@@ -1,0 +1,42 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Atenna — design tokens canônicos (FASE 10)
+   Fonte única de cor / tipo / espaço / raio para: welcome, popup, (modal 10.3).
+   Não redeclarar estes valores em outro lugar — importar este arquivo.
+   ────────────────────────────────────────────────────────────────────────── */
+:root{
+  /* superfícies */
+  --ink:#0A2E23;            /* verde pinho profundo — herói / fundo escuro */
+  --ink-rule:rgba(244,243,238,.05);
+  --redact:#05211A;         /* tarja de censura */
+  --paper:#FBFAF7;          /* papel quente — corpo claro */
+  --paper-2:#FFFFFF;
+  --line:#E7E3DA;           /* fio de 1px no papel */
+
+  /* texto */
+  --text:#1A2B24;
+  --text-soft:#5B6B63;      /* ≥ 4.5:1 no papel */
+  --on-ink:#F4F3EE;
+  --on-ink-soft:#9DB5AC;    /* ≥ 4.5:1 no ink */
+
+  /* acento — só CTA e foco */
+  --accent:#0B6E4B;         /* preenchimento; texto branco 5.9:1 */
+  --accent-press:#095B3E;
+  --accent-soft:#EDF6F1;    /* fundo de realce sutil */
+  --focus:#12986A;          /* anel de foco */
+
+  /* estados */
+  --danger:#B23A30;
+  --danger-bg:#FBF0EF;
+  --danger-line:#E7C7C3;
+  --ok-bg:#EDF6F1;
+  --ok-line:#C4E3D4;
+
+  /* forma */
+  --radius:10px;
+  --radius-sm:7px;
+
+  /* tipo */
+  --serif:'Iowan Old Style','Palatino Linotype',Palatino,Charter,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --mono:'SFMono-Regular',ui-monospace,'Cascadia Code',Consolas,monospace;
+}

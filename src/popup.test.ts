@@ -4,9 +4,8 @@ import fs from 'fs';
 describe('popup.ts doAction — signup confirmation screen', () => {
   it('shows email confirmation content after successful signup', () => {
     const src = fs.readFileSync('src/popup.ts', 'utf-8');
-    expect(src).toContain('Verifique seu email');
-    expect(src).toContain('mail.google.com');
-    expect(src).toContain('Abrir Gmail');
+    expect(src).toContain('Confirme seu email');
+    expect(src).toContain('link de confirmação');
     expect(src).toContain('Voltar ao login');
     expect(src).toContain('ap-back-to-login');
   });
@@ -74,7 +73,7 @@ beforeEach(() => {
 });
 
 describe('First-run onboarding', () => {
-  it('shows 3-slide onboarding when atenna_onboarded is not set', async () => {
+  it('shows onboarding with platform links when atenna_onboarded is not set', async () => {
     vi.resetModules();
     vi.mock('./auth/bffClient', () => ({
       bffMe: vi.fn().mockResolvedValue({ email: 'test@test.com', plan: 'free' }),
@@ -84,7 +83,8 @@ describe('First-run onboarding', () => {
     const { initPopup } = await import('./popup');
     await initPopup();
     const container = document.getElementById('atenna-popup')!;
-    expect(container.querySelectorAll('.ap-onboarding__slide').length).toBe(3);
+    expect(container.querySelector('.ap-state')).not.toBeNull();
+    expect(container.querySelectorAll('.ap-link-row').length).toBe(4);
   });
 
   it('skips onboarding when atenna_onboarded is true', async () => {
@@ -98,7 +98,7 @@ describe('First-run onboarding', () => {
     const { initPopup } = await import('./popup');
     await initPopup();
     const container = document.getElementById('atenna-popup')!;
-    expect(container.querySelectorAll('.ap-onboarding__slide').length).toBe(0);
+    expect(container.querySelectorAll('.ap-link-row').length).toBe(0);
   });
 
   it('sets atenna_onboarded and calls onDone after clicking CTA', async () => {
