@@ -27,13 +27,16 @@ interativa do navegador durante o desenvolvimento.
 Gera e roda testes de fluxo end-to-end e reporta cobertura de caminho crítico.
 
 1. Criar conta em https://www.testsprite.com → **API Keys** → copiar a chave.
-2. Exportar a chave no ambiente (NÃO commitar):
-   - Windows (PowerShell, permanente): `setx TESTSPRITE_API_KEY "sk-..."`
-   - ou adicionar `TESTSPRITE_API_KEY=sk-...` a um `.env` que o shell carrega.
-3. A config do MCP já está em `.mcp.json` (`testsprite` → `npx @testsprite/testsprite-mcp@latest`,
-   lê `${TESTSPRITE_API_KEY}`).
-4. Reabrir o Claude Code → aprovar o servidor `testsprite`.
-5. Uso: "teste este projeto com o TestSprite" após uma mudança.
+2. O `.mcp.json` (commitado) **não** expande `${VAR}` neste cliente — então o servidor
+   `testsprite` fica no `~/.claude.json` local (fora do git), sob
+   `projects["<repo>"].mcpServers.testsprite`, com a chave **inline**:
+   ```json
+   "testsprite": { "type":"stdio", "command":"npx",
+     "args":["@testsprite/testsprite-mcp@latest"],
+     "env": { "API_KEY": "sk-user-..." } }
+   ```
+3. Reabrir o Claude Code → aprovar o servidor `testsprite`.
+4. Uso: "teste este projeto com o TestSprite" após uma mudança.
 
 Docs: https://docs.testsprite.com/mcp/getting-started/installation
 
