@@ -56,19 +56,28 @@ Docs: https://code.claude.com/docs/en/code-review
 Skills de auditoria de segurança (injeção, authz, deserialização, cripto, path traversal,
 SSRF, secrets, regras Semgrep).
 
-No Claude Code (marketplace `trailofbits` já adicionado). Skills relevantes p/ este projeto
-(FastAPI + extensão Chrome, Python + TS):
+Marketplace: **`trailofbits/skills`** (`/plugin marketplace add trailofbits/skills` — já adicionado
+como `trailofbits`). Cada skill vive em `github.com/trailofbits/skills/tree/main/plugins/<nome>`.
+
+Skills relevantes p/ ESTE projeto (Python FastAPI + extensão Chrome TS, SaaS de DLP).
+**Instalar (a camada de segurança do pipeline + o que o P3 pede):**
 ```
-/plugin install differential-review@trailofbits      # audita o DIFF da branch atrás de vuln — o núcleo desta camada
-/plugin install insecure-defaults@trailofbits        # configs/defaults inseguros
-/plugin install static-analysis@trailofbits          # análise estática geral
-/plugin install modern-python@trailofbits            # segurança/idioma Python
-/plugin install supply-chain-risk-auditor@trailofbits # risco de dependências (P3)
-/plugin install mutation-testing@trailofbits          # testes de mutação (P3)
-/plugin install semgrep-rule-creator@trailofbits      # gera regra Semgrep a partir de um bug
+/plugin install differential-review@trailofbits       # ⭐ audita o DIFF atrás de vuln + blast radius — o núcleo desta camada
+/plugin install insecure-defaults@trailofbits         # creds hardcoded, fallback secrets, defaults fracos de auth
+/plugin install static-analysis@trailofbits           # Semgrep + CodeQL + SARIF
+/plugin install supply-chain-risk-auditor@trailofbits # risco de dependências npm + PyPI (P3)
+/plugin install modern-python@trailofbits             # boas práticas Python
+/plugin install spec-to-code-compliance@trailofbits   # confere o código contra o spec (docs/specs/FASE_*)
+/plugin install mutation-testing@trailofbits          # campanhas de mutação (P3)
+/plugin install property-based-testing@trailofbits    # Hypothesis / fast-check (P3)
+/plugin install agentic-actions-auditor@trailofbits   # audita os workflows do GitHub Actions (P3)
 ```
-Catálogo completo: `/plugin` → marketplace `trailofbits` (~42 skills).
-Repo: https://github.com/trailofbits/skills
+**Opcionais (aprofundam o review):** `sharp-edges`, `fp-check`, `variant-analysis`, `semgrep-rule-creator`, `trailmark`, `git-cleanup`.
+
+**NÃO instalar** (smart contract / C++ / Rust / cripto de baixo nível / irrelevante):
+`building-secure-contracts`, `entry-point-analyzer`, `dimensional-analysis`, `constant-time-analysis`,
+`zeroize-audit`, `c-review`, `rust-review`, `modern-cpp`, `dwarf-expert`, `yara-authoring`,
+`firebase-apk-scanner`, `burpsuite-project-parser`, `writing-lean-proofs`, `second-opinion` (precisa de CLI OpenAI/Google).
 
 ## 5. claude-mem — memória de longo prazo entre sessões
 
