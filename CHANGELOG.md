@@ -6,6 +6,22 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE P3: CI/CD
 
+### P3.5 — monitor de assinaturas (proteção de receita)
+- O plano vive em 3 tabelas (`profiles` / `user_plans` / `subscriptions`) escritas
+  não-atomicamente pelo checkout → drift (BUG-01: usuário pago pode ser bloqueado).
+  **Drift real encontrado hoje:** 3 usuários `free` em `profiles` mas `pro/active` em
+  `user_plans` (incluindo o do dono) + 1 pro sem `plan_expires_at`.
+- `routes/subscription_health.py` — job diário (`06:00`, `observability.monitor`):
+  detecta drift, pro vencido ainda ativo (→ **error**, alerta Discord), pro sem validade
+  (→ **warning**), idade do último evento Asaas. Loga só `user_id[:8]` (zero PII no painel).
+- Métricas: `atenna_subscription_sync_mismatch`, `atenna_subscriptions_total{bucket}`,
+  `atenna_last_checkout_event_age_seconds`.
+- `GET /admin/subscriptions/health` (super-admin) — mesma checagem sob demanda.
+- `scripts/reconcile_plans.py` — one-shot idempotente, fonte da verdade = `user_plans`.
+  **Rodado em prod:** os 3 drifts corrigidos (`free → pro`).
+- Follow-up FASE 9.4: escrita atômica no `_promote_to_pro` (causa raiz).
+- Spec: `docs/specs/FASE_P3.5_MONITOR_ASSINATURAS.md`. Harness: 460 → 466.
+
 ### P3.4 — backup do banco (Supabase Postgres)
 - Descoberta: a VPS tem IPv6 global e `pg_dump` 17.11 conecta **direto** no Postgres do Supabase
   (`db.<ref>.supabase.co:5432`) do host — sem pooler, sem add-on IPv4. (De dentro de container não
