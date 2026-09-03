@@ -63,6 +63,20 @@ if _ENABLED:
     )
     bff_session_store.set(1)
 
+    subscriptions_gauge = Gauge(
+        "atenna_subscriptions_total",
+        "Assinaturas por plano/status (de user_plans) + profiles_pro",
+        ["bucket"],
+    )
+    subscription_sync_mismatch = Gauge(
+        "atenna_subscription_sync_mismatch",
+        "Nº de usuários com plano divergente entre profiles/user_plans (BUG-01)",
+    )
+    last_checkout_event_age = Gauge(
+        "atenna_last_checkout_event_age_seconds",
+        "Idade do último evento de checkout — se subir demais, o webhook Asaas pode ter quebrado",
+    )
+
 else:
 
     class _NoopMetric:
@@ -83,6 +97,9 @@ else:
     checkout_events_total = _NoopMetric()
     auth_failures_total = _NoopMetric()
     bff_session_store = _NoopMetric()
+    subscriptions_gauge = _NoopMetric()
+    subscription_sync_mismatch = _NoopMetric()
+    last_checkout_event_age = _NoopMetric()
 
 
 # ── Helpers best-effort ─────────────────────────────────────────────────────
@@ -141,3 +158,19 @@ def set_bff_session_store(healthy: bool) -> None:
         bff_session_store.set(1 if healthy else 0)
     except Exception:  # pragma: no cover
         _log.debug("set_bff_session_store falhou", exc_info=True)
+
+
+def set_subscription_metrics(counts: dict, mismatch_total: int) -> None:
+    try:
+        for bucket, n in (counts or {}).items():
+            subscriptions_gauge.labels(bucket=str(bucket)).set(n)
+        subscription_sync_mismatch.set(mismatch_total)
+    except Exception:  # pragma: no cover
+        _log.debug("set_subscription_metrics falhou", exc_info=True)
+
+
+def set_last_checkout_event_age(seconds: float) -> None:
+    try:
+        last_checkout_event_age.set(seconds)
+    except Exception:  # pragma: no cover
+        _log.debug("set_last_checkout_event_age falhou", exc_info=True)
