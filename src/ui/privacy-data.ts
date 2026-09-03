@@ -222,6 +222,10 @@ function buildExportCard(token: string): HTMLElement {
   actionRow.style.marginTop = '8px';
   actionRow.style.display = 'flex';
   actionRow.style.justifyContent = 'flex-end';
+  // botão padrão (otimista) — updateExportCardState só o substitui se houver
+  // solicitação pendente; se o backend falhar, o botão continua clicável.
+  actionRow.innerHTML = '<button class="atenna-privacy__btn">Solicitar relatório</button>';
+  actionRow.querySelector('button')?.addEventListener('click', () => void handleRequestExport(card, token));
 
   card.appendChild(title);
   card.appendChild(desc);
@@ -333,6 +337,9 @@ function buildDeletionCard(token: string): HTMLElement {
   actionRow.style.marginTop = '8px';
   actionRow.style.display = 'flex';
   actionRow.style.justifyContent = 'flex-end';
+  // botão padrão (otimista) — ver comentário no card de exportação
+  actionRow.innerHTML = '<button class="atenna-privacy__btn atenna-privacy__danger-btn">Solicitar exclusão</button>';
+  actionRow.querySelector('button')?.addEventListener('click', () => void handleRequestDeletion(card, token));
 
   card.appendChild(title);
   card.appendChild(desc);

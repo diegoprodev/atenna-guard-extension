@@ -97,6 +97,7 @@ export function renderSettingsPage(
   logoutBtn.className = 'atenna-settings__logout';
   logoutBtn.textContent = 'Sair';
   logoutBtn.addEventListener('click', async () => {
+    if (!confirm('Sair da sua conta Atenna?')) return;
     void trackEvent('logout_clicked');
     const { signOut } = await import('../../core/auth');
     await signOut();
