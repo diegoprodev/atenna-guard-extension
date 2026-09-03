@@ -26,5 +26,15 @@ if (manifest.content_scripts?.[0]?.matches) {
   ];
 }
 
+// Add localhost to web_accessible_resources matches so a logo (icon128.png etc.)
+// loads on the fixture page — mesma condição das IAs reais em produção.
+for (const war of manifest.web_accessible_resources ?? []) {
+  if (!Array.isArray(war.matches)) continue;
+  war.matches = [
+    ...war.matches.filter(p => !LOCAL_PATTERNS.includes(p)),
+    ...LOCAL_PATTERNS,
+  ];
+}
+
 writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2));
 console.log('[e2e] ✓ localhost restaurado no dist/manifest.json para testes E2E');

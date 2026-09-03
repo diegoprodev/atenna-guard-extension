@@ -78,18 +78,9 @@ export async function initPopup(): Promise<void> {
   const [me, tabInfo, tabId] = await Promise.all([bffMe(), getActiveTabInfo(), getActiveTabId()]);
 
   if (!me) {
-    // Primeira vez sem sessão → garante que a tela de boas-vindas apareça pelo
-    // menos uma vez (o onInstalled pode ter perdido: reload em dev, update do
-    // Chrome, instalação sem foco).
-    const welcomedStore = await new Promise<Record<string, unknown>>(resolve => {
-      chrome.storage.local.get('atenna_welcomed', resolve);
-    });
-    if (welcomedStore['atenna_welcomed'] !== true) {
-      chrome.storage.local.set({ atenna_welcomed: true });
-      chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
-    }
-    // Sem sessão → login DENTRO do popup (não depender do content script nem
-    // fechar o popup — bug "abre skeleton e some").
+    // Sem sessão → login DENTRO do popup, com a mensagem amigável de valor
+    // (não depender do content script nem fechar o popup — bug "abre skeleton
+    // e some"). O welcome de boas-vindas é aberto pelo onInstalled do background.
     renderLogin(container, tabId, tabInfo?.supported ?? false);
     return;
   }

@@ -18,13 +18,21 @@ All notable changes to **Atenna Guard Extension** are documented here.
   `manifest.json` (pendente: dono pega no CWS).
 - **Ícone da extensão deslogado** → login **com mensagem amigável de valor** ("faça login para
   liberar a proteção de dados e a geração de prompts"), troca no signup.
+- **Onboarding travado no modal — CORRIGIDO.** O modal in-page tinha um 3º onboarding
+  (wizard de 5 slides com emoji e ícone-estrela) que só marcava `onboarding_seen` no servidor —
+  quando o POST falhava, ele aparecia **pra sempre** e bloqueava "Abrir Atenna" / "Gerar prompt"
+  ("Começar" não fazia nada). **Wizard removido**: o modal abre direto no Refinar. Onboarding
+  vive na welcome.html + no 1º-run do popup, não num 3º lugar.
 - **Welcome robusto** — `background.ts` abre o welcome no `install` de forma idempotente
-  (flag `atenna_welcomed`); o popup abre o welcome uma vez se a 1ª abertura sem sessão nunca
-  o viu (reload em dev / update do Chrome perdem o `onInstalled`).
+  (flag `atenna_welcomed`). Em dev: **remover e re-adicionar** a extensão (recarregar = `update`,
+  não dispara `install`).
 - **On-page deslogado continua sem nada** (decisão do dono — o caminho de login é o ícone).
-- E2E: `welcome.spec` W7 reescrito (signup → auto-login) + W7b (fallback manual);
-  `extension.spec` P1/P2/P3 (popup no Chromium real).
-- **Validação:** `npm run test:e2e` → **27 ✓ / 0 ✗ / 1 skip**; `vitest` 317 ✓; build limpo.
+- E2E: **`full-flow.spec` (F1–F5)** — deslogado → login → badge → modal Refinar (sem wizard) →
+  gerar (3 cards) → configurações → sair, tudo com a extensão carregada de verdade.
+  `welcome.spec` W7 reescrito (signup → auto-login) + W7b; `extension.spec` P1/P2/P3.
+  `add-localhost-e2e.mjs` agora inclui `web_accessible_resources` (logo carrega no fixture).
+- **Validação:** `npm run test:e2e` → **32 ✓ / 0 ✗ / 1 skip**; `vitest` 317 ✓; build limpo.
+- **Ainda pendente (FASE 10.3):** o redesign visual do modal in-page (tema escuro / emoji).
 - Spec: `docs/specs/FASE_10.7_VALIDACAO_REAL_E_CORRECOES.md`.
 
 ### Bug — popup "abre skeleton e some" (sem login)

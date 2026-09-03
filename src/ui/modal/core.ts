@@ -17,7 +17,7 @@ import { renderPlansModal, renderUpgradeModal } from './plans-modal';
 import { renderSettingsPage, updateUsageBadge } from './settings';
 import { renderLoginView, renderSignupView, renderResetView } from './auth-views';
 import {
-  showDlpAdvisory, renderPostLoginOnboarding, renderPreLoginOnboarding, showProWelcomeOverlay,
+  showDlpAdvisory, renderPreLoginOnboarding, showProWelcomeOverlay,
 } from './onboarding-views';
 import {
   makeVariantRow, renderMeusPrompts, renderSuggestion, getBuilderVal,
@@ -175,14 +175,10 @@ async function openModal(autoGenerate = false): Promise<void> {
     return;
   }
 
-  // ── Professional post-login onboarding (server-driven flag) ──────
-  // Check if user has seen onboarding — flag stored in Supabase user profile
-  const hasSeenOnboarding = me.onboarding_seen === true; // server returns this
-  if (!hasSeenOnboarding) {
-    renderPostLoginOnboarding(modal, close);
-    modal.querySelector('.atenna-modal__close')?.addEventListener('click', close);
-    return;
-  }
+  // FASE 10.7: sem wizard de onboarding no modal in-page. O onboarding é a
+  // welcome.html (pós-instalação) + o 1º-run do popup. Um 3º onboarding de 5
+  // slides aqui só bloqueava o acesso ao painel (e travava quando o mark
+  // server-side falhava). Modal sempre abre direto no Refinar.
 
   const platformInput = getCurrentInput();
   const userText      = platformInput ? getInputText(platformInput).trim() : '';
