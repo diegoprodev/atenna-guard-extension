@@ -26,15 +26,18 @@ export function renderPlansModal(trigger: string): void {
 
   const box = document.createElement('div');
   box.style.cssText = [
-    'background:#111;border:1px solid #222;border-radius:16px',
+    // tokens Atenna (FASE 10.3b) — o overlay não herda de .atenna-modal
+    '--at-accent:#0B6E4B;--at-accent-press:#095B3E;--at-accent-2:#6FD3A6',
+    '--at-card-bg:#0F3B2D;--at-surface:#0F3B2D;--at-border:rgba(244,243,238,.14)',
+    'background:#0A2E23;border:1px solid rgba(244,243,238,.12);border-radius:16px',
     'width:100%;max-width:560px;padding:28px 24px 24px',
     'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
-    'position:relative;color:#e8e8e8',
+    'position:relative;color:#F4F3EE',
   ].join(';');
 
   // Close
   const closeBtn = document.createElement('button');
-  closeBtn.style.cssText = 'position:absolute;top:14px;right:16px;background:none;border:none;color:#666;font-size:18px;cursor:pointer;line-height:1;padding:4px 6px;';
+  closeBtn.style.cssText = 'position:absolute;top:14px;right:16px;background:none;border:none;color:#9DB5AC;font-size:18px;cursor:pointer;line-height:1;padding:4px 6px;';
   closeBtn.textContent = '×';
   closeBtn.addEventListener('click', () => overlay.remove());
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
@@ -43,7 +46,7 @@ export function renderPlansModal(trigger: string): void {
   const head = document.createElement('div');
   head.style.cssText = 'text-align:center;margin-bottom:22px;';
   head.innerHTML = `
-    <div style="font-size:11px;letter-spacing:1.5px;color:#6366f1;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Atenna Safe Prompt</div>
+    <div style="font-size:11px;letter-spacing:1.5px;color:var(--at-accent-2, #0A2E23);font-weight:700;text-transform:uppercase;margin-bottom:8px;">Atenna Safe Prompt</div>
     <h2 style="font-size:17px;font-weight:700;margin:0 0 6px;color:#fff;line-height:1.3;">Quem usa IA todos os dias<br>protege o que importa.</h2>
     <p style="font-size:12px;color:#888;margin:0;line-height:1.6;">Seus dados passam por dezenas de sistemas antes de chegar à IA.<br>A maioria das pessoas não sabe o que escapa.</p>
   `;
@@ -81,24 +84,24 @@ export function renderPlansModal(trigger: string): void {
   // ── Card Anual (destaque — ancoragem + perda) ──
   const cYear = document.createElement('div');
   cYear.style.cssText = [
-    'border:2px solid #6366f1;border-radius:12px;padding:18px 16px',
+    'border:2px solid var(--at-accent-2, #0A2E23);border-radius:12px;padding:18px 16px',
     'display:flex;flex-direction:column;gap:4px;position:relative;',
     'background:linear-gradient(160deg,rgba(99,102,241,0.07) 0%,transparent 60%)',
   ].join(';');
 
   // Badge economia — loss aversion anchor
   const savingsBadge = document.createElement('div');
-  savingsBadge.style.cssText = 'position:absolute;top:-11px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#6366f1;color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:0.3px;';
+  savingsBadge.style.cssText = 'position:absolute;top:-11px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--at-accent-2, #0A2E23);color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:0.3px;';
   savingsBadge.textContent = `Economize R$${YEARLY_SAVINGS.toFixed(2).replace('.',',')} (${YEARLY_SAVINGS_PCT}%)`;
   cYear.appendChild(savingsBadge);
 
   cYear.innerHTML += `
-    <div style="font-size:11px;color:#6366f1;font-weight:600;margin-bottom:2px;">Anual · Melhor escolha</div>
+    <div style="font-size:11px;color:var(--at-accent-2, #0A2E23);font-weight:600;margin-bottom:2px;">Anual · Melhor escolha</div>
     <div style="font-size:24px;font-weight:700;color:#fff;line-height:1;">R$${YEARLY_MONTHLY_EQUIV.toFixed(2).replace('.',',')} <span style="font-size:11px;font-weight:400;color:#888;">/mês</span></div>
     <div style="font-size:10px;color:#888;margin:2px 0 4px;">
       <span style="text-decoration:line-through;color:#555;">R$${(MONTHLY_PRICE * 12).toFixed(2).replace('.',',')}</span>
       &nbsp;→&nbsp;
-      <span style="color:#22c55e;font-weight:600;">R$${YEARLY_PRICE.toFixed(2).replace('.',',')} /ano</span>
+      <span style="color:var(--at-accent, #0B6E4B);font-weight:600;">R$${YEARLY_PRICE.toFixed(2).replace('.',',')} /ano</span>
     </div>
     <div style="font-size:10px;color:#888;margin-bottom:10px;">PIX ou cartão · Um pagamento</div>
     <div style="font-size:11px;color:#aaa;line-height:1.7;flex:1;">
@@ -106,15 +109,15 @@ export function renderPlansModal(trigger: string): void {
       – Proteção de dados automática<br>
       – Histórico completo<br>
       – PDF, DOCX, Excel<br>
-      <span style="color:#6366f1;">– 300 gerações garantidas/mês</span>
+      <span style="color:var(--at-accent-2, #0A2E23);">– 300 gerações garantidas/mês</span>
     </div>
   `;
   const btnYear = document.createElement('button');
-  btnYear.style.cssText = 'margin-top:14px;width:100%;padding:10px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:background 150ms;';
+  btnYear.style.cssText = 'margin-top:14px;width:100%;padding:10px;background:var(--at-accent-2, #0A2E23);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:background 150ms;';
   btnYear.textContent = 'Quero proteger e gerar sem limites';
   btnYear.dataset.label = 'Quero proteger e gerar sem limites';
   btnYear.addEventListener('mouseenter', () => { btnYear.style.background = '#5254cc'; });
-  btnYear.addEventListener('mouseleave', () => { btnYear.style.background = '#6366f1'; });
+  btnYear.addEventListener('mouseleave', () => { btnYear.style.background = 'var(--at-accent-2, #0A2E23)'; });
   btnYear.addEventListener('click', () => void openCheckout(`plans_modal_${trigger}`, btnYear, 'yearly'));
   cYear.appendChild(btnYear);
 
@@ -247,18 +250,18 @@ export function renderPricingCards(container: HTMLElement, source: string): void
 
   // ── Card PIX Anual (destaque premium) ──
   const cardPix = document.createElement('div');
-  cardPix.style.cssText = 'background:linear-gradient(135deg,#0d1f12 0%,#0a1a1a 100%);border:1.5px solid #22c55e;border-radius:10px;padding:14px 16px;cursor:pointer;position:relative;';
+  cardPix.style.cssText = 'background:var(--at-card-bg, #0F3B2D);border:1.5px solid var(--at-accent, #0B6E4B);border-radius:10px;padding:14px 16px;cursor:pointer;position:relative;';
   cardPix.innerHTML = `
-    <div style="position:absolute;top:-10px;right:14px;background:#22c55e;color:#000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:0.5px;">MELHOR OPÇÃO</div>
+    <div style="position:absolute;top:-10px;right:14px;background:var(--at-accent, #0B6E4B);color:#000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:0.5px;">MELHOR OPÇÃO</div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-      <div style="font-size:12px;font-weight:700;color:#22c55e;">PIX Anual — Pague à vista</div>
+      <div style="font-size:12px;font-weight:700;color:var(--at-accent, #0B6E4B);">PIX Anual — Pague à vista</div>
     </div>
     <div style="font-size:24px;font-weight:800;color:#fff;line-height:1;">R$197 <span style="font-size:12px;font-weight:400;color:#888;">/ano</span></div>
-    <div style="font-size:10px;color:#22c55e;margin:2px 0 8px;font-weight:500;">~R$16,40/mês · sem juros · aprovação instantânea</div>
+    <div style="font-size:10px;color:var(--at-accent, #0B6E4B);margin:2px 0 8px;font-weight:500;">~R$16,40/mês · sem juros · aprovação instantânea</div>
     <div style="font-size:11px;color:var(--at-muted,#aaa);line-height:1.6;">Prompts ilimitados &nbsp;·&nbsp; DLP avançado &nbsp;·&nbsp; PDF, DOCX, Excel</div>
   `;
   const btnPix = document.createElement('button');
-  btnPix.style.cssText = 'margin-top:10px;width:100%;padding:10px;background:#22c55e;color:#000;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;';
+  btnPix.style.cssText = 'margin-top:10px;width:100%;padding:10px;background:var(--at-accent, #0B6E4B);color:#000;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;';
   btnPix.textContent = 'Pagar com PIX agora';
   btnPix.dataset.label = 'Pagar com PIX agora';
   btnPix.addEventListener('click', () => void openCheckout(source, btnPix, 'pix_yearly'));
@@ -273,15 +276,15 @@ export function renderPricingCards(container: HTMLElement, source: string): void
 
   // ── Card Anual Cartão ──
   const cardYear = document.createElement('div');
-  cardYear.style.cssText = 'background:var(--at-surface,#1a1a1a);border:1.5px solid #6366f1;border-radius:10px;padding:14px 16px;cursor:pointer;position:relative;';
+  cardYear.style.cssText = 'background:var(--at-surface,#1a1a1a);border:1.5px solid var(--at-accent-2, #0A2E23);border-radius:10px;padding:14px 16px;cursor:pointer;position:relative;';
   cardYear.innerHTML = `
     <div style="font-size:12px;font-weight:600;color:var(--at-text,#e8e8e8);margin-bottom:4px;">Pro Anual — Cartão</div>
     <div style="font-size:22px;font-weight:700;color:#fff;line-height:1;">R$197 <span style="font-size:12px;font-weight:400;color:#888;">/ano</span></div>
-    <div style="font-size:10px;color:#6366f1;margin:2px 0 8px;">Cobrado anualmente · ~R$16,40/mês · Renovação automática</div>
+    <div style="font-size:10px;color:var(--at-accent-2, #0A2E23);margin:2px 0 8px;">Cobrado anualmente · ~R$16,40/mês · Renovação automática</div>
     <div style="font-size:11px;color:var(--at-muted,#888);line-height:1.6;">Prompts ilimitados · DLP avançado · PDF, DOCX, Excel</div>
   `;
   const btnYear = document.createElement('button');
-  btnYear.style.cssText = 'margin-top:10px;width:100%;padding:9px;background:#6366f1;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;';
+  btnYear.style.cssText = 'margin-top:10px;width:100%;padding:9px;background:var(--at-accent-2, #0A2E23);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;';
   btnYear.textContent = 'Assinar com cartão (anual)';
   btnYear.dataset.label = 'Assinar com cartão (anual)';
   btnYear.addEventListener('click', () => void openCheckout(source, btnYear, 'yearly'));
