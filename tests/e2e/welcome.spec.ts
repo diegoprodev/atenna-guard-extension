@@ -84,14 +84,10 @@ test('W1: welcome page loads with left panel and right panel', async ({ context,
 
 // ─── W2: Logos reais das plataformas ──────────────────────────────────────────
 
-test('W2: platform chips show real brand logo images', async ({ context, extensionId }) => {
+test('W2: platform footer shows real brand logo images', async ({ context, extensionId }) => {
   const page = await openWelcomePage(context, extensionId);
 
-  const chips = page.locator('.w-plat-chip');
-  await expect(chips).toHaveCount(4);
-
-  // Cada chip deve ter um <img> com src apontando para um .svg real
-  const imgs = page.locator('.w-plat-chip img');
+  const imgs = page.locator('.w-foot-marks img');
   await expect(imgs).toHaveCount(4);
 
   const srcs = await imgs.evaluateAll((els: HTMLImageElement[]) => els.map(e => e.src));
@@ -100,12 +96,12 @@ test('W2: platform chips show real brand logo images', async ({ context, extensi
   expect(srcs.some(s => s.includes('gemini.svg'))).toBe(true);
   expect(srcs.some(s => s.includes('perplexity.svg'))).toBe(true);
 
-  // Verifica que os textos dos chips estão corretos
-  const chipsText = await chips.allTextContents();
-  expect(chipsText.join(' ')).toContain('ChatGPT');
-  expect(chipsText.join(' ')).toContain('Claude');
-  expect(chipsText.join(' ')).toContain('Gemini');
-  expect(chipsText.join(' ')).toContain('Perplexity');
+  // Cada marca nomeia a plataforma no alt (acessibilidade)
+  const alts = await imgs.evaluateAll((els: HTMLImageElement[]) => els.map(e => e.alt));
+  expect(alts.join(' ')).toContain('ChatGPT');
+  expect(alts.join(' ')).toContain('Claude');
+  expect(alts.join(' ')).toContain('Gemini');
+  expect(alts.join(' ')).toContain('Perplexity');
 
   await page.close();
 });
@@ -125,13 +121,13 @@ test('W3: tab switching shows correct form and hides the other', async ({ contex
   await expect(page.locator('#tab-signup')).toHaveClass(/active/);
   await expect(page.locator('#form-signup')).toBeVisible();
   await expect(page.locator('#form-login')).toBeHidden();
-  await expect(page.locator('#w-title')).toContainText('Crie sua conta');
+  await expect(page.locator('#w-title')).toContainText('Criar conta');
 
   // Voltar para login
   await page.click('#tab-login');
   await expect(page.locator('#form-login')).toBeVisible();
   await expect(page.locator('#form-signup')).toBeHidden();
-  await expect(page.locator('#w-title')).toContainText('Bem-vindo');
+  await expect(page.locator('#w-title')).toContainText('Entrar');
 
   await page.close();
 });
@@ -214,7 +210,7 @@ test('W7: signup with valid data shows signup success screen', async ({ context,
   await page.waitForSelector('#w-signup-success', { state: 'visible', timeout: 5000 });
 
   // Tela deve mostrar mensagem de sucesso
-  await expect(page.locator('#w-title')).toHaveText('Conta criada! 🎉');
+  await expect(page.locator('#w-title')).toHaveText('Conta criada');
   await expect(page.locator('#w-sub')).toHaveText('Agora faça login para começar.');
 
   // Formulário e tabs devem estar ocultos
@@ -301,7 +297,7 @@ test('W10: forgot password flow shows form, hides tabs, sends link and shows suc
   await expect(page.locator('#w-tabs')).toBeHidden();
   await expect(page.locator('#w-google-btn')).toBeHidden();
   await expect(page.locator('#form-forgot')).toBeVisible();
-  await expect(page.locator('#w-title')).toContainText('Recuperar senha');
+  await expect(page.locator('#w-title')).toContainText('Redefinir senha');
 
   // Validação: campo vazio
   await page.click('#forgot-btn');
