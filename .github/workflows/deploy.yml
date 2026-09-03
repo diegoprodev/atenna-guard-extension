@@ -1,0 +1,60 @@
+name: Deploy backend (prod)
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # só se o CI que disparou passou (ou disparo manual)
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: production   # exige aprovação manual (GitHub Environments)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configura chave SSH de deploy
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_DEPLOY_KEY }}" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          ssh-keyscan -H 157.90.246.156 >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: rsync backend/ -> VPS (sem --delete; exclui local-only)
+        run: |
+          rsync -az --no-perms --no-owner --no-group \
+            -e "ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes" \
+            --exclude='.env' --exclude='.env.*' \
+            --exclude='data/' --exclude='nginx/certs/' --exclude='static/admin/' \
+            --exclude='__pycache__/' --exclude='*.pyc' \
+            --exclude='*.bak*' --exclude='.pre-*' --exclude='*.tgz' --exclude='c*.py' \
+            backend/ root@157.90.246.156:/root/atenna-backend/
+
+      - name: Deploy (build -> health check -> rollback)
+        id: deploy
+        run: |
+          ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes root@157.90.246.156 \
+            'bash /root/atenna-backend/deploy.sh'
+
+      - name: Notifica Discord
+        if: always() && vars.DISCORD_WEBHOOK != ''
+        run: |
+          if [ "${{ steps.deploy.outcome }}" = "success" ]; then
+            MSG="✅ Deploy backend OK — \`${{ github.sha }}\` em produção"
+          else
+            MSG="🔴 Deploy backend FALHOU (rollback automático) — \`${{ github.sha }}\`"
+          fi
+          curl -s -X POST -H 'Content-Type: application/json' \
+            -d "{\"content\": \"$MSG\"}" "${{ vars.DISCORD_WEBHOOK }}" || true

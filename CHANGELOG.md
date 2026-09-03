@@ -6,6 +6,17 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE P3: CI/CD
 
+### P3.2 — deploy automático do backend (fim da dança manual)
+- `.github/workflows/deploy.yml` — dispara quando o **CI passa em `main`**, com **aprovação
+  manual** (GitHub Environment `production`). rsync do `backend/` p/ a VPS (sem `--delete`,
+  exclui `.env`/`data`/`nginx/certs`/`static/admin`) → `backend/deploy.sh`.
+- `backend/deploy.sh`: snapshot da imagem atual → `docker compose up -d --build` → health
+  check em `/health` (até 60s) → **rollback automático** (re-tag da imagem anterior) se falhar
+  → notifica Discord. Testado ponta a ponta na VPS.
+- Chave SSH dedicada `atenna-ci-deploy` (não a do dono) já autorizada na VPS.
+- Pendente do dono: secret `VPS_DEPLOY_KEY` (privada), environment `production` com ele como
+  reviewer, e (opcional) variável `DISCORD_WEBHOOK`.
+
 ### P3.1 — CI mínimo (GitHub Actions) — ✅ verde no 1º run
 - `.github/workflows/ci.yml` roda em todo push/PR:
   - **frontend**: `npm ci` → `tsc --noEmit` (informativo — 52 erros de tipo pré-existentes,
