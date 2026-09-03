@@ -1,0 +1,9 @@
+# /etc/cron.d/atenna-backup  (na VPS)
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# backup diário 03:30 UTC
+30 3 * * *   root  /root/backup/backup-supabase.sh >> /var/log/atenna-backup.log 2>&1
+
+# teste de restauração domingo 04:15 UTC
+15 4 * * 0   root  /root/backup/restore-test.sh   >> /var/log/atenna-backup.log 2>&1
