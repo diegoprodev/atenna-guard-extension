@@ -55,7 +55,7 @@ export const expect = base.expect;
  * Inject a properly encrypted session into chrome.storage.local via the service worker.
  * Uses the same AES-GCM derivation as sessionManager.ts (keyed on chrome.runtime.id).
  */
-export async function injectSession(context: BrowserContext): Promise<void> {
+export async function injectSession(context: BrowserContext, plan: 'free' | 'pro' = 'free'): Promise<void> {
   let [sw] = context.serviceWorkers();
   if (!sw) {
     sw = await context.waitForEvent('serviceworker', { timeout: 15_000 });
@@ -105,7 +105,7 @@ export async function injectSession(context: BrowserContext): Promise<void> {
   }, {
     token:      FAKE_SESSION.access_token,
     email:      FAKE_SESSION.email,
-    plan:       'free',
+    plan,
     expires_at: FAKE_SESSION.expires_at,
     user_id:    'e2e-user-id',
   });

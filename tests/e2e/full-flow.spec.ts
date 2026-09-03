@@ -156,3 +156,55 @@ test('F5: configurações — abre e mostra o email logado; Sair remove o badge'
   expect(await page.$('#atenna-guard-btn')).toBeNull();
   await page.close();
 });
+
+test('F6: usuário PRO NÃO vê upsell do produto no modal', async ({ context }) => {
+  await clearAll(context);
+  await injectSession(context, 'pro');
+  // plano já é pro no storage → evita o overlay de pro-welcome no 1º open
+  let [sw6] = context.serviceWorkers();
+  if (!sw6) sw6 = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  await sw6.evaluate(() => new Promise<void>((r) => chrome.storage.local.set({
+    'atenna_plan': { type: 'pro', planType: 'monthly', validUntil: 9999999999999 },
+    'atenna_plan__e2e-user-id': { type: 'pro', planType: 'monthly', validUntil: 9999999999999 },
+    'atenna_pro_welcome_pending': false,
+    'atenna_pro_welcome_pending__e2e-user-id': false,
+  }, () => r())));
+  await new Promise((r) => setTimeout(r, 1500));
+  // /auth/me tem que dizer pro tb (planManager sincroniza)
+  await context.route('**/api.atennaia.com.br/auth/me**', (r) => r.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ user_id: 'e2e-user-id', email: 'e2e@atenna.ai', plan: 'pro', expires_at: 9999999999 }),
+  }));
+  await context.route('**/generate-prompts', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { direct: 'x', technical: 'y', structured: 'z' } }) }));
+  await context.route('**/auth/v1/user**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'e2e-user-id', email: 'e2e@atenna.ai' }) }));
+
+  const page = await openFixturePage(context);
+  // page.route tem prioridade sobre context.route — sobrescreve o /auth/me do helper
+  await page.route('**/auth/me', (r) => r.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ user_id: 'e2e-user-id', email: 'e2e@atenna.ai', plan: 'pro', expires_at: 9999999999, onboarding_seen: true }),
+  }));
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 30_000 });
+  await page.click('#atenna-guard-btn');
+  await page.waitForSelector('.atenna-modal__editor', { timeout: 8000 });
+  await page.waitForTimeout(800);
+
+  // nenhum CTA de upsell "Quero prompts ilimitados..."
+  expect(await page.locator('.atenna-modal__onb-cta-green').count()).toBe(0);
+  expect(await page.locator('text=Quero prompts ilimitados').count()).toBe(0);
+  await page.close();
+});
+
+test('F7: usuário FREE VÊ o upsell no modal (contraprova)', async ({ context }) => {
+  await clearAll(context);
+  await injectSession(context, 'free');
+  await new Promise((r) => setTimeout(r, 1500));
+  await mockBff(context);
+  const page = await openFixturePage(context);
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 30_000 });
+  await page.click('#atenna-guard-btn');
+  await page.waitForSelector('.atenna-modal__editor', { timeout: 8000 });
+  await page.waitForTimeout(800);
+  expect(await page.locator('.atenna-modal__onb-cta-green').count()).toBe(1);
+  await page.close();
+});

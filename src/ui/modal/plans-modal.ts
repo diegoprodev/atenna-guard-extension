@@ -43,7 +43,7 @@ export function renderPlansModal(trigger: string): void {
   const head = document.createElement('div');
   head.style.cssText = 'text-align:center;margin-bottom:22px;';
   head.innerHTML = `
-    <div style="font-size:11px;letter-spacing:1.5px;color:#6366f1;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Atenna Guardião</div>
+    <div style="font-size:11px;letter-spacing:1.5px;color:#6366f1;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Atenna Safe Prompt</div>
     <h2 style="font-size:17px;font-weight:700;margin:0 0 6px;color:#fff;line-height:1.3;">Quem usa IA todos os dias<br>protege o que importa.</h2>
     <p style="font-size:12px;color:#888;margin:0;line-height:1.6;">Seus dados passam por dezenas de sistemas antes de chegar à IA.<br>A maioria das pessoas não sabe o que escapa.</p>
   `;
