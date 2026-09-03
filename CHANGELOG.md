@@ -6,6 +6,15 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE P3: CI/CD
 
+### P3 — configuração do repositório (via `gh api`)
+- **Branch protection em `main`**: PR obrigatório, status check `ci-ok` verde + up-to-date,
+  histórico linear, sem force-push, conversas resolvidas. (admin não forçado — hotfix solo.)
+- **Secret scanning + push protection** ligados. **Dependabot alerts + security fixes** ligados.
+- `.github/dependabot.yml` — PRs semanais (npm raiz+admin, pip backend, github-actions).
+- Environment **`production`** com o dono como *required reviewer* (portão de aprovação do deploy).
+- Secret `VPS_DEPLOY_KEY` + variável `DISCORD_WEBHOOK`.
+- `gitleaks` no CI precisava de `GITHUB_TOKEN` p/ escanear PR (fix).
+
 ### P3.2 — deploy automático do backend (fim da dança manual)
 - `.github/workflows/deploy.yml` — dispara quando o **CI passa em `main`**, com **aprovação
   manual** (GitHub Environment `production`). rsync do `backend/` p/ a VPS (sem `--delete`,

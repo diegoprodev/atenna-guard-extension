@@ -12,6 +12,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   # ── Frontend: typecheck (informativo), testes unitários, build ────────────
@@ -76,11 +77,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Sem fetch-depth:0 de propósito: a action varre só os commits novos
-      # (push) / do PR. A chave Gemini antiga no histórico é tratada à parte
-      # (purga de histórico — FASE 9.3 / P0.1); ela já foi rotacionada.
+        with:
+          fetch-depth: 0  # gitleaks precisa do commit base p/ calcular o range do PR
+      # A action varre só o DELTA (base^..head), não o histórico todo — as chaves
+      # antigas em commits velhos não entram no scan. Purga de histórico = FASE 9.3.
       - uses: gitleaks/gitleaks-action@v2
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: ${{ github.workspace }}/.gitleaks.toml
 
   # ── Gate único: tudo verde ─────────────────────────────────────────────
