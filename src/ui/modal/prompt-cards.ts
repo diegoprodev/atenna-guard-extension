@@ -272,6 +272,7 @@ export function renderPrompts(
   overlay:       HTMLElement,
   origin:        PromptOrigin = 'manual',
   totalCount:    number = 0,
+  pro:           boolean = false,
 ): void {
   clearMsgInterval();
   container.innerHTML = '';
@@ -286,7 +287,7 @@ export function renderPrompts(
   cards.className = 'atenna-modal__cards';
   entries.forEach((v, i) => cards.appendChild(buildCard(v, i, platformInput, overlay, origin)));
 
-  if (!modalState.upgradeShown && totalCount >= UPGRADE_TRIGGER) {
+  if (!pro && !modalState.upgradeShown && totalCount >= UPGRADE_TRIGGER) {
     modalState.upgradeShown = true;
     cards.appendChild(renderUpgradeTrigger());
   }
