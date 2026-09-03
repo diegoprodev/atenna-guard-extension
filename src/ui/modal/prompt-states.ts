@@ -9,6 +9,7 @@ import { renderPlansModal, renderPricingCards } from './plans-modal';
 export function renderOnboarding(
   container: HTMLElement,
   _onChipClick: (suggestion: string) => void,
+  pro = false,
 ): void {
   container.innerHTML = '';
   const wrap = document.createElement('div');
@@ -16,7 +17,7 @@ export function renderOnboarding(
 
   const title = document.createElement('h2');
   title.className = 'atenna-modal__onb-title';
-  title.textContent = 'Atenna';
+  title.textContent = 'Atenna Safe Prompt';
 
   const subtitle = document.createElement('p');
   subtitle.className = 'atenna-modal__onb-subtitle';
@@ -26,19 +27,22 @@ export function renderOnboarding(
   description.className = 'atenna-modal__onb-description';
   description.textContent = 'Seus dados trafegam por dezenas de sistemas antes de chegar à IA. O Atenna protege o que é sensível e estrutura o que você quer dizer — para que nada vaze e tudo chegue certo.';
 
-  // CTA para usuários Free — gatilho de identidade, não de preço
-  const ctaWrap = document.createElement('div');
-  ctaWrap.style.cssText = 'margin-top:20px;display:flex;justify-content:center;';
-  const cta = document.createElement('button');
-  cta.className = 'atenna-modal__onb-cta-green';
-  cta.textContent = 'Quero prompts ilimitados e proteger meus dados 100% conforme LGPD';
-  cta.addEventListener('click', () => renderPlansModal('onboarding_screen'));
-  ctaWrap.appendChild(cta);
-
   wrap.appendChild(title);
   wrap.appendChild(subtitle);
   wrap.appendChild(description);
-  wrap.appendChild(ctaWrap);
+
+  // CTA de upgrade — SÓ para quem não é Pro. Pro não vê upsell do produto.
+  if (!pro) {
+    const ctaWrap = document.createElement('div');
+    ctaWrap.style.cssText = 'margin-top:20px;display:flex;justify-content:center;';
+    const cta = document.createElement('button');
+    cta.className = 'atenna-modal__onb-cta-green';
+    cta.textContent = 'Quero prompts ilimitados e proteger meus dados 100% conforme LGPD';
+    cta.addEventListener('click', () => renderPlansModal('onboarding_screen'));
+    ctaWrap.appendChild(cta);
+    wrap.appendChild(ctaWrap);
+  }
+
   container.appendChild(wrap);
 }
 

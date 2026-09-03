@@ -6,6 +6,27 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.8 — bugs de plano/UX que o dono achou no uso
+- **PRO via upsell — CORRIGIDO (era grave).** Usuário Pro via "Quero prompts ilimitados…"
+  no modal e o gatilho de upgrade após 3 prompts. Agora `renderOnboarding` e
+  `renderPrompts` recebem `pro` e **não mostram nenhum upsell pra quem já é Pro**.
+  Contraprova: E2E F6 (pro → 0 CTA) + F7 (free → 1 CTA).
+- **"Atenna Guardião" → "Atenna Safe Prompt"** no modal de planos e na tela vazia do modal
+  (nome canônico do produto).
+- **"Seus dados" / "Exclusão de conta" agora são clicáveis.** Os botões ("Solicitar
+  relatório" / "Solicitar exclusão") eram renderizados **só depois** de uma chamada ao
+  backend responder — se ela falhava (token ausente / rota), os cards ficavam mortos.
+  Agora o botão aparece por padrão (otimista) e o token opaco é passado de verdade
+  (`core.ts` pega de `getActiveSession()`).
+- **"Sair" no modal agora pede confirmação** (`confirm()`), igual ao popup.
+- `.gitleaks.toml`: `manifest.json` na allowlist — o campo `key` é a chave **pública** da
+  extensão, não segredo (destrava o job `secrets` do CI no #34).
+- **Pendente (precisa de backend):** upsell mensal→anual com cupom automático — o
+  `/auth/me` não devolve o ciclo de cobrança (mensal/anual); é uma feature à parte.
+- **Login Google:** o `"key"` do manifest (10.7) só vale na build **que tem o key** — hoje
+  só no branch do #34. Depois de mergear o #34 + `npm run build` + **remover e re-adicionar**
+  a extensão, o ID vira `eeejlbiagiieioangpmhhfjlnpphljao` e o redirect do Supabase casa.
+
 ### FASE 10.7 — validação real E2E + correções do uso real
 - **REGRA nova (`CLAUDE.md`):** screenshot de `<style>` isolado / harness stubado / http-server
   **não valida**. Popup/content/background/welcome/modal/auth só é "pronto" depois de

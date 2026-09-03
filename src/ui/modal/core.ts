@@ -83,8 +83,11 @@ export async function openSettingsOverlay(): Promise<void> {
   // Always sync plan from BFF before rendering — ensures pro users see correct badge
   await syncPlanFromBff(me);
   const pro = await isPro();
+  // Token opaco p/ as chamadas de export/exclusão de conta (privacy-data.ts).
+  const { getActiveSession } = await import('../../core/auth');
+  const active = await getActiveSession();
   const settingsPage = renderSettingsPage(
-    me,
+    { ...me, access_token: active?.access_token },
     pro,
     () => document.getElementById('atenna-settings-overlay')?.remove(),
     renderDocumentActionBar,
@@ -386,13 +389,17 @@ async function openModal(autoGenerate = false): Promise<void> {
       e.stopPropagation();
       const existing = document.getElementById('atenna-settings-overlay');
       if (existing) { existing.remove(); return; }
-      const settingsPage = renderSettingsPage(
-        me,
-        pro,
-        () => { document.getElementById('atenna-settings-overlay')?.remove(); },
-        renderDocumentActionBar,
-      );
-      document.body.appendChild(settingsPage);
+      void (async () => {
+        const { getActiveSession } = await import('../../core/auth');
+        const active = await getActiveSession();
+        const settingsPage = renderSettingsPage(
+          { ...me, access_token: active?.access_token },
+          pro,
+          () => { document.getElementById('atenna-settings-overlay')?.remove(); },
+          renderDocumentActionBar,
+        );
+        document.body.appendChild(settingsPage);
+      })();
     });
   }
 
@@ -403,7 +410,7 @@ async function openModal(autoGenerate = false): Promise<void> {
     // Cache hit: same text was generated before — render instantly, skip backend
     if (modalState.promptCache && modalState.promptCache.forText === userText) {
       void renderSuccess(resultsView).then(() =>
-        renderPrompts(resultsView, modalState.promptCache!.data, platformInput, overlay, 'manual', 0)
+        renderPrompts(resultsView, modalState.promptCache!.data, platformInput, overlay, 'manual', 0, pro)
       );
     } else {
       renderLoading(resultsView);
@@ -431,7 +438,7 @@ async function openModal(autoGenerate = false): Promise<void> {
     renderOnboarding(resultsView, (example: string) => {
       editorEl.value = example;
       editorEl.focus();
-    });
+    }, pro);
   }
 
   (modal.querySelector('.atenna-modal__close') as HTMLButtonElement).focus();
@@ -472,7 +479,7 @@ async function runFlow(
       void trackEvent('prompt_generate_api_failed', { origin, input_length: userText.length });
       await renderSuccess(container);
       if (!document.getElementById(OVERLAY_ID)) return;
-      renderPrompts(container, data, platformInput, overlay, origin, 0);
+      renderPrompts(container, data, platformInput, overlay, origin, 0, pro);
       return;
     }
 
@@ -509,7 +516,7 @@ async function runFlow(
 
     modalState.promptCache = { forText: userText, data };
 
-    renderPrompts(container, data, platformInput, overlay, origin, newTotalCount);
+    renderPrompts(container, data, platformInput, overlay, origin, newTotalCount, pro);
   } catch (error) {
     if (error instanceof QuotaExceededError) {
       // Server-side quota exceeded — user bypassed client-side limit
