@@ -16,6 +16,11 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log('[Atenna Guard] Extension installed.');
 });
 
+// Página de feedback aberta pelo Chrome quando o usuário remove a extensão (FASE 10.6).
+try {
+  chrome.runtime.setUninstallURL(`${BFF_BASE}/desinstalado`);
+} catch { /* setUninstallURL indisponível em contexto de teste */ }
+
 // Returns the BFF opaque token (accepted by all backend routes).
 async function getBffToken(): Promise<string | null> {
   try {

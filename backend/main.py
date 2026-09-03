@@ -30,6 +30,7 @@ from routes.export import router as export_router
 from routes.documents import router as documents_router
 from routes.protect import router as protect_router
 from routes.report_problem import router as report_problem_router
+from routes.uninstall_feedback import router as uninstall_feedback_router
 from routes.upload import router as upload_router
 from routes.upload_large import router as upload_large_router
 from middleware.auth import require_auth
@@ -123,6 +124,7 @@ app.include_router(export_router)
 app.include_router(documents_router)
 app.include_router(protect_router)
 app.include_router(report_problem_router)
+app.include_router(uninstall_feedback_router)
 app.include_router(upload_router)
 app.include_router(upload_large_router)
 app.include_router(metrics_router)
