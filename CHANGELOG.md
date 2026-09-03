@@ -6,6 +6,23 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### SEGURANÇA — vazamento de histórico entre contas na mesma máquina (CRÍTICO)
+- **O que era:** `scopedStorage.sk()` caía na chave **global crua** (`atenna_history`) quando
+  `_uid` estava null, e o modal in-page **nunca fixava** o `_uid` da sessão atual. Resultado:
+  numa máquina com 2 contas, o usuário B via o **histórico de prompts do usuário A** (e
+  plano, uso, stats). `auth.storeSession` ainda escapava o namespace por **email**, não por
+  `user_id` — chave inconsistente entre caminhos.
+- **Fix:**
+  - `sk()` **nunca** usa a chave crua — sem `_uid` vai pra `__nouser` (namespace que
+    nenhuma conta real lê).
+  - `openModal` e `openSettingsOverlay` chamam `setStorageUser(me.user_id)` **antes** de ler
+    qualquer dado (histórico/plano/uso).
+  - `content.ts`: zera o `_uid` no logout e re-resolve na troca de token (troca de conta).
+  - `auth.storeSession`: no-op — o namespace é sempre por `user_id`, nunca por email.
+- **Regressão:** E2E `full-flow F8` — usuário A gera "PROMPT SECRETO DE A" → usuário B loga
+  na mesma máquina → aba Histórico do B **não contém nada de A**. Falhava antes.
+- **Validado:** `vitest` 318 · `npm run test:e2e` → **35 / 0 / 1 skip**.
+
 ### FASE 10.3b-fix — modal in-page volta a ser NEUTRO (não verde)
 - O dono rejeitou o fundo verde-pinho do modal: o modal vive **dentro** do ChatGPT/Claude,
   então deve **acompanhar o tema do site** — branco no claro, **cinza escuro `#1c1c1e`** no
