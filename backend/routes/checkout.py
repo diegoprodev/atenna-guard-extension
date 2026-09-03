@@ -351,7 +351,14 @@ async def asaas_webhook(request: Request):
     logger.info(f"Asaas webhook received: event={event}")
     try:
         from observability_metrics import record_checkout_event
-        record_checkout_event(event or "unknown")
+        # bound: só eventos conhecidos viram label (evita cardinalidade infinita na métrica)
+        _known = {
+            "PAYMENT_RECEIVED", "PAYMENT_CONFIRMED", "PAYMENT_OVERDUE",
+            "PAYMENT_REFUNDED", "PAYMENT_DELETED", "PAYMENT_CHARGEBACK_REQUESTED",
+            "SUBSCRIPTION_CREATED", "SUBSCRIPTION_UPDATED", "SUBSCRIPTION_DELETED",
+            "SUBSCRIPTION_CANCELLED",
+        }
+        record_checkout_event(event if event in _known else "other")
     except Exception:
         pass
 
