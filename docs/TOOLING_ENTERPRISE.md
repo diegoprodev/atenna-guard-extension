@@ -56,14 +56,18 @@ Docs: https://code.claude.com/docs/en/code-review
 Skills de auditoria de segurança (injeção, authz, deserialização, cripto, path traversal,
 SSRF, secrets, regras Semgrep).
 
-No Claude Code:
+No Claude Code (marketplace `trailofbits` já adicionado). Skills relevantes p/ este projeto
+(FastAPI + extensão Chrome, Python + TS):
 ```
-/plugin marketplace add trailofbits/skills
-/plugin install <skill>@trailofbits-skills
+/plugin install differential-review@trailofbits      # audita o DIFF da branch atrás de vuln — o núcleo desta camada
+/plugin install insecure-defaults@trailofbits        # configs/defaults inseguros
+/plugin install static-analysis@trailofbits          # análise estática geral
+/plugin install modern-python@trailofbits            # segurança/idioma Python
+/plugin install supply-chain-risk-auditor@trailofbits # risco de dependências (P3)
+/plugin install mutation-testing@trailofbits          # testes de mutação (P3)
+/plugin install semgrep-rule-creator@trailofbits      # gera regra Semgrep a partir de um bug
 ```
-(rodar `/plugin` para listar as skills disponíveis do marketplace e instalar as relevantes —
-ex.: análise estática, insecure-defaults, entrypoint analysis).
-
+Catálogo completo: `/plugin` → marketplace `trailofbits` (~42 skills).
 Repo: https://github.com/trailofbits/skills
 
 ## 5. claude-mem — memória de longo prazo entre sessões
@@ -71,10 +75,9 @@ Repo: https://github.com/trailofbits/skills
 Captura o que o agente faz, comprime com IA e reinjeta contexto relevante em sessões futuras.
 Complementa o `~/.claude/projects/.../memory/` (que é curado à mão).
 
-No Claude Code:
+No Claude Code (marketplace `thedotmack` já adicionado):
 ```
-/plugin marketplace add thedotmack/claude-mem
-/plugin install claude-mem
+/plugin install claude-mem@thedotmack
 ```
 Reiniciar o Claude Code. (NÃO usar `npm install -g claude-mem` — não registra os hooks.)
 
