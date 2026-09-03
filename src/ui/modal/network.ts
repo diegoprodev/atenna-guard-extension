@@ -115,7 +115,7 @@ export async function openCheckout(source: string, btn?: HTMLButtonElement, plan
           if (me?.plan === 'pro') {
             clearInterval(pollId);
             await syncPlanFromBff(me);
-            showToast('🎉 Bem-vindo ao Atenna Pro! Aproveite todos os recursos.', 'success');
+            showToast('Bem-vindo ao Atenna Pro. Aproveite todos os recursos.', 'success');
             void trackEvent('checkout_plan_upgraded', { source, plan } as Parameters<typeof trackEvent>[1]);
           }
         } catch { /* network error — keep polling */ }

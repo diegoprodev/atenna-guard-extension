@@ -33,7 +33,13 @@ All notable changes to **Atenna Guard Extension** are documented here.
   `welcome.spec` W7 reescrito (signup → auto-login) + W7b; `extension.spec` P1/P2/P3.
   `add-localhost-e2e.mjs` agora inclui `web_accessible_resources` (logo carrega no fixture).
 - **Validação:** `npm run test:e2e` → **32 ✓ / 0 ✗ / 1 skip**; `vitest` 317 ✓; build limpo.
-- **Ainda pendente (FASE 10.3):** o redesign visual do modal in-page (tema escuro / emoji).
+- **Modal in-page — varredura de emoji (10.3-a).** Removidos de settings (📊 📎 🛡 ⚙, "Pro ✓",
+  "⎋ Sair", "Salvo ✓" → "Salvo"), plans-modal (✓ bullets → travessão, 🏆 ⚡ 💳),
+  prompt-states (📅 ⚡ ✨ 🛡 📄 → SVG relógio + texto), prompt-cards (★/☆ → estrela desenhada),
+  pro-welcome (✓ → SVG check), toasts (🎉). Wizard de onboarding morto + `ONB_STEPS`
+  (com os 💡) **deletados** do `onboarding-views.ts`.
+- **Ainda pendente (FASE 10.3-b):** o redesign de cor/tipo do modal (tema escuro, tokens,
+  serif, indigo `#6366f1` do checkout) — `modal.css` tem 4293 linhas, é fase própria.
 - Spec: `docs/specs/FASE_10.7_VALIDACAO_REAL_E_CORRECOES.md`.
 
 ### Bug — popup "abre skeleton e some" (sem login)

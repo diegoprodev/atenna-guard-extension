@@ -10,6 +10,11 @@ import type { HistoryGroup, PromptEntry } from '../../core/history';
 import { track, trackEvent } from '../../core/analytics';
 import type { PromptOrigin, PromptType } from '../../core/analytics';
 
+/** Estrela de favorito — ícone desenhado (não glifo ★/☆). */
+function starSvg(filled: boolean): string {
+  return `<svg width="14" height="14" viewBox="0 0 24 24" fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.9 6.1 21l1.2-6.5L2.5 9.9l6.6-.9z"/></svg>`;
+}
+
 export function makeVariantRow(
   label: string,
   text: string,
@@ -107,7 +112,7 @@ export async function renderMeusPrompts(
 
       const starBtn = document.createElement('button');
       starBtn.className = g.favorited ? 'atenna-modal__history-star atenna-modal__history-star--active' : 'atenna-modal__history-star';
-      starBtn.textContent = g.favorited ? '★' : '☆';
+      starBtn.innerHTML = starSvg(g.favorited);
       starBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         await toggleFavorite(g.id);
@@ -163,7 +168,7 @@ export async function renderMeusPrompts(
 
       const starBtn = document.createElement('button');
       starBtn.className = e.favorited ? 'atenna-modal__history-star atenna-modal__history-star--active' : 'atenna-modal__history-star';
-      starBtn.textContent = e.favorited ? '★' : '☆';
+      starBtn.innerHTML = starSvg(e.favorited);
       starBtn.addEventListener('click', async () => {
         await toggleFavorite(e.id);
         await renderMeusPrompts(container, platformInput, overlay);

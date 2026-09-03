@@ -193,7 +193,7 @@ async function openModal(autoGenerate = false): Promise<void> {
   const editSelected    = 'true';
   const promptsSelected = 'false';
 
-  const builderLogoImg = logoUrl ? `<img src="${logoUrl}" width="14" height="14" alt="" aria-hidden="true" style="border-radius:50%;vertical-align:middle;filter:none;opacity:0.9;"/>` : '✦';
+  const builderLogoImg = logoUrl ? `<img src="${logoUrl}" width="14" height="14" alt="" aria-hidden="true" style="border-radius:50%;vertical-align:middle;filter:none;opacity:0.9;"/>` : '';
 
   modal.innerHTML = `
     <div class="atenna-modal__header">
@@ -500,7 +500,7 @@ async function runFlow(
     // Milestone tracking
     if (newTotalCount === 1) {
       void trackEvent('first_prompt_generated');
-      showToast('🎉 Primeiro prompt criado!', 'success');
+      showToast('Primeiro prompt criado', 'success');
     } else if (newTotalCount === 3) {
       void trackEvent('third_prompt_generated');
     } else if (newTotalCount === 5) {
