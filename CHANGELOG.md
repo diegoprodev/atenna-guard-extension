@@ -16,7 +16,11 @@ All notable changes to **Atenna Guard Extension** are documented here.
   (→ **warning**), idade do último evento Asaas. Loga só `user_id[:8]` (zero PII no painel).
 - Métricas: `atenna_subscription_sync_mismatch`, `atenna_subscriptions_total{bucket}`,
   `atenna_last_checkout_event_age_seconds`.
-- `GET /admin/subscriptions/health` (super-admin) — mesma checagem sob demanda.
+- `GET /admin/subscriptions/health` + `POST /admin/subscriptions/reconcile` (super-admin).
+- **Aba no `/nexussafe/`** (página "Planos Pro"): card "Saúde das assinaturas" com a lista de
+  divergências + botões *Prévia* / *Reconciliar*.
+- GlitchTip: 2 monitores **Heartbeat** criados (`atenna-db-backup`, `atenna-db-restore-test`);
+  check-in via `POST /api/0/organizations/atenna/heartbeat_check/<endpoint_id>/`.
 - `scripts/reconcile_plans.py` — one-shot idempotente, fonte da verdade = `user_plans`.
   **Rodado em prod:** os 3 drifts corrigidos (`free → pro`).
 - Follow-up FASE 9.4: escrita atômica no `_promote_to_pro` (causa raiz).

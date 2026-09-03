@@ -38,7 +38,7 @@ docker exec "$GT_PG" psql -U postgres -c "DROP DATABASE restore_test;" >/dev/nul
 
 if [ "${ROWS:-0}" -ge 1 ]; then
   echo "RESTORE TEST OK — profiles: ${ROWS} linhas"
-  [ -n "${GLITCHTIP_RESTORE_MONITOR_URL:-}" ] && curl -fsS -m 10 "$GLITCHTIP_RESTORE_MONITOR_URL" >/dev/null 2>&1 || true
+  [ -n "${GLITCHTIP_RESTORE_MONITOR_URL:-}" ] && curl -fsS -m 10 -X POST "$GLITCHTIP_RESTORE_MONITOR_URL" >/dev/null 2>&1 || true
 else
   echo "RESTORE TEST FALHOU — profiles vazio"
   exit 1
