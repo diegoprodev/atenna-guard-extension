@@ -36,8 +36,11 @@ All notable changes to **Atenna Guard Extension** are documented here.
 - O `.dump` cru **nunca** toca o disco sem cifra (pipe `pg_dump | age`).
 - VPS: `age`+`rclone` instalados, chave `age` gerada, cron `03:30` diário + `restore-test` domingo.
   Backup local + restore-test **testados** (316 KB cifrado; restore = 9 `profiles`).
-- Pendente do dono: bucket R2 + API token; 2 cron monitors no GlitchTip; **guardar a chave `age`
-  privada no cofre** (sem ela o backup é inútil). Spec: `docs/specs/FASE_P3.4_BACKUP_BANCO.md`.
+- **R2 ligado (03/09):** bucket `atenna-db-backups` + Account API token (Object R&W, IP-filtered
+  p/ a VPS) → `/root/backup/.env`. Backup rodou fim-a-fim: local + R2 `daily/` + restore-test +
+  check-in. rclone atualizado p/ 1.75 (o do apt dava 501). 2 monitores Heartbeat no GlitchTip.
+- Pendente do dono: **guardar a chave `age` privada no cofre** (sem ela o backup é inútil).
+  Spec: `docs/specs/FASE_P3.4_BACKUP_BANCO.md`.
 
 
 ### P3 — configuração do repositório (via `gh api`)

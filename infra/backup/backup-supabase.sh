@@ -45,6 +45,7 @@ echo "local ok: ${LOCAL_PATH} (${SIZE} bytes)"
 
 # ── Cloudflare R2 (via rclone) ────────────────────────────────────────────────
 if [ -n "${R2_ACCESS_KEY_ID:-}" ] && [ -n "${R2_ENDPOINT:-}" ]; then
+  export RCLONE_CONFIG=/dev/null
   export RCLONE_CONFIG_R2_TYPE=s3
   export RCLONE_CONFIG_R2_PROVIDER=Cloudflare
   export RCLONE_CONFIG_R2_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID"
