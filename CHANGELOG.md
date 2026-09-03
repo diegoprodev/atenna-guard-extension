@@ -14,6 +14,18 @@ All notable changes to **Atenna Guard Extension** are documented here.
   página **Feedback (churn)** no admin React — lista + gráfico de barras por motivo.
 - `backend/static/atenna-logo.png` (cópia do `icon128`). Teste do endpoint admin no pytest.
 
+### FASE 10.3b — cor e tipografia do modal in-page
+- **Tokens `--at-*` retunados** pra identidade Atenna (mesma paleta do welcome/popup):
+  claro = branco + papel quente + `--at-accent #0B6E4B`; **escuro = verde-pinho `#0A2E23`**
+  (não mais o cinza genérico `#1a1a1a`/`#2a2a2a`).
+- **Indigo `#6366f1` eliminado** (era o tell de UI gerada no checkout) → verde-família:
+  anual usa `--at-accent-2` (pinho no claro, mint no escuro).
+- **Serif** (`--at-serif`) nos títulos do modal (login, empty, onboarding, pro-welcome).
+- Pill de uso: neutra (era laranja de alerta sempre ligado). Wordmark do header:
+  `--at-text` (não mais verde gritante). Scrollbar do corpo tematizada.
+- `plans-modal.ts`: box em verde-pinho com tokens próprios + "Atenna Safe Prompt" (10.8).
+- **Validado:** `vitest` 318 · `npm run test:e2e` → **34 / 0 / 1 skip** · screenshots modal + planos.
+
 
 ### FASE 10.8 — bugs de plano/UX que o dono achou no uso
 - **PRO via upsell — CORRIGIDO (era grave).** Usuário Pro via "Quero prompts ilimitados…"

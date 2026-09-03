@@ -1,4 +1,4 @@
-/* Atenna Guard — Modal. 2 cores: #22c55e (verde) + superfície. Prefixo atenna-modal-* */
+/* Atenna Guard — Modal. 2 cores: var(--at-accent) (verde) + superfície. Prefixo atenna-modal-* */
 
 @keyframes atenna-modal-fade-in {
   from { opacity: 0; }
@@ -97,12 +97,20 @@
 /* ── Modal box ───────────────────────────────────────────── */
 
 .atenna-modal {
-  --at-green:      #22c55e;
+  /* FASE 10.3b — identidade Atenna (mesma paleta do welcome/popup) */
+  --at-accent:       #0B6E4B;   /* CTA principal — texto branco 5.9:1 */
+  --at-accent-press: #095B3E;
+  --at-accent-2:     #0A2E23;   /* plano anual / secundário (era indigo var(--at-accent-2)) */
+  --at-focus:        #12986A;
+  --at-green:        var(--at-accent);   /* alias de compat */
   --at-bg:         #ffffff;
-  --at-text:       #111111;
-  --at-border:     rgba(0, 0, 0, 0.08);
-  --at-card-bg:    #f7f7f7;
+  --at-surface:    #FBFAF7;
+  --at-text:       #1A2B24;
+  --at-text-muted: #5B6B63;
+  --at-border:     #E7E3DA;
+  --at-card-bg:    #FBFAF7;
   --at-header-bg:  #ffffff;
+  --at-serif:      'Iowan Old Style', 'Palatino Linotype', Palatino, Charter, Georgia, serif;
 
   --at-transition-fast:   150ms;
   --at-transition-base:   200ms;
@@ -144,11 +152,15 @@
 }
 
 .atenna-modal--dark {
-  --at-bg:         #1f1f1f;
-  --at-text:       #e8e8e8;
-  --at-border:     rgba(255, 255, 255, 0.12);
-  --at-card-bg:    #2a2a2a;
-  --at-header-bg:  #1f1f1f;
+  --at-bg:         #0A2E23;   /* verde-pinho — não mais cinza genérico */
+  --at-surface:    #0F3B2D;
+  --at-text:       #F4F3EE;
+  --at-text-muted: #9DB5AC;
+  --at-border:     rgba(244, 243, 238, 0.14);
+  --at-card-bg:    #0F3B2D;
+  --at-header-bg:  #0A2E23;
+  /* acento fica o mesmo — o verde funciona nos dois temas */
+  --at-accent-2:   #6FD3A6;   /* no escuro, o secundário clareia p/ legibilidade */
 }
 
 /* ── Sticky header ───────────────────────────────────────── */
@@ -208,8 +220,8 @@
   align-items: center;
   gap: 7px;
   font-size: 14px;
-  font-weight: 700;
-  color: var(--at-green);
+  font-weight: 650;
+  color: var(--at-text);
   letter-spacing: 0.01em;
   justify-self: start;
 }
@@ -273,16 +285,16 @@
   transition: all var(--at-transition-fast) var(--at-ease-out);
   padding: 3px 10px;
   border-radius: 20px;
-  background: rgba(249, 115, 22, 0.10);
-  color: #ea580c;
-  border: 1px solid rgba(249, 115, 22, 0.20);
+  background: transparent;
+  color: var(--at-text-muted);
+  border: 1px solid var(--at-border);
 }
 
 .atenna-modal__pro-badge {
   display: inline-block;
   margin-left: 5px;
   padding: 1px 6px;
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  background: var(--at-accent);
   color: #fff;
   font-size: 9px;
   font-weight: 700;
@@ -293,9 +305,9 @@
 }
 
 .atenna-modal__usage--pro {
-  background: rgba(34, 197, 94, 0.12);
-  color: #16a34a;
-  border: 1px solid rgba(34, 197, 94, 0.25);
+  background: var(--at-surface);
+  color: var(--at-accent-press);
+  border: 1px solid var(--at-border);
 }
 
 .atenna-modal__usage--warning { color: #dc2626; background: rgba(220,38,38,0.08); border-color: rgba(220,38,38,0.2); }
@@ -457,7 +469,7 @@
 }
 
 .atenna-modal__account-toggle:checked {
-  background: #22c55e;
+  background: var(--at-accent);
 }
 
 .atenna-modal__account-toggle:checked::after {
@@ -503,6 +515,14 @@
   padding: 12px;
   flex: 1;
   overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--at-border) transparent;
+}
+.atenna-modal__body::-webkit-scrollbar { width: 8px; }
+.atenna-modal__body::-webkit-scrollbar-thumb {
+  background: var(--at-border);
+  border-radius: 8px;
+  border: 2px solid var(--at-bg);
 }
 
 /* In popup context, body should not constrain height - NO SCROLL */
@@ -1161,7 +1181,7 @@
 }
 
 .atenna-upgrade-modal__hero {
-  background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
+  background: linear-gradient(135deg, var(--at-accent-press) 0%, var(--at-accent) 100%);
   padding: 26px 22px 20px;
   text-align: center;
   position: relative;
@@ -1224,7 +1244,7 @@
 }
 
 .atenna-upgrade-modal__price-anchor strong {
-  color: #22c55e;
+  color: var(--at-accent);
 }
 
 .atenna-upgrade-modal__body {
@@ -1253,7 +1273,7 @@
   height: 18px;
   border-radius: 50%;
   background: rgba(34,197,94,0.12);
-  color: #16a34a;
+  color: var(--at-accent-press);
   font-size: 10px;
   font-weight: 700;
   display: flex;
@@ -1282,7 +1302,7 @@
 .atenna-upgrade-modal__cta {
   width: 100%;
   padding: 13px;
-  background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
+  background: linear-gradient(135deg, var(--at-accent-press) 0%, var(--at-accent) 100%);
   color: #fff;
   border: none;
   border-radius: 12px;
@@ -1342,6 +1362,7 @@
 }
 
 #atenna-popup .atenna-modal__login-title {
+  font-family: var(--at-serif);
   text-align: center;
   margin: 0;
   font-size: 18px;
@@ -1377,7 +1398,7 @@
 }
 
 #atenna-popup .atenna-modal__login-btn:hover:not(:disabled) {
-  background: #16a34a;
+  background: var(--at-accent-press);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
@@ -1580,7 +1601,7 @@
 }
 
 .atenna-modal__login-status--success {
-  color: #22c55e;
+  color: var(--at-accent);
 }
 
 .atenna-modal__login-status--error {
@@ -1689,6 +1710,7 @@
 }
 
 .atenna-modal__empty-title {
+  font-family: var(--at-serif);
   font-size: 28px;
   font-weight: 700;
   color: var(--at-text);
@@ -2006,7 +2028,7 @@
   font-weight: 700;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: #22c55e;
+  color: var(--at-accent);
   margin-bottom: 14px;
   opacity: 0.9;
   display: block;
@@ -2055,7 +2077,7 @@
 }
 
 .atenna-modal__onb-features li:hover {
-  border-color: #22c55e;
+  border-color: var(--at-accent);
   background: var(--at-card-bg);
   transform: translateY(-1px);
 }
@@ -2069,7 +2091,7 @@
   border-radius: 6px;
   background: rgba(34, 197, 94, 0.12);
   flex-shrink: 0;
-  color: #22c55e;
+  color: var(--at-accent);
   line-height: 0;
   font-size: 18px;
 }
@@ -2091,8 +2113,8 @@
 .atenna-modal__onb-free-tag {
   font-size: 10px;
   font-weight: 600;
-  color: #22c55e;
-  background: #f0fdf4;
+  color: var(--at-accent);
+  background: var(--at-surface);
   border: 1px solid #bbf7d0;
   border-radius: 16px;
   padding: 6px 16px;
@@ -2106,7 +2128,7 @@
   width: 100%;
   max-width: 380px;
   padding: 14px 20px;
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  background: linear-gradient(135deg, var(--at-accent) 0%, var(--at-accent-press) 100%);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -2154,7 +2176,7 @@
 }
 
 .atenna-modal__onb-login:hover {
-  color: #22c55e;
+  color: var(--at-accent);
 }
 
 /* ── Onboarding Wizard ───────────────────────────────────── */
@@ -2184,7 +2206,7 @@
 .atenna-onb-wizard__tag {
   font-size: 10px;
   font-weight: 700;
-  color: #22c55e;
+  color: var(--at-accent);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 6px;
@@ -2215,7 +2237,7 @@
 .atenna-onb-wizard__tip {
   font-size: 12px;
   color: #888;
-  background: #f8fdf9;
+  background: var(--at-surface);
   border: 1px solid #d1fae5;
   border-radius: 8px;
   padding: 8px 12px;
@@ -2248,7 +2270,7 @@
 .atenna-onb-wizard__dot--active {
   width: 22px;
   border-radius: 4px;
-  background: #22c55e;
+  background: var(--at-accent);
 }
 
 .atenna-onb-wizard__nav {
@@ -2293,20 +2315,20 @@
 .atenna-onb-wizard__btn--skip:hover { color: #666; }
 
 .atenna-onb-wizard__btn--next {
-  background: #22c55e;
+  background: var(--at-accent);
   color: #fff;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(34,197,94,0.25);
 }
 
 .atenna-onb-wizard__btn--next:hover {
-  background: #16a34a;
+  background: var(--at-accent-press);
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(34,197,94,0.35);
 }
 
 .atenna-onb-wizard__btn--finish {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
+  background: linear-gradient(135deg, var(--at-accent), var(--at-accent-press));
   padding: 9px 20px;
 }
 
@@ -2399,7 +2421,7 @@
   font-family: inherit;
 }
 
-.atenna-dlp-advisory__btn-primary:hover { background: #16a34a; }
+.atenna-dlp-advisory__btn-primary:hover { background: var(--at-accent-press); }
 
 .atenna-dlp-advisory__btn-secondary {
   font-size: 11px;
@@ -2458,6 +2480,7 @@
 }
 
 .atenna-modal__onb-title {
+  font-family: var(--at-serif);
   font-size: 28px;
   font-weight: 700;
   color: var(--at-text);
@@ -2578,7 +2601,7 @@
 }
 
 .atenna-modal__limit-btn:hover {
-  background: #16a34a;
+  background: var(--at-accent-press);
 }
 
 /* ── Upgrade Trigger (FASE 1) ───────────────────────────── */
@@ -2631,7 +2654,7 @@
 }
 
 .atenna-modal__upgrade-trigger-btn:hover {
-  background: #16a34a;
+  background: var(--at-accent-press);
 }
 
 /* ── Settings Dashboard Page ──────────────────────────────── */
@@ -2696,7 +2719,7 @@
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  background: linear-gradient(135deg, var(--at-accent) 0%, var(--at-accent-press) 100%);
   color: #ffffff;
   font-size: 16px;
   font-weight: 700;
@@ -2737,7 +2760,7 @@
 }
 
 .atenna-settings__plan-badge--pro {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  background: linear-gradient(135deg, var(--at-accent) 0%, var(--at-accent-press) 100%);
   color: #ffffff;
 }
 
@@ -2840,7 +2863,7 @@
   width: calc(100% - 28px);
   margin: 4px 14px 10px;
   padding: 9px 14px;
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  background: linear-gradient(135deg, var(--at-accent) 0%, var(--at-accent-press) 100%);
   color: #000000;
   border: none;
   border-radius: 8px;
@@ -3399,7 +3422,7 @@
   position: relative;
   overflow: hidden;
   padding: 10px 20px;
-  background: linear-gradient(90deg, #16a34a 0%, #22c55e 35%, #4ade80 50%, #22c55e 65%, #16a34a 100%);
+  background: linear-gradient(90deg, var(--at-accent-press) 0%, var(--at-accent) 35%, var(--at-accent) 50%, var(--at-accent) 65%, var(--at-accent-press) 100%);
   background-size: 250% auto;
   animation: atenna-shimmer-ltr 3.2s linear infinite;
   border: none;
@@ -3487,6 +3510,7 @@
 }
 
 .atenna-pro-welcome__title {
+  font-family: var(--at-serif);
   font-size: 18px;
   font-weight: 700;
   color: var(--at-text, #e8e8e8);
@@ -3495,7 +3519,7 @@
 
 .atenna-pro-welcome__sub {
   font-size: 13px;
-  color: var(--at-green, #22c55e);
+  color: var(--at-green, var(--at-accent));
   font-weight: 600;
   margin-bottom: 20px;
 }
@@ -3526,7 +3550,7 @@
 .atenna-pro-welcome__perks li:nth-child(4) { animation-delay: 440ms; }
 
 .atenna-pro-welcome__check {
-  color: var(--at-green, #22c55e);
+  color: var(--at-green, var(--at-accent));
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -3534,7 +3558,7 @@
 .atenna-pro-welcome__btn {
   width: 100%;
   padding: 11px;
-  background: var(--at-green, #22c55e);
+  background: var(--at-green, var(--at-accent));
   color: #fff;
   border: none;
   border-radius: 9px;
@@ -3620,7 +3644,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #22c55e;
+  background: var(--at-accent);
   box-shadow: 0 0 8px rgba(34, 197, 94, 0.7);
 }
 
@@ -3637,7 +3661,7 @@
   height: 100%;
   width: 4%;
   border-radius: 2px;
-  background: linear-gradient(90deg, #22c55e, #4ade80);
+  background: linear-gradient(90deg, var(--at-accent), var(--at-accent));
   transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -3912,7 +3936,7 @@
 }
 
 .atenna-upw__quota-card--featured {
-  border-color: #6366f1;
+  border-color: var(--at-accent-2);
   border-width: 1.5px;
 }
 
@@ -3920,7 +3944,7 @@
   position: absolute;
   top: -9px;
   right: 12px;
-  background: #6366f1;
+  background: var(--at-accent-2);
   color: #fff;
   font-size: 9px;
   font-weight: 700;
@@ -3983,15 +4007,15 @@
 }
 
 .atenna-upw__quota-btn--primary {
-  background: #6366f1;
-  border-color: #6366f1;
+  background: var(--at-accent-2);
+  border-color: var(--at-accent-2);
   color: #fff;
   font-weight: 600;
 }
 
 .atenna-upw__quota-btn--primary:hover {
   opacity: 0.88;
-  background: #6366f1;
+  background: var(--at-accent-2);
 }
 
 /* Fitts: botão primário maior que o secundário */
@@ -4038,8 +4062,8 @@
 
 .atenna-upw__btn--protect:hover {
   opacity: 1;
-  background: #16a34a;
-  border-color: #16a34a;
+  background: var(--at-accent-press);
+  border-color: var(--at-accent-press);
   color: #fff;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(34,197,94,0.35);
