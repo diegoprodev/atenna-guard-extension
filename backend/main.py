@@ -60,11 +60,14 @@ async def _lifespan(app):
     _onbd1     = observability.monitor("daily-onboarding-d1")(run_onboarding_d1)
     _upsell    = observability.monitor("daily-upsell")(run_upsell)
     _cleanup   = observability.monitor("daily-dlp-cleanup")(cleanup_old_dlp_events)
+    from routes.subscription_health import run_subscription_health
+    _subhealth = observability.monitor("daily-subscription-health")(run_subscription_health)
     scheduler.add_job(_renewal30, "cron", hour=9,  minute=0,  id="daily_renewal_30d",   replace_existing=True)
     scheduler.add_job(_renewal7,  "cron", hour=9,  minute=15, id="daily_renewal_7d",    replace_existing=True)
     scheduler.add_job(_onbd1,     "cron", hour=10, minute=0,  id="daily_onboarding_d1", replace_existing=True)
     scheduler.add_job(_upsell,    "cron", hour=11, minute=0,  id="daily_upsell",         replace_existing=True)
     scheduler.add_job(_cleanup,   "cron", hour=3,  minute=0,  id="daily_dlp_cleanup",   replace_existing=True)
+    scheduler.add_job(_subhealth, "cron", hour=6,  minute=0,  id="daily_subscription_health", replace_existing=True)
     scheduler.start()
     import logging
     logging.getLogger(__name__).info("[SCHEDULER] All lifecycle jobs scheduled")
