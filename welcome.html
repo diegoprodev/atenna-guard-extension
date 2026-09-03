@@ -3,183 +3,219 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bem-vindo ao Atenna Safe Prompt</title>
+  <title>Entrar — Atenna Safe Prompt</title>
   <style>
+    /* ── design tokens (canônicos — o popup migra para cá na FASE 10.2) ── */
+    :root{
+      --ink:#0A2E23;          /* fundo do painel esquerdo (verde pinho profundo) */
+      --ink-rule:rgba(244,243,238,.05);
+      --redact:#05211A;       /* tarja de censura */
+      --paper:#FBFAF7;        /* lado do formulário */
+      --paper-2:#FFFFFF;
+      --line:#E7E3DA;         /* fio de 1px no papel */
+      --text:#1A2B24;
+      --text-soft:#5B6B63;
+      --on-ink:#F4F3EE;
+      --on-ink-soft:#9DB5AC;
+      --accent:#0B6E4B;       /* preenchimento de CTA — texto branco, 5.9:1 */
+      --accent-press:#095B3E;
+      --focus:#12986A;        /* anel de foco */
+      --danger:#B23A30;
+      --danger-bg:#FBF0EF;
+      --danger-line:#E7C7C3;
+      --ok-bg:#EDF6F1;
+      --ok-line:#C4E3D4;
+      --radius:10px;
+      --radius-sm:7px;
+      --serif:'Iowan Old Style','Palatino Linotype',Palatino,Charter,Georgia,serif;
+      --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+      --mono:'SFMono-Regular',ui-monospace,'Cascadia Code',Consolas,monospace;
+    }
+
     *{box-sizing:border-box;margin:0;padding:0}
-    html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f6fa}
+    html,body{height:100%;overflow:hidden;font-family:var(--sans);background:var(--paper);color:var(--text)}
+    ::selection{background:rgba(18,152,106,.20)}
+    :focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:3px}
 
     .w-root{display:flex;height:100vh;overflow:hidden}
 
-    /* ── LEFT PANEL ─────────────────────────────────────────────── */
+    /* ── PAINEL ESQUERDO ─────────────────────────────────────────── */
     .w-left{
-      flex:0 0 440px;
-      background:linear-gradient(150deg,#16a34a 0%,#15803d 50%,#14532d 100%);
+      flex:0 0 46%;max-width:560px;
+      background:var(--ink);
+      background-image:repeating-linear-gradient(var(--ink-rule) 0 1px,transparent 1px 30px);
       display:flex;flex-direction:column;justify-content:space-between;
-      padding:36px 40px 32px;color:#fff;position:relative;overflow:hidden;
+      padding:40px 44px 34px;color:var(--on-ink);position:relative;overflow:hidden;
     }
-    /* watermark — half-logo faded bottom-right */
+    .w-left ::selection{background:rgba(244,243,238,.24)}
+    /* marca d'água — meia-logo esmaecida no canto inferior direito */
     .w-wm{
       position:absolute;bottom:-120px;right:-120px;
-      width:520px;height:520px;opacity:0.07;pointer-events:none;
+      width:520px;height:520px;opacity:.06;pointer-events:none;
       background:url('icons/icon128.png') center/contain no-repeat;
       filter:brightness(10);
     }
+
     .w-brand{display:flex;align-items:center;gap:11px;position:relative;z-index:1}
-    .w-brand img{width:40px;height:40px;border-radius:10px;background:#fff;padding:3px}
-    .w-brand-name{font-size:16px;font-weight:700;letter-spacing:-0.02em}
-    .w-brand-tag{font-size:10px;opacity:0.7;margin-top:1px;letter-spacing:0.03em;text-transform:uppercase}
+    .w-brand img{width:40px;height:40px;border-radius:10px;background:var(--on-ink);padding:3px}
+    .w-brand-name{font-size:15px;font-weight:650;letter-spacing:.01em}
+    .w-brand-tag{font-size:10px;color:var(--on-ink-soft);margin-top:2px;letter-spacing:.05em;text-transform:uppercase}
 
-    .w-hero{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:center;padding:24px 0 16px}
-    .w-hero-badge{
-      display:inline-flex;align-items:center;gap:6px;
-      background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);
-      border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;
-      letter-spacing:0.04em;margin-bottom:16px;width:fit-content;
+    .w-hero{flex:1;display:flex;flex-direction:column;justify-content:center;gap:26px;padding:24px 0;position:relative;z-index:1}
+    @media(min-height:640px){.w-hero{justify-content:flex-start;padding-top:9vh}}
+
+    .w-hero h1{
+      font-family:var(--serif);font-weight:500;
+      font-size:clamp(1.7rem,1.1rem + 1.7vw,2.15rem);
+      line-height:1.2;letter-spacing:-.012em;color:var(--on-ink);
+      max-width:22ch;text-wrap:balance;
     }
-    .w-hero-badge span{width:6px;height:6px;border-radius:50%;background:#86efac;display:inline-block}
-    .w-hero h1{font-size:28px;font-weight:800;line-height:1.15;letter-spacing:-0.03em;margin-bottom:10px}
-    .w-hero h1 em{font-style:normal;color:#bbf7d0}
-    .w-hero p{font-size:13px;opacity:0.8;line-height:1.6;max-width:340px}
-
-    .w-features{display:flex;flex-direction:column;gap:10px;position:relative;z-index:1}
-    .w-feat{display:flex;align-items:center;gap:12px}
-    .w-feat-icon{
-      width:32px;height:32px;border-radius:8px;
-      background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.15);
-      display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;
+    .w-hero h1 em{
+      font-style:italic;white-space:nowrap;font-weight:600;
+      color:#0A2E23;background:#7FD8AE;border-radius:3px;
+      box-shadow:.16em 0 0 #7FD8AE,-.16em 0 0 #7FD8AE;
+      -webkit-box-decoration-break:clone;box-decoration-break:clone;
     }
-    .w-feat-text{font-size:13px}
-    .w-feat-text strong{display:block;font-weight:600;margin-bottom:1px}
-    .w-feat-text span{font-size:11px;opacity:0.7}
 
-    .w-plat-section{position:relative;z-index:1}
-    .w-plat-label{font-size:10px;opacity:0.55;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;margin-bottom:10px}
-    .w-plat-row{display:flex;align-items:center;gap:8px}
-    .w-plat-chip{
-      display:flex;align-items:center;gap:6px;
-      padding:5px 10px;background:rgba(255,255,255,0.1);
-      border:1px solid rgba(255,255,255,0.18);border-radius:20px;
-      font-size:11px;font-weight:500;
+    /* demonstração: a tarja de censura é o produto */
+    .w-demo{
+      border:1px solid var(--ink-rule);border-radius:var(--radius);
+      background:rgba(0,0,0,.16);padding:15px 17px;max-width:420px;
     }
-    .w-plat-chip svg{width:14px;height:14px;flex-shrink:0}
+    .w-demo-cap{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--on-ink-soft);margin-bottom:9px}
+    .w-demo-line{font-family:var(--mono);font-size:11.5px;line-height:2;color:var(--on-ink)}
+    .rd{position:relative;white-space:nowrap;letter-spacing:.02em}
+    .rd::after{
+      content:"";position:absolute;inset:-1px -2px;background:var(--redact);border-radius:2px;
+      transform:scaleX(0);transform-origin:left;
+      animation:redact .45s cubic-bezier(.2,.7,.3,1) forwards;
+    }
+    .rd:nth-of-type(1)::after{animation-delay:.6s}
+    .rd:nth-of-type(2)::after{animation-delay:1.15s}
+    .rd:nth-of-type(3)::after{animation-delay:1.7s}
+    @keyframes redact{to{transform:scaleX(1)}}
+    @media (prefers-reduced-motion:reduce){
+      .rd::after{transform:scaleX(1);animation:none}
+    }
 
-    /* ── RIGHT PANEL ─────────────────────────────────────────────── */
+    .w-foot{display:flex;flex-direction:column;gap:10px;position:relative;z-index:1}
+    .w-foot-label{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--on-ink-soft)}
+    .w-foot-marks{display:flex;align-items:center;gap:18px}
+    .w-foot-marks img{height:15px;width:auto;opacity:.5;filter:grayscale(1) brightness(0) invert(1)}
+
+    /* ── PAINEL DIREITO ──────────────────────────────────────────── */
     .w-right{
       flex:1;display:flex;align-items:center;justify-content:center;
-      padding:32px 48px;background:#fff;overflow-y:auto;
+      padding:32px 48px;background:var(--paper);border-left:1px solid var(--line);
+      overflow-y:auto;
     }
+    .w-right::-webkit-scrollbar{width:10px}
+    .w-right::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;border:3px solid var(--paper)}
     .w-form{width:100%;max-width:380px}
 
-    .w-form-header{margin-bottom:20px}
-    .w-form-title{font-size:22px;font-weight:800;color:#111;letter-spacing:-0.03em;margin-bottom:4px}
-    .w-form-sub{font-size:13px;color:#888;line-height:1.5}
+    .w-form-header{margin-bottom:22px}
+    .w-form-title{font-family:var(--serif);font-weight:500;font-size:23px;color:var(--text);letter-spacing:-.01em;margin-bottom:5px}
+    .w-form-sub{font-size:13px;color:var(--text-soft);line-height:1.5}
 
-    /* Tabs */
-    .w-tabs{display:flex;background:#f3f4f6;border-radius:9px;padding:3px;gap:3px;margin-bottom:20px}
+    /* abas — sublinhado, não pílula iOS */
+    .w-tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);margin-bottom:20px}
     .w-tab{
-      flex:1;padding:7px;border:none;background:none;border-radius:7px;
-      font-family:inherit;font-size:13px;font-weight:600;color:#888;cursor:pointer;transition:all 130ms;
+      padding:0 0 10px;border:none;background:none;font-family:inherit;
+      font-size:13px;font-weight:600;color:var(--text-soft);cursor:pointer;
+      border-bottom:2px solid transparent;margin-bottom:-1px;transition:color 130ms,border-color 130ms;
     }
-    .w-tab.active{background:#fff;color:#111;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+    .w-tab:hover{color:var(--text)}
+    .w-tab.active{color:var(--text);border-bottom-color:var(--accent)}
 
-    /* Google */
     .w-google{
       width:100%;display:flex;align-items:center;justify-content:center;gap:9px;
-      padding:10px 16px;border:1.5px solid #dadce0;border-radius:9px;
-      background:#fff;color:#3c4043;font-family:inherit;font-size:13px;font-weight:500;
-      cursor:pointer;transition:background 130ms,box-shadow 130ms;margin-bottom:16px;
-      box-shadow:0 1px 3px rgba(0,0,0,0.07);
+      padding:11px 16px;border:1px solid var(--line);border-radius:var(--radius-sm);
+      background:var(--paper-2);color:var(--text);font-family:inherit;font-size:13px;font-weight:500;
+      cursor:pointer;transition:background 130ms,border-color 130ms;margin-bottom:16px;
     }
-    .w-google:hover:not(:disabled){background:#f8f9fa;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
-    .w-google:disabled{opacity:0.5;cursor:not-allowed}
+    .w-google:hover:not(:disabled){background:#F4F2ED;border-color:#D9D4C8}
+    .w-google:disabled{opacity:.55;cursor:not-allowed}
 
-    .w-divider{
-      display:flex;align-items:center;gap:9px;margin-bottom:16px;
-      color:#ccc;font-size:11px;
-    }
-    .w-divider::before,.w-divider::after{content:'';flex:1;height:1px;background:#efefef}
+    .w-divider{display:flex;align-items:center;gap:10px;margin-bottom:16px;color:var(--text-soft);font-size:11px}
+    .w-divider::before,.w-divider::after{content:'';flex:1;height:1px;background:var(--line)}
 
-    /* Fields */
-    .w-field{margin-bottom:12px}
-    .w-field label{display:block;font-size:12px;font-weight:600;color:#444;margin-bottom:5px}
+    .w-field{margin-bottom:13px}
+    .w-field label{display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px}
     .w-field input{
-      width:100%;padding:10px 13px;border:1.5px solid #e5e5e5;border-radius:8px;
-      font-family:inherit;font-size:14px;color:#111;outline:none;
-      transition:border-color 140ms,box-shadow 140ms;
+      width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:var(--radius-sm);
+      font-family:inherit;font-size:14px;color:var(--text);background:var(--paper-2);outline:none;
+      caret-color:var(--focus);transition:border-color 140ms,box-shadow 140ms;
     }
-    .w-field input:focus{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,0.08)}
-    .w-field input.err{border-color:#ef4444}
-    .w-ferr{font-size:11px;color:#ef4444;margin-top:3px}
+    .w-field input::placeholder{color:var(--text-soft)}
+    .w-field input:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(18,152,106,.12)}
+    .w-field input.err{border-color:var(--danger)}
+    .w-ferr{font-size:11px;color:var(--danger);margin-top:4px}
 
     .w-pass-wrap{position:relative}
     .w-pass-wrap input{padding-right:40px}
     .w-eye{
       position:absolute;right:11px;top:50%;transform:translateY(-50%);
-      background:none;border:none;cursor:pointer;color:#bbb;display:flex;padding:0;
+      background:none;border:none;cursor:pointer;color:var(--text-soft);display:flex;padding:0;
     }
-    .w-eye:hover{color:#555}
+    .w-eye:hover{color:var(--text)}
 
-    .w-forgot-row{display:flex;justify-content:flex-end;margin:-4px 0 12px}
-    .w-link-btn{background:none;border:none;cursor:pointer;font-family:inherit;font-size:12px;color:#888;padding:0}
-    .w-link-btn:hover{color:#22c55e}
-    .w-link-btn.green{color:#22c55e;font-weight:500}
-    .w-link-btn.green:hover{text-decoration:underline}
+    .w-forgot-row{display:flex;justify-content:flex-end;margin:-2px 0 14px}
+    .w-link-btn{background:none;border:none;cursor:pointer;font-family:inherit;font-size:12px;color:var(--text-soft);padding:0}
+    .w-link-btn:hover{color:var(--text)}
+    .w-link-btn.green{color:var(--accent);font-weight:600}
+    .w-link-btn.green:hover{color:var(--accent-press);text-decoration:underline}
 
     .w-submit{
-      width:100%;padding:11px;border:none;border-radius:9px;
-      background:#22c55e;color:#fff;font-family:inherit;font-size:14px;font-weight:700;
-      cursor:pointer;transition:background 130ms,transform 130ms;margin-bottom:14px;
-      box-shadow:0 2px 8px rgba(34,197,94,0.28);
+      width:100%;padding:12px;border:none;border-radius:var(--radius-sm);
+      background:var(--accent);color:#fff;font-family:inherit;font-size:14px;font-weight:600;
+      cursor:pointer;transition:background 130ms,box-shadow 130ms;margin-bottom:14px;
+      box-shadow:0 1px 2px rgba(10,46,35,.14);
     }
-    .w-submit:hover:not(:disabled){background:#16a34a;transform:translateY(-1px)}
-    .w-submit:disabled{background:#d1d5db;color:#9ca3af;box-shadow:none;cursor:not-allowed;transform:none}
+    .w-submit:hover:not(:disabled){background:var(--accent-press);box-shadow:0 2px 8px rgba(10,46,35,.16)}
+    .w-submit:disabled{background:#CFCabc;color:#F4F3EE;box-shadow:none;cursor:not-allowed}
     .w-spin{
       display:inline-block;width:14px;height:14px;
-      border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;
-      border-radius:50%;animation:wspin 0.7s linear infinite;
-      vertical-align:middle;margin-right:6px;
+      border:2px solid rgba(255,255,255,.35);border-top-color:#fff;
+      border-radius:50%;animation:wspin .7s linear infinite;vertical-align:middle;margin-right:6px;
     }
     @keyframes wspin{to{transform:rotate(360deg)}}
 
-    .w-bottom-row{display:flex;justify-content:center;align-items:center;gap:6px;font-size:12px;color:#999}
+    .w-bottom-row{display:flex;justify-content:center;align-items:center;gap:6px;font-size:12px;color:var(--text-soft)}
 
-    .w-alert{padding:9px 13px;border-radius:8px;font-size:13px;margin-bottom:12px}
-    .w-alert.err{background:#fff5f5;border:1px solid #fecaca;color:#dc2626}
-    .w-alert.info{background:#f0fdf4;border:1px solid #bbf7d0;color:#16a34a}
+    .w-alert{padding:10px 13px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:12px;line-height:1.45}
+    .w-alert.err{background:var(--danger-bg);border:1px solid var(--danger-line);color:var(--danger)}
+    .w-alert.info{background:var(--ok-bg);border:1px solid var(--ok-line);color:var(--accent-press)}
 
-    /* Verify & Success states */
-    .w-state{text-align:center;padding:8px 0}
-    .w-state-icon{font-size:44px;margin-bottom:14px}
-    .w-state h2{font-size:20px;font-weight:800;color:#111;margin-bottom:8px;letter-spacing:-0.02em}
-    .w-state p{font-size:13px;color:#555;line-height:1.6;margin-bottom:20px}
-    .w-state strong{color:#111}
+    /* estados de sucesso */
+    .w-state{text-align:center;padding:22px 0 8px}
+    .w-state-icon{display:flex;justify-content:center;margin-bottom:14px}
+    .w-state-icon svg{width:40px;height:40px;color:var(--accent)}
+    .w-state h2{font-family:var(--serif);font-weight:500;font-size:21px;color:var(--text);margin-bottom:8px;letter-spacing:-.01em}
+    .w-state p{font-size:13px;color:var(--text-soft);line-height:1.6;margin-bottom:20px}
+    .w-state strong{color:var(--text);font-weight:600}
 
     .w-plat-links{display:flex;flex-direction:column;gap:7px}
     .w-plat-link{
-      display:flex;align-items:center;gap:10px;padding:10px 14px;
-      border:1.5px solid #e5e5e5;border-radius:9px;background:#fff;
-      font-family:inherit;font-size:13px;font-weight:500;color:#111;
+      display:flex;align-items:center;gap:11px;padding:11px 14px;
+      border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper-2);
+      font-family:inherit;font-size:13px;font-weight:500;color:var(--text);
       cursor:pointer;text-decoration:none;transition:border-color 130ms,background 130ms;
     }
-    .w-plat-link:hover{border-color:#22c55e;background:#f0fdf4}
-    .w-plat-link-ico{width:26px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-    .w-plat-link-arr{margin-left:auto;color:#ccc}
-
-    .w-open-mail{
-      display:inline-flex;align-items:center;gap:7px;padding:10px 22px;
-      background:#22c55e;color:#fff;border:none;border-radius:9px;
-      font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;
-      text-decoration:none;transition:background 130ms;margin-bottom:10px;
+    .w-plat-link:hover{border-color:#CFE6D9;background:#F3F8F5}
+    .w-plat-link-ico{
+      width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+      border:1px solid var(--line);border-radius:6px;background:var(--paper-2);
     }
-    .w-open-mail:hover{background:#16a34a}
+    .w-plat-link-ico img{width:16px;height:16px;opacity:.85}
+    .w-plat-link-arr{margin-left:auto;color:var(--text-soft)}
 
-    @media(max-width:800px){.w-left{display:none}.w-right{padding:28px 20px}}
+    @media(max-width:820px){.w-left{display:none}.w-right{padding:28px 20px;border-left:none}}
   </style>
 </head>
 <body>
 <div class="w-root">
 
-  <!-- ── LEFT PANEL ── -->
+  <!-- ── PAINEL ESQUERDO ── -->
   <div class="w-left">
     <div class="w-wm"></div>
 
@@ -192,65 +228,32 @@
     </div>
 
     <div class="w-hero">
-      <div class="w-hero-badge"><span></span>Extensão instalada com sucesso</div>
-      <h1>Seus dados sensíveis<br>nunca mais vão<br><em>vazar para a IA.</em></h1>
-      <p>Toda vez que você digitar um CPF, email ou telefone numa IA, o Atenna bloqueia antes do envio. Invisível. Automático.</p>
-    </div>
+      <h1>Seus dados sensíveis <em>nunca vão vazar</em> para a IA</h1>
 
-    <div class="w-features">
-      <div class="w-feat">
-        <div class="w-feat-icon">🛡️</div>
-        <div class="w-feat-text">
-          <strong>Bloqueio automático de dados sensíveis</strong>
-          <span>CPF, RG, cartão, telefone, email — interceptados antes do envio</span>
-        </div>
-      </div>
-      <div class="w-feat">
-        <div class="w-feat-icon">✨</div>
-        <div class="w-feat-text">
-          <strong>Geração de prompts otimizados</strong>
-          <span>3 versões melhores do seu texto em segundos</span>
-        </div>
-      </div>
-      <div class="w-feat">
-        <div class="w-feat-icon">📋</div>
-        <div class="w-feat-text">
-          <strong>Conformidade LGPD nativa</strong>
-          <span>Auditoria e histórico de cada proteção realizada</span>
-        </div>
+      <div class="w-demo" aria-hidden="true">
+        <div class="w-demo-cap">O que a IA recebe de você</div>
+        <p class="w-demo-line">Nome <span class="rd">João da Silva</span> · CPF <span class="rd">123.456.789-00</span></p>
       </div>
     </div>
 
-    <div class="w-plat-section" style="margin-top:20px">
-      <div class="w-plat-label">Protege você em</div>
-      <div class="w-plat-row">
-        <div class="w-plat-chip">
-          <img src="icons/openai.svg" width="14" height="14" style="filter:brightness(0) invert(1)" alt="ChatGPT">
-          ChatGPT
-        </div>
-        <div class="w-plat-chip">
-          <img src="icons/anthropic.svg" width="14" height="14" style="filter:brightness(0) invert(1)" alt="Claude">
-          Claude
-        </div>
-        <div class="w-plat-chip">
-          <img src="icons/gemini.svg" width="14" height="14" alt="Gemini">
-          Gemini
-        </div>
-        <div class="w-plat-chip">
-          <img src="icons/perplexity.svg" width="14" height="14" style="filter:brightness(0) invert(1)" alt="Perplexity">
-          Perplexity
-        </div>
+    <div class="w-foot">
+      <div class="w-foot-label">Protege você em</div>
+      <div class="w-foot-marks">
+        <img src="icons/openai.svg" alt="ChatGPT">
+        <img src="icons/anthropic.svg" alt="Claude">
+        <img src="icons/gemini.svg" alt="Gemini">
+        <img src="icons/perplexity.svg" alt="Perplexity">
       </div>
     </div>
   </div>
 
-  <!-- ── RIGHT PANEL ── -->
+  <!-- ── PAINEL DIREITO ── -->
   <div class="w-right">
     <div class="w-form">
 
-      <div class="w-form-header">
-        <div class="w-form-title" id="w-title">Bem-vindo!</div>
-        <div class="w-form-sub"  id="w-sub">Entre ou crie sua conta gratuita para começar.</div>
+      <div class="w-form-header" id="w-form-header">
+        <div class="w-form-title" id="w-title">Entrar na sua conta</div>
+        <div class="w-form-sub"  id="w-sub">Use o email e a senha que você cadastrou.</div>
       </div>
 
       <!-- Alerts -->
@@ -270,7 +273,7 @@
       </button>
       <div class="w-divider" id="w-divider">ou</div>
 
-      <!-- Main content (forms) — hidden when verify/success screens show -->
+      <!-- Main content (forms) — hidden when success screens show -->
       <div id="w-main-content">
 
       <!-- LOGIN form -->
@@ -338,7 +341,7 @@
         </div>
         <button class="w-submit" id="forgot-btn">Enviar link de redefinição</button>
         <div class="w-bottom-row">
-          <button class="w-link-btn" id="back-to-login">← Voltar ao login</button>
+          <button class="w-link-btn" id="back-to-login">Voltar ao login</button>
         </div>
       </div>
 
@@ -346,40 +349,34 @@
 
       <!-- SIGNUP SUCCESS state -->
       <div id="w-signup-success" style="display:none" class="w-state">
-        <div class="w-state-icon">🎉</div>
-        <h2>Conta criada!</h2>
-        <p>Agora faça login para começar.</p>
+        <div class="w-state-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>
+        </div>
+        <p>Sua conta está pronta. Falta só entrar.</p>
         <button class="w-link-btn" id="signup-success-back" style="margin-top:8px">Voltar ao login</button>
       </div>
 
       <!-- SUCCESS state -->
       <div id="w-success" style="display:none" class="w-state">
-        <div class="w-state-icon">🛡️</div>
-        <h2>Proteção ativada!</h2>
-        <p>Abra qualquer plataforma abaixo.<br>O Atenna estará protegendo você automaticamente.</p>
+        <div class="w-state-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>
+        </div>
+        <p>Abra uma plataforma abaixo.<br>O Atenna já está protegendo você automaticamente.</p>
         <div class="w-plat-links">
           <a href="https://chatgpt.com/" target="_blank" class="w-plat-link">
-            <div class="w-plat-link-ico" style="background:#10a37f;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center">
-              <img src="icons/openai.svg" width="18" height="18" style="filter:brightness(0) invert(1)" alt="ChatGPT">
-            </div>
+            <span class="w-plat-link-ico"><img src="icons/openai.svg" alt="ChatGPT"></span>
             <span>ChatGPT</span><span class="w-plat-link-arr">›</span>
           </a>
           <a href="https://claude.ai/" target="_blank" class="w-plat-link">
-            <div class="w-plat-link-ico" style="background:#d97757;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center">
-              <img src="icons/anthropic.svg" width="18" height="18" style="filter:brightness(0) invert(1)" alt="Claude">
-            </div>
+            <span class="w-plat-link-ico"><img src="icons/anthropic.svg" alt="Claude"></span>
             <span>Claude</span><span class="w-plat-link-arr">›</span>
           </a>
           <a href="https://gemini.google.com/" target="_blank" class="w-plat-link">
-            <div class="w-plat-link-ico" style="background:linear-gradient(135deg,#4285f4,#ea4335,#fbbc05,#34a853);border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center">
-              <img src="icons/gemini.svg" width="18" height="18" alt="Gemini">
-            </div>
+            <span class="w-plat-link-ico"><img src="icons/gemini.svg" alt="Gemini"></span>
             <span>Gemini</span><span class="w-plat-link-arr">›</span>
           </a>
           <a href="https://www.perplexity.ai/" target="_blank" class="w-plat-link">
-            <div class="w-plat-link-ico" style="background:#1d1f27;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center">
-              <img src="icons/perplexity.svg" width="18" height="18" style="filter:brightness(0) invert(1)" alt="Perplexity">
-            </div>
+            <span class="w-plat-link-ico"><img src="icons/perplexity.svg" alt="Perplexity"></span>
             <span>Perplexity</span><span class="w-plat-link-arr">›</span>
           </a>
         </div>

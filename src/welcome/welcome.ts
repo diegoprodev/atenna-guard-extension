@@ -81,9 +81,9 @@ function switchTab(tab: Tab) {
   $('tab-signup').classList.toggle('active', tab === 'signup');
   clearErrors();
   const titles: Record<Tab, [string, string]> = {
-    login:  ['Bem-vindo de volta!',     'Entre para continuar protegendo seus dados.'],
-    signup: ['Crie sua conta grátis',   'Sem cartão de crédito. Ativo em 30 segundos.'],
-    forgot: ['Recuperar senha',         'Enviaremos um link para redefinir sua senha.'],
+    login:  ['Entrar na sua conta',   'Use o email e a senha que você cadastrou.'],
+    signup: ['Criar conta grátis',    'Leva 30 segundos. Não pedimos cartão.'],
+    forgot: ['Redefinir senha',       'Enviamos um link de redefinição para o seu email.'],
   };
   $('w-title').textContent = titles[tab][0];
   $('w-sub').textContent   = titles[tab][1];
@@ -192,13 +192,13 @@ async function submitForgot() {
 }
 
 // ── states ────────────────────────────────────────────────────────────────────
-function showSignupSuccess(email: string) {
+function showSignupSuccess(_email: string) {
   $('w-main-content').style.display = 'none';
   $('w-google-btn').style.display   = 'none';
   $('w-divider').style.display      = 'none';
   $('w-tabs').style.display         = 'none';
   $('w-signup-success').style.display       = '';
-  $('w-title').textContent = 'Conta criada! 🎉';
+  $('w-title').textContent = 'Conta criada';
   $('w-sub').textContent   = 'Agora faça login para começar.';
 }
 
@@ -208,7 +208,7 @@ function showSuccess(email: string) {
   $('w-divider').style.display      = 'none';
   $('w-tabs').style.display         = 'none';
   $('w-success').style.display      = '';
-  $('w-title').textContent = 'Proteção ativada! 🛡️';
+  $('w-title').textContent = 'Proteção ativada';
   $('w-sub').textContent   = email ? `Logado como ${email}` : 'Sua extensão está pronta.';
 }
 
