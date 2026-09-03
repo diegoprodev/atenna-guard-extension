@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atenna Safe Prompt — até logo</title>
+<style>
+  :root{
+    --ink:#0A2E23;--paper:#FBFAF7;--paper-2:#fff;--line:#E7E3DA;
+    --text:#1A2B24;--text-soft:#5B6B63;--accent:#0B6E4B;--accent-press:#095B3E;--focus:#12986A;
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,Charter,Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--sans);background:var(--paper);color:var(--text);line-height:1.55;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 20px}
+  ::selection{background:rgba(18,152,106,.18)}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:3px}
+  .card{width:100%;max-width:440px}
+  .brand{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--text-soft);margin-bottom:20px}
+  h1{font-family:var(--serif);font-weight:500;font-size:26px;letter-spacing:-.015em;line-height:1.2;margin-bottom:8px}
+  .sub{font-size:13.5px;color:var(--text-soft);margin-bottom:26px}
+  fieldset{border:none;margin-bottom:16px}
+  legend{font-size:13px;font-weight:600;margin-bottom:9px}
+  .opt{display:flex;align-items:flex-start;gap:9px;padding:8px 0;font-size:13.5px;cursor:pointer}
+  .opt input{margin-top:2px;accent-color:var(--accent);flex-shrink:0}
+  label.fld{display:block;font-size:12px;font-weight:600;margin:14px 0 6px}
+  textarea,input[type=email]{
+    width:100%;font-family:inherit;font-size:14px;color:var(--text);background:var(--paper-2);
+    border:1px solid var(--line);border-radius:7px;padding:10px 12px;outline:none;caret-color:var(--focus);
+    transition:border-color .14s,box-shadow .14s;
+  }
+  textarea{min-height:78px;resize:vertical}
+  textarea:focus,input[type=email]:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(18,152,106,.12)}
+  .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  button{
+    margin-top:20px;width:100%;padding:12px;border:none;border-radius:7px;
+    background:var(--accent);color:#fff;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
+    box-shadow:0 1px 2px rgba(10,46,35,.14);transition:background .13s;
+  }
+  button:hover:not(:disabled){background:var(--accent-press)}
+  button:disabled{background:#CFCABC;color:#F4F3EE;box-shadow:none;cursor:not-allowed}
+  .done{text-align:center;padding:12px 0}
+  .done h1{margin-bottom:10px}
+  .err{font-size:12px;color:#B23A30;margin-top:8px;display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <div id="form-view">
+    <div class="brand">Atenna Safe Prompt</div>
+    <h1>Que pena que você foi</h1>
+    <p class="sub">30 segundos: por que você desinstalou? A gente lê todas as respostas.</p>
+
+    <form id="fb">
+      <fieldset>
+        <legend>Motivo principal</legend>
+        <label class="opt"><input type="radio" name="reason" value="nao_melhorou">Não melhorou meus prompts o suficiente</label>
+        <label class="opt"><input type="radio" name="reason" value="confuso">Difícil ou confuso de usar</label>
+        <label class="opt"><input type="radio" name="reason" value="bugs">Bugs ou lentidão</label>
+        <label class="opt"><input type="radio" name="reason" value="faltou_recurso">Faltou um recurso que eu precisava</label>
+        <label class="opt"><input type="radio" name="reason" value="caro">Muito caro / achei alternativa grátis</label>
+        <label class="opt"><input type="radio" name="reason" value="nao_preciso">Não preciso mais</label>
+        <label class="opt"><input type="radio" name="reason" value="outro">Outro</label>
+      </fieldset>
+
+      <label class="fld" for="detail">O que faltou? <span style="font-weight:400;color:var(--text-soft)">(opcional)</span></label>
+      <textarea id="detail" name="detail" maxlength="2000"></textarea>
+
+      <label class="fld" for="email">Email <span style="font-weight:400;color:var(--text-soft)">(opcional — avisamos quando melhorar)</span></label>
+      <input type="email" id="email" name="email" maxlength="200" autocomplete="email">
+
+      <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+      <button type="submit" id="send">Enviar feedback</button>
+      <div class="err" id="err">Não deu pra enviar. Tente de novo em instantes.</div>
+    </form>
+  </div>
+
+  <div id="done-view" class="done" hidden>
+    <div class="brand">Atenna Safe Prompt</div>
+    <h1>Obrigado</h1>
+    <p class="sub">Sua resposta chegou. Pode fechar esta aba.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  var form = document.getElementById('fb');
+  var btn = document.getElementById('send');
+  var err = document.getElementById('err');
+  var EXT_VERSION = '2.3.0';
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var reason = (form.querySelector('input[name=reason]:checked') || {}).value;
+    if (!reason) { return; }
+    err.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+
+    fetch('/uninstall-feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reason: reason,
+        detail: form.detail.value.trim() || null,
+        email: form.email.value.trim() || null,
+        ext_version: EXT_VERSION,
+        website: form.website.value
+      })
+    }).then(function (r) {
+      if (!r.ok) throw new Error(String(r.status));
+      document.getElementById('form-view').hidden = true;
+      document.getElementById('done-view').hidden = false;
+    }).catch(function () {
+      btn.disabled = false;
+      btn.textContent = 'Enviar feedback';
+      err.style.display = 'block';
+    });
+  });
+})();
+</script>
+</body>
+</html>

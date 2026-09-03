@@ -101,6 +101,19 @@ All notable changes to **Atenna Guard Extension** are documented here.
 - **Validação:** `vitest` 317 ✓; build limpo; `impeccable` detector 0 achados; hook de design 0;
   screenshots desktop (login + sucesso) + mobile + `welcome.spec.ts` (W1–W2 atualizados).
 
+### Feedback de desinstalação (FASE 10.6)
+- `background.ts` registra `chrome.runtime.setUninstallURL(api.atennaia.com.br/desinstalado)`
+  — o Chrome abre essa página quando o usuário remove a extensão.
+- `GET /desinstalado` serve `backend/static/uninstall.html` — formulário minimalista na
+  identidade do Atenna (1 motivo obrigatório, detalhe + email opcionais, estado "Obrigado").
+- `POST /uninstall-feedback` — **público** (a extensão já foi removida). Honeypot,
+  `reason` numa allowlist, `detail` ≤ 2000, rate-limit 5/10 min por IP. Grava em
+  `uninstall_feedback` (Supabase, service role, RLS sem policies) + webhook opcional.
+- Migration `20260903_uninstall_feedback.sql`.
+- Testes: `pytest` `test_uninstall_feedback.py` (6 casos) + `vitest` `uninstall-url.test.ts`.
+- Spec: `docs/specs/FASE_10.6_FEEDBACK_DESINSTALACAO.md`.
+- **Validação:** `vitest` 318 ✓; build limpo; screenshots (formulário + "Obrigado").
+
 ### Specs
 - `FASE_10_DESIGN_ONBOARDING.md` — auditoria da "cara de IA", plano do design system único
   (welcome → popup → modal → admin → e-mails), dirigido pelo `impeccable`.

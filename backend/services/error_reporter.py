@@ -130,6 +130,40 @@ async def log_user_report(
     return cid
 
 
+async def log_uninstall_feedback(
+    *,
+    reason: str,
+    detail: Optional[str] = None,
+    email: Optional[str] = None,
+    ext_version: Optional[str] = None,
+) -> None:
+    """Grava uma resposta do formulário de desinstalação. Nunca levanta."""
+    payload = {
+        "reason": reason[:120],
+        "detail": (detail or "")[:2000] or None,
+        "email": (email or "")[:200] or None,
+        "ext_version": (ext_version or "")[:40] or None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as c:
+            await c.post(
+                f"{SUPABASE_URL}/rest/v1/uninstall_feedback",
+                headers=_svc_headers(),
+                json=payload,
+            )
+    except Exception:
+        pass
+
+    if ADMIN_WEBHOOK_URL:
+        asyncio.create_task(_notify_webhook(
+            "-", "uninstall_feedback",
+            f"motivo={reason} | detalhe={detail or '—'} | email={email or '—'}",
+            "/uninstall-feedback",
+            email,
+        ))
+
+
 async def _notify_webhook(
     cid: str,
     error_type: str,
