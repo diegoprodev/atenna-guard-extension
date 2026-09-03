@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production   # exige aprovação manual (GitHub Environments)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Configura chave SSH de deploy
         run: |
