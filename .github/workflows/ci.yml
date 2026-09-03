@@ -12,6 +12,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   # ── Frontend: typecheck (informativo), testes unitários, build ────────────
@@ -81,6 +82,7 @@ jobs:
       # (purga de histórico — FASE 9.3 / P0.1); ela já foi rotacionada.
       - uses: gitleaks/gitleaks-action@v2
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: ${{ github.workspace }}/.gitleaks.toml
 
   # ── Gate único: tudo verde ─────────────────────────────────────────────
