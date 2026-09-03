@@ -69,8 +69,16 @@ Jobs paralelos, **todos obrigatórios** para merge:
 - **production**: atual. Deploy exige approval.
 
 ## Ordem de execução
-1. FASE 9.2 — harness verde (pré-req).
-2. P3.1 — CI mínimo viável: lint + test-front + test-back + build + gitleaks + branch protection.
+1. FASE 9.2 — harness verde (pré-req). ✅
+2. **P3.1 — CI mínimo viável** — `.github/workflows/ci.yml` (EM ANDAMENTO):
+   - `frontend`: `npm ci` → `tsc --noEmit` (informativo, 52 erros de tipo = limpeza FASE 9.3)
+     → `vitest run` (bloqueante) → `npm run build` + valida `dist/` (bloqueante)
+   - `backend`: py3.12 + tesseract + `requirements-dev.txt` + modelos spaCy → `pytest` (bloqueante, 460)
+   - `secrets`: `gitleaks` só nos commits novos (histórico com a chave Gemini antiga = purga à parte)
+   - `ci-ok`: gate único (todos verdes) → é o *required status check* da branch protection
+   - `.nvmrc` (24), `.github/pull_request_template.md`, `.github/CODEOWNERS`
+   - **Branch protection** (dono, via web ou `gh api`): PR obrigatório em `main`, `ci-ok` verde,
+     histórico linear, sem force-push. Secret scanning + push protection no repo.
    **Isto já destrava republicar a extensão com segurança.**
 3. P3.2 — deploy automático do backend + rollback (acaba a dança manual).
 4. P3.3 — cobertura (ratchet) + complexidade + estrutura de dependência.
