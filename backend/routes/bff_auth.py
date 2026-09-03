@@ -48,27 +48,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["BFF Auth"])
 _bearer = HTTPBearer()
 
-TOKEN_TTL = 3600
-
-# In-memory fallback used when bff_sessions table not yet created
-_sessions_fallback: dict[str, dict] = {}
-_table_ok: bool | None = None  # None = not checked, True = ok, False = missing
-
-def _check_table() -> bool:
-    global _table_ok
-    if _table_ok is not None:
-        return _table_ok
-    try:
-        get_admin_client().table('bff_sessions').select('token').limit(0).execute()
-        _table_ok = True
-        logger.info("bff_sessions table verified ✓")
-    except Exception:
-        _table_ok = False
-        logger.warning("bff_sessions table not found — using in-memory fallback. "
-                       "Run the migration SQL in Supabase dashboard to enable persistent sessions.")
-        log_security_event("bff_sessions_fallback", {"reason": "table_missing"}, severity="CRITICAL")
-    set_bff_session_store(_table_ok)
-    return _table_ok
+# Armazenamento de sessão movido p/ services/session_store.py (FASE P3.3) —
+# o middleware/ precisa resolver token sem importar routes/.
+from services import session_store
+from services.session_store import (  # noqa: F401  (re-export p/ compat)
+    TOKEN_TTL, resolve_token, _check_table, _sessions_fallback,
+)
+_issue_token = session_store.issue_token
 
 # Rate limiting for login endpoint — 5 attempts per email per minute
 _login_attempts: dict[str, deque] = {}
@@ -110,69 +96,6 @@ class LogoutRequest(BaseModel):
 class ResetRequest(BaseModel):
     email: str
 
-def _issue_token(supabase_jwt: str, refresh_token: str, user_id: str, email: str, plan: str) -> dict:
-    """Issue a new opaque BFF token. Persists to Supabase if table exists, else in-memory."""
-    opaque = str(uuid.uuid4())
-    expires_at = int(time.time()) + TOKEN_TTL
-
-    if _check_table():
-        try:
-            get_admin_client().table('bff_sessions').insert({
-                'token': opaque,
-                'supabase_jwt': supabase_jwt,
-                'refresh_token': refresh_token,
-                'user_id': user_id,
-                'email': email,
-                'plan': plan,
-                'expires_at': expires_at,
-            }).execute()
-        except Exception as e:
-            logger.error(f"Failed to persist token: {e}")
-            raise HTTPException(500, "Failed to create session")
-    else:
-        # Fallback: in-memory session (lost on restart)
-        _sessions_fallback[opaque] = {
-            'user_id': user_id, 'email': email, 'plan': plan,
-            'expires_at': expires_at, 'supabase_jwt': supabase_jwt,
-        }
-
-    return {"token": opaque, "expires_at": expires_at, "plan": plan}
-
-def resolve_token(opaque: str) -> dict:
-    """Resolve token. Checks Supabase if table exists, else falls back to in-memory."""
-    if not _check_table():
-        # In-memory fallback
-        session = _sessions_fallback.get(opaque)
-        if not session:
-            raise HTTPException(401, "Invalid or expired token")
-        if session['expires_at'] < int(time.time()):
-            _sessions_fallback.pop(opaque, None)
-            raise HTTPException(401, "Token expired")
-        return session
-
-    try:
-        client = get_admin_client()
-        resp = client.table('bff_sessions').select('*').eq('token', opaque).single().execute()
-
-        if not resp.data:
-            raise HTTPException(401, "Invalid or expired token")
-
-        session = resp.data
-        now = int(time.time())
-
-        if session['expires_at'] < now:
-            try:
-                client.table('bff_sessions').delete().eq('token', opaque).execute()
-            except Exception:
-                pass
-            raise HTTPException(401, "Token expired")
-
-        return session
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to resolve token: {e}")
-        raise HTTPException(401, "Invalid or expired token")
 
 def _get_plan(user_id: str) -> str:
     try:

@@ -32,7 +32,7 @@ def require_auth(
 
     # Validate opaque token against BFF session store
     try:
-        from routes.bff_auth import resolve_token
+        from services.session_store import resolve_token
         session = resolve_token(token)
         try:
             import observability

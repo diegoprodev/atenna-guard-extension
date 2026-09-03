@@ -6,6 +6,22 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE P3: CI/CD
 
+### P3.3 — portões de qualidade no CI
+- **Cobertura com ratchet** (`scripts/coverage-ratchet.mjs`): backend `pytest --cov` (baseline **62%**,
+  real 63%), frontend `vitest --coverage` v8 (baseline **33%**). PR que derruba a cobertura > 0.5
+  ponto → CI falha. Subiu ≥ 1 → avisa p/ atualizar o baseline.
+- **Estrutura de dependência** (`backend/.importlinter`): contrato de camadas
+  (`routes > middleware > services > document|security > dlp > utils|schemas`) + `dlp` não importa
+  `routes`/`middleware`. **2 contratos, 0 quebrados.**
+- **Refactor p/ fechar a inversão de camada:** `resolve_token`/`issue_token`/`_check_table` +
+  fallback in-memory saíram de `routes/bff_auth.py` → **`services/session_store.py`** (o
+  `middleware/` resolvia token importando `routes/`). `bff_auth` re-exporta p/ compat.
+- `dlp/test_image_endpoint.py` → `tests/` (test file no lugar errado — violava `dlp` não importa web).
+- **Complexidade** (`xenon`): relatório no CI, teto = estado atual (não bloqueia dívida legada;
+  bloqueia se piorar). Pior hoje: `checkout.asaas_webhook` CC=45.
+- Dívida FASE 9.4 (documentada no `.importlinter`): `security.monitor -> routes.email_service`.
+- Harness: 466 verdes, sem regressão. Spec: `docs/specs/FASE_P3.3_PORTOES_QUALIDADE.md`.
+
 ### P3.5 — monitor de assinaturas (proteção de receita)
 - O plano vive em 3 tabelas (`profiles` / `user_plans` / `subscriptions`) escritas
   não-atomicamente pelo checkout → drift (BUG-01: usuário pago pode ser bloqueado).

@@ -133,7 +133,7 @@ def test_logout_invalidates_token(client):
 def test_refresh_rotates_token(client):
     mock_sb = make_mock_supabase()
     import routes.bff_auth as bff_auth
-    with patch("routes.bff_auth.get_admin_client", return_value=mock_sb):
+    with patch("routes.bff_auth.get_admin_client", return_value=mock_sb), patch("services.session_store.get_admin_client", return_value=mock_sb):
         login = client.post("/auth/login", json={"email": "a@b.com", "password": "pw"}).json()
         old = login["token"]
         refresh_r = client.post("/auth/refresh", json={"token": old})

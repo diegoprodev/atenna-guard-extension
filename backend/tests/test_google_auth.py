@@ -53,7 +53,7 @@ def test_google_code_invalido_401(client):
 def test_google_code_valido_retorna_token_opaco(client):
     mock = _mock_auth_client(ok=True)
     with patch("routes.bff_auth.get_auth_client", return_value=mock), \
-         patch("routes.bff_auth.get_admin_client", return_value=mock):
+         patch("routes.bff_auth.get_admin_client", return_value=mock), patch("services.session_store.get_admin_client", return_value=mock):
         r = client.post("/auth/google", json={"code": "good", "redirect_uri": "https://x/cb"})
     assert r.status_code == 200, r.text
     data = r.json()
@@ -69,7 +69,7 @@ def test_google_sessao_sem_user_e_401_nao_500(client):
         session=MagicMock(access_token="j", refresh_token="r"), user=None,
     )
     with patch("routes.bff_auth.get_auth_client", return_value=mock), \
-         patch("routes.bff_auth.get_admin_client", return_value=mock):
+         patch("routes.bff_auth.get_admin_client", return_value=mock), patch("services.session_store.get_admin_client", return_value=mock):
         r = client.post("/auth/google", json={"code": "x", "redirect_uri": "https://x/cb"})
     assert r.status_code == 401
 
@@ -78,7 +78,7 @@ def test_google_fluxo_implicito_access_token(client):
     """bffClient manda {access_token, refresh_token} no fluxo implícito do Supabase."""
     mock = _mock_auth_client(ok=True)
     with patch("routes.bff_auth.get_auth_client", return_value=mock), \
-         patch("routes.bff_auth.get_admin_client", return_value=mock):
+         patch("routes.bff_auth.get_admin_client", return_value=mock), patch("services.session_store.get_admin_client", return_value=mock):
         r = client.post("/auth/google", json={"access_token": "eyJ.x.y", "refresh_token": "r"})
     assert r.status_code == 200, r.text
     assert r.json()["token"].count(".") != 2
