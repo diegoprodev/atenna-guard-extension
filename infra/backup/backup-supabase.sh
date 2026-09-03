@@ -77,7 +77,7 @@ ls -1t "${LOCAL_DIR}"/atenna-db-*.dump.age 2>/dev/null | tail -n "+$((KEEP_LOCAL
 
 # ── check-in GlitchTip (cron monitor) ────────────────────────────────────────
 if [ -n "${GLITCHTIP_MONITOR_URL:-}" ]; then
-  curl -fsS -m 10 "$GLITCHTIP_MONITOR_URL" >/dev/null 2>&1 || echo "aviso: check-in GlitchTip falhou"
+  curl -fsS -m 10 -X POST "$GLITCHTIP_MONITOR_URL" >/dev/null 2>&1 || echo "aviso: check-in GlitchTip falhou"
 fi
 
 echo "[$(date -u +%FT%TZ)] BACKUP OK"

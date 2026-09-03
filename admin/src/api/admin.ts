@@ -83,6 +83,10 @@ export const api = {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
       body: JSON.stringify({ status, notes, confirmed: true }),
     }).then(r => r.json()),
+  subscriptionsHealth: (t: string) =>
+    get<SubHealth>('/admin/subscriptions/health', t),
+  subscriptionsReconcile: (t: string, confirmed: boolean) =>
+    post<SubReconcile>('/admin/subscriptions/reconcile', t, { confirmed }),
   compliance: (t: string, days = 30) =>
     get<ComplianceSummaryResponse>(`/admin/compliance/summary?days=${days}`, t),
   complianceEvents: (t: string, days = 30, page = 1, riskLevel = '') =>
@@ -297,4 +301,19 @@ export interface ComplianceEventsResponse {
   page: number;
   limit: number;
   error?: string;
+}
+
+export interface SubHealth {
+  ok: boolean;
+  mismatch_total: number;
+  errors: Record<string, string[]>;
+  warnings: Record<string, string[]>;
+  counts: Record<string, number>;
+  last_checkout_event_age_h: number | null;
+}
+export interface SubReconcile {
+  ok: boolean;
+  dry_run: boolean;
+  n: number;
+  changes: Array<{ user: string; de: string; para: string }>;
 }

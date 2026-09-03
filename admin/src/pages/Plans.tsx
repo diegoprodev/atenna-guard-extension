@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { api, PlanUserRow, PlanConfig } from '../api/admin';
+import { api, PlanUserRow, PlanConfig, SubHealth } from '../api/admin';
 
 const PLAN_COLORS: Record<string, string> = {
   free: '#6b7280', pro: '#6366f1', enterprise: '#f59e0b',
@@ -25,6 +25,10 @@ export function Plans({ token }: { token: string }) {
   const [planFilter, setPlanFilter]     = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [feedback, setFeedback] = useState<{ msg: string; ok: boolean } | null>(null);
+
+  // Saúde das assinaturas (P3.5)
+  const [health, setHealth] = useState<SubHealth | null>(null);
+  const [healthBusy, setHealthBusy] = useState(false);
 
   // Assign modal
   const [assignModal, setAssignModal] = useState(false);
@@ -53,6 +57,23 @@ export function Plans({ token }: { token: string }) {
   }
 
   useEffect(() => { load(); }, [token, planFilter, statusFilter]);
+
+  function loadHealth() {
+    api.subscriptionsHealth(token).then(setHealth).catch(console.error);
+  }
+  useEffect(() => { loadHealth(); }, [token]);
+
+  async function runReconcile(apply: boolean) {
+    if (apply && !confirm('Aplicar? Isso escreve na tabela profiles.')) return;
+    setHealthBusy(true);
+    try {
+      const r = await api.subscriptionsReconcile(token, apply);
+      setFeedback({ msg: `${r.dry_run ? 'Prévia' : 'Aplicado'}: ${r.n} mudança(s)`, ok: true });
+      if (apply) { loadHealth(); load(); }
+    } catch (e) {
+      setFeedback({ msg: 'Falhou: ' + e, ok: false });
+    } finally { setHealthBusy(false); }
+  }
 
   function setFb(msg: string, ok: boolean) {
     setFeedback({ msg, ok });
@@ -176,6 +197,44 @@ export function Plans({ token }: { token: string }) {
           ))}
         </div>
       </div>
+
+      {/* Saúde das assinaturas — P3.5 */}
+      {health && (
+        <div className="admin-card" style={{ marginBottom: 20, borderLeft: `3px solid ${health.ok ? 'var(--green)' : 'var(--red)'}` }}>
+          <div className="admin-card__header">
+            <span className="admin-card__title">Saúde das assinaturas</span>
+            <span style={{ fontSize: 12, color: health.ok ? 'var(--green)' : 'var(--red)' }}>
+              {health.ok ? 'sem divergência' : `${health.mismatch_total} divergência(s)`}
+            </span>
+          </div>
+          <div style={{ padding: '12px 20px', fontSize: 13 }}>
+            {Object.entries(health.errors).map(([k, ids]) => (
+              <div key={k} style={{ marginBottom: 6 }}>
+                <strong style={{ color: 'var(--red)' }}>{k}</strong>: {ids.join(', ')}
+              </div>
+            ))}
+            {Object.entries(health.warnings).map(([k, ids]) => (
+              <div key={k} style={{ marginBottom: 6, color: 'var(--text-3)' }}>
+                {k}: {ids.join(', ')}
+              </div>
+            ))}
+            <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)' }}>
+              {Object.entries(health.counts).map(([k, v]) => `${k}=${v}`).join('  ·  ')}
+              {health.last_checkout_event_age_h != null && `  ·  último checkout: ${health.last_checkout_event_age_h}h atrás`}
+            </div>
+            {!health.ok && (
+              <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                <button className="btn btn-secondary btn-sm" disabled={healthBusy} onClick={() => runReconcile(false)}>
+                  Prévia do reconcile
+                </button>
+                <button className="btn btn-danger btn-sm" disabled={healthBusy} onClick={() => runReconcile(true)}>
+                  Reconciliar (fonte: user_plans)
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Users table */}
       <div className="admin-card">
