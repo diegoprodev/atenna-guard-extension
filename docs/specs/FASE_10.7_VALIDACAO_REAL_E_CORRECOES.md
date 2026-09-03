@@ -58,7 +58,19 @@ dá pra automatizar (OAuth Google real), dizer explicitamente.
   coberto só o caminho de erro (timeout). O `/generate-prompts` real sai do service worker;
   o F4 valida que os cards renderizam (com o fallback local quando o mock não alcança o SW).
 
-## Pendências pro dono
-1. CWS → Package → "View public key" → me manda a string → `"key"` no `manifest.json`
-   (ID local == publicado → Google funciona sem compactação).
-2. Alternativa: adicionar o `chromiumapp.org` do ID de dev em Supabase → Auth → URL Config.
+## Login Google — ID estável (feito)
+- **`"key"` adicionado ao `manifest.json`** → o ID da extensão sem compactação agora é
+  **determinístico**: `eeejlbiagiieioangpmhhfjlnpphljao` (antes era aleatório a cada load).
+- Chave **pública** no manifest (não é segredo — vai em toda extensão instalada).
+  Chave **privada**: `.keys/atenna-extension-dev.pem` — **gitignored**, fora do repo.
+- `strip-localhost.mjs` **não** remove o `key` (o `dist/` de dev precisa dele). Ao subir na CWS:
+  o item já publicado usa a chave original da 1ª submissão — o `key` do zip é ignorado pra
+  updates. Se a CWS reclamar do campo, remover só do zip.
+
+### Pendência do dono — 1 paste no Supabase
+Adicionar em **Supabase → Authentication → URL Configuration → Redirect URLs**:
+```
+https://eeejlbiagiieioangpmhhfjlnpphljao.chromiumapp.org/
+```
+Sem isso o "Entrar com Google" na extensão sem compactação ainda falha (agora com timeout
+limpo em vez de travar). Na extensão **publicada** o Google já funciona (ID/redirect da CWS).

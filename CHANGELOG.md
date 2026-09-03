@@ -12,10 +12,11 @@ All notable changes to **Atenna Guard Extension** are documented here.
   `playwright test --project=extension` (carrega o `dist/` real no Chromium) + 1 teste E2E novo +
   `npm run test:e2e` com o número real reportado. O que não dá pra automatizar (OAuth Google
   real), dizer explicitamente.
-- **Login Google não pendura mais** — `launchWebAuthFlow` com timeout de 120s
-  (`bffClient.launchAuthFlowWithTimeout`). O botão trava pra sempre quando a extensão está
-  sem compactação (ID aleatório fora da allowlist do Supabase). Fix definitivo = `"key"` no
-  `manifest.json` (pendente: dono pega no CWS).
+- **Login Google** — (a) `launchWebAuthFlow` com timeout de 120s (`launchAuthFlowWithTimeout`)
+  — não trava mais o botão; (b) **`"key"` no `manifest.json`** → ID da extensão sem compactação
+  agora é fixo (`eeejlbiagiieioangpmhhfjlnpphljao`). Falta 1 paste do dono: adicionar
+  `https://eeejlbiagiieioangpmhhfjlnpphljao.chromiumapp.org/` em Supabase → Auth → Redirect URLs.
+  Chave privada em `.keys/` (gitignored).
 - **Ícone da extensão deslogado** → login **com mensagem amigável de valor** ("faça login para
   liberar a proteção de dados e a geração de prompts"), troca no signup.
 - **Onboarding travado no modal — CORRIGIDO.** O modal in-page tinha um 3º onboarding
