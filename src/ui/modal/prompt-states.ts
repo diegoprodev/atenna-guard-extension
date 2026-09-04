@@ -91,6 +91,52 @@ export function renderEmptyState(
 
 // ─── Render: loading (premium skeleton, adaptive states) ─────
 
+/**
+ * FASE 10.9.2 (B8) — o conteúdo da caixa é o MESMO da última geração.
+ * Em vez de gastar uma geração de novo, pergunta. Botões grandes (Lei de Fitts),
+ * 2 opções só (Lei de Hick), verde = ação positiva (Lei de Jakob).
+ */
+export function renderDuplicateConfirm(
+  container: HTMLElement,
+  firstName: string,
+  onConfirm: () => void,
+  onCancel: () => void,
+): void {
+  clearMsgInterval();
+  container.innerHTML = '';
+
+  // Reusa o visual do card de sugestão (mesmo layout: texto + 2 botões).
+  const wrap = document.createElement('div');
+  wrap.className = 'atenna-modal__suggest';
+
+  const ic = document.createElement('span');
+  ic.className = 'atenna-modal__suggest-icon';
+  ic.textContent = '↻';
+
+  const msg = document.createElement('p');
+  msg.className = 'atenna-modal__suggest-text';
+  msg.textContent = firstName
+    ? `${firstName}, você já gerou um prompt com o mesmo conteúdo. Deseja gerar novamente?`
+    : 'Você já gerou um prompt com o mesmo conteúdo. Deseja gerar novamente?';
+
+  const actions = document.createElement('div');
+  actions.className = 'atenna-modal__suggest-actions';
+
+  const yes = document.createElement('button');
+  yes.className = 'atenna-modal__suggest-btn atenna-modal__suggest-btn--primary';
+  yes.textContent = 'Gerar de novo';
+  yes.addEventListener('click', onConfirm);
+
+  const no = document.createElement('button');
+  no.className = 'atenna-modal__suggest-btn';
+  no.textContent = 'Ver o anterior';
+  no.addEventListener('click', onCancel);
+
+  actions.append(yes, no);
+  wrap.append(ic, msg, actions);
+  container.appendChild(wrap);
+}
+
 export function renderLoading(container: HTMLElement): void {
   clearMsgInterval();
   container.innerHTML = '';

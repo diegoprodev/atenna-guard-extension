@@ -275,3 +275,37 @@ test('F9: badge aparece na aba JÁ ABERTA quando a sessão surge (login Google)'
   await page.waitForSelector('#atenna-guard-btn', { timeout: 15_000 });
   await page.close();
 });
+
+test('F10: canetinha NÃO regera calada — pergunta se o conteúdo é o mesmo', async ({ context }) => {
+  // B7/B8: apos gerar 1x, clicar a canetinha com o MESMO conteudo abre o modal
+  // mas mostra "voce ja gerou um prompt com o mesmo conteudo. Gerar de novo?"
+  await clearAll(context);
+  await injectSession(context);
+  await new Promise((r) => setTimeout(r, 1500));
+  await mockBff(context);
+
+  const page = await openFixturePage(context);
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 30_000 });
+
+  // escreve na caixa da "plataforma" (fixture)
+  const INPUT = 'preciso de um resumo executivo do mercado de energia solar no Brasil';
+  await page.fill('#prompt-textarea', INPUT);
+
+  // canetinha tem pointer-events:none até o hover — dispara o click direto
+  const clickWand = () => page.locator('.atenna-btn__action[aria-label="Gerar prompt"]').dispatchEvent('click');
+
+  // 1a geracao pela canetinha
+  await clickWand();
+  await page.waitForSelector('.atenna-modal__card', { timeout: 20_000 });
+  await expect(page.locator('.atenna-modal__card')).toHaveCount(3);
+  // fecha o modal
+  await page.locator('.atenna-modal__close').click();
+  await page.waitForSelector('#atenna-modal-overlay', { state: 'detached', timeout: 5000 }).catch(() => {});
+
+  // 2o clique na canetinha — MESMO conteudo na caixa → tem que PERGUNTAR, nao regerar
+  await clickWand();
+  await page.waitForSelector('.atenna-modal__suggest-text', { timeout: 8000 });
+  await expect(page.locator('.atenna-modal__suggest-text')).toContainText('mesmo conteúdo');
+  await expect(page.locator('.atenna-modal__suggest-btn--primary')).toHaveText('Gerar de novo');
+  await page.close();
+});

@@ -6,6 +6,22 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.9.2 (B7/B8) — canetinha não regera calada + alerta "mesmo conteúdo"
+- **B7:** a canetinha sempre regerava. Agora, se o conteúdo da caixa tem a **mesma
+  assinatura** da última geração, ela **não gera** — pergunta antes.
+- **B8:** _"`<nome>`, você já gerou um prompt com o mesmo conteúdo. Deseja gerar novamente?"_
+  com **"Gerar de novo"** (geração fresca) e **"Ver o anterior"** (cache, sem backend).
+- "Mesmo conteúdo" é reconhecido **mesmo depois do DLP reescrever a caixa**: a comparação
+  normaliza fora os tokens (`[CPF]`, `[NOME]`, …) e as sequências de dígitos, então
+  `meu CPF 123.456.789-00` e `meu CPF [CPF]` batem.
+- `src/core/lastGeneration.ts` (novo) — assinatura djb2 da forma normalizada, em
+  `chrome.storage.local` escopada por `user_id` (some no logout).
+- **Validado:** `lastGeneration.test.ts` (6) · `full-flow F10` · `modal.test.ts` atualizado ·
+  `vitest` 331 · `full-flow` 10/10. Só frontend — reload da extensão.
+- B9 ("Reverter proteção") e B10 ("sempre gerar [estilo]") → parte 2.
+  Spec: `docs/specs/FASE_10.9.2_BADGE.md`.
+
+
 ### FASE 10.9.7 — os e-mails de LGPD não saíam
 - **O que era:** "Solicitar relatório" respondia "email enviado" e **nada chegava**.
   `export.py`/`deletion.py` nunca chamavam `send_email` — só criavam a linha no banco.
