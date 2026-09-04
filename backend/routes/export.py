@@ -137,14 +137,26 @@ async def confirm_export_page(token: str = Query(...)):
     """
     manager = get_export_manager()
     result = manager.confirm_export(confirmation_token=token, expires_in_hours=48)
-    already = (not result.get("success")
-               and "already confirmed" in str(result.get("error", "")).lower())
-    if not result.get("success") and not already:
-        return _confirm_page(
-            "Link inválido ou expirado",
-            "Solicite um novo relatório na extensão, em Configurações → Seus dados.",
-            ok=False,
-        )
+
+    if not result.get("success"):
+        # Pode ter falhado porque já foi confirmado antes. Checa o estado real
+        # no banco em vez de adivinhar pela string de erro (que é genérica).
+        row = None
+        try:
+            from services.supabase_admin import get_admin_client
+            r = (get_admin_client().table("user_export_requests")
+                 .select("status").eq("download_token", token).limit(1).execute())
+            row = r.data[0] if r.data else None
+        except Exception as e:
+            logger.warning(f"confirm lookup failed: {e}")
+        if not row or row.get("status") not in ("confirmed", "ready"):
+            return _confirm_page(
+                "Link inválido ou expirado",
+                "Solicite um novo relatório na extensão, em Configurações → Seus dados.",
+                ok=False,
+            )
+        # já confirmado antes → segue pro download
+
     try:
         manager.mark_export_ready(token)
     except Exception as e:
