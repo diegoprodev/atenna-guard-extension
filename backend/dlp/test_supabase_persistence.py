@@ -127,13 +127,14 @@ class TestSupabasePersistence:
         stored_event = persistence.events[-1]
         stored_json = stored_event.to_json()
 
-        # No CPF values should appear anywhere
-        assert "050" not in stored_json
-        assert "423" not in stored_json
-        assert "674" not in stored_json
-
-        # No email values
-        assert "@" not in stored_json or "entity_types" in stored_json
+        # Valor de PII nunca é persistido — só o tipo.
+        # (Antes: `assert "674" not in stored_json` — "674" colide com o
+        #  timestamp ISO de `created_at`, deixando o teste flaky.)
+        import re
+        assert "05042367411" not in stored_json
+        assert "050.423.674-11" not in stored_json
+        assert not re.search(r"\d{11,}", stored_json), f"dígitos suspeitos: {stored_json}"
+        assert "@" not in stored_json
 
         # Only types should be there
         assert "BR_CPF" in stored_json
