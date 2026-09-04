@@ -6,6 +6,19 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.9.8 — contador de uso zerado + download do relatório
+- **"Uso de prompts" mostrava 0 / ∞ / "nenhum ainda"** mesmo com gerações feitas.
+  `/auth/usage` lia de `telemetry_persistence` — **tabela que não existe** → todo request
+  caía no `except` e devolvia zeros. Agora conta em `dlp_events`
+  (`event_type='generate_prompt'`), a **mesma fonte** do rate limiter.
+- **Download do relatório LGPD:** a página de confirmação prometia "você recebe um email com
+  o link de download" — esse e-mail **nunca era enviado** (não havia job). Agora a própria
+  página de confirmação **marca o relatório pronto e mostra o botão "Baixar relatório (PDF)"**
+  na hora. Novo `GET /user/export/download-file?token=` — download pelo token (sem auth, o
+  token de 32 bytes é o segredo), gera o PDF, incrementa o contador (máx 3 / 48h).
+- Card do modal trata `status: 'confirmed'`/'ready'.
+
+
 ### FASE 10.9 (B12) — fim do "Access to storage is not allowed from this context"
 - **O que era:** dezenas de `Unchecked runtime.lastError: Access to storage is not allowed
   from this context` no console. Causa: `analytics.getOrCreateSessionId()` usa
