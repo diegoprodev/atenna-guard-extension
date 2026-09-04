@@ -16,6 +16,15 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log('[Atenna Guard] Extension installed.');
 });
 
+// FASE 10.9 (B12) — libera chrome.storage.session pro content script.
+// Por padrão só TRUSTED_CONTEXTS (background/popup) acessam. O analytics roda
+// no content script e chamava storage.session → dezenas de
+// "Unchecked runtime.lastError: Access to storage is not allowed from this context".
+try {
+  chrome.storage.session.setAccessLevel({ accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS' })
+    .catch(() => { /* API ausente em versões antigas do Chrome */ });
+} catch { /* noop */ }
+
 // Página de feedback aberta pelo Chrome quando o usuário remove a extensão (FASE 10.6).
 try {
   chrome.runtime.setUninstallURL(`${BFF_BASE}/desinstalado`);
