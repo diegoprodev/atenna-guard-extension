@@ -139,7 +139,7 @@ async def auth_callback():
       <div id="v-reset" class="hidden">
         <div class="ico">🔑</div>
         <h1>Criar nova senha</h1>
-        <p class="sub">Escolha uma senha forte. Você vai usá-la para entrar na extensão.</p>
+        <p class="sub">Escolha uma senha forte. Você vai usá-la para entrar na sua conta Atenna.</p>
         <form id="resetForm" novalidate>
           <div class="field">
             <label for="pw1">Nova senha</label>
@@ -169,19 +169,19 @@ async def auth_callback():
       <div id="v-reset-ok" class="hidden state">
         <div class="ico">✅</div>
         <h1>Senha redefinida!</h1>
-        <p>Volte à extensão e faça login com a sua nova senha.</p>
+        <p>Faça login com a sua nova senha — na extensão ou no painel de admin.</p>
         <div class="muted">Pode fechar esta aba.</div>
       </div>
 
       <div id="v-success" class="hidden state">
         <div class="ico">✨</div>
         <h1>Acesso confirmado</h1>
-        <p>Você pode fechar esta aba e retornar à extensão.</p>
+        <p>Você pode fechar esta aba e voltar para o login.</p>
       </div>
 
       <div id="v-error" class="hidden state">
         <div class="alert err" id="err-msg">Este link expirou ou já foi usado.</div>
-        <p>Abra a extensão, clique em <strong>“Esqueci a senha”</strong> e use o link mais recente do e-mail.</p>
+        <p>Clique em <strong>“Esqueci a senha”</strong> (na extensão ou no painel de admin) e use o link mais recente do e-mail.</p>
       </div>
 
     </div>
@@ -274,7 +274,7 @@ async def auth_callback():
     }}
     if (h.get('error')) {{ err(h.get('error_description') || h.get('error')); return; }}
     const at = h.get('access_token');
-    if (!at) {{ err('Link inválido. Solicite um novo na extensão.'); return; }}
+    if (!at) {{ err('Link inválido. Solicite um novo link de redefinição.'); return; }}
     if (h.get('type') === 'recovery') {{ window._rt = at; show('v-reset'); $('pw1').focus(); }}
     else {{
       if (window.opener) window.opener.postMessage({{type:'ATENNA_AUTH_SUCCESS',access_token:at,refresh_token:h.get('refresh_token'),expires_in:h.get('expires_in')}}, '*');

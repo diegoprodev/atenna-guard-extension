@@ -6,6 +6,18 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.9.3 — reset de senha no painel de admin
+- **O que faltava:** `/nexussafe/` (painel de admin) não tinha "Esqueci a senha". Sem a senha,
+  o único caminho era o dashboard do Supabase — e o e-mail/página de reset falavam só em
+  "extensão", então parecia que não servia pro admin.
+- **Fix:** `Login.tsx` do admin ganha "Esqueci minha senha" → dispara `POST /auth/reset-password`
+  (a **mesma** rota da extensão; nenhuma rota nova). O link do e-mail cai em `/auth/callback`,
+  que redefine a senha da conta Supabase — a mesma que o `/auth/admin-login` valida.
+- Cópia de `/auth/callback` neutralizada ("sua conta Atenna", "na extensão ou no painel de
+  admin") em vez de assumir extensão.
+- Spec: `docs/specs/FASE_10.9.3_ADMIN_RESET_SENHA.md` (inclui o desbloqueio imediato via
+  dashboard do Supabase).
+
 ### FASE 10.9 — bugs encontrados no uso real (lote do dono)
 - **B1 — erro de login em inglês.** Senha errada mostrava **"INVALID_CREDENTIALS"** cru no
   popup. `bffLogin` lança `AppError` cujo `.message` é só o código; o popup renderizava
