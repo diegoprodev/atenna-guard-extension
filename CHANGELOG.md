@@ -6,6 +6,23 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.9.6 — LGPD funcional + fim dos erros silenciosos
+- **O que era:** "Solicitar relatório" e "Excluir dados" davam **503** e o frontend engolia
+  em silêncio (`console.error` e nada na tela). Diagnóstico pelos **logs do backend**
+  (GlitchTip): `get_export_status` → `42702 column "status" is ambiguous`;
+  `initiate_account_deletion` → `PGRST202 function not found` (a migration de exclusão de
+  conta nunca foi aplicada no banco de produção — mesma vítima da migração de infra que
+  sumiu com `/auth/admin-login`); e o dono tinha 2 pedidos de export presos em `requested`.
+- **Frontend (`privacy-data.ts`):** `showCardMessage()` + `friendlyBackendError()` — **nunca**
+  mais um erro só no console. 503 → "serviço instável, tente em minutos"; "já tem export
+  ativo" → "verifique seu email"; 401 → "sessão expirou". Sucesso mostra confirmação verde.
+- **Banco (`supabase/migrations/`):** `20260904_lgpd_fixes.sql` corrige `get_export_status`
+  (CTE, sem coluna ambígua) + expira pedidos presos > 1 dia. `20260507_account_deletion_
+  governance.sql` (já no repo) precisa ser **aplicada** — cria as tabelas/funções de exclusão.
+- **Pendente:** aplicar as 2 migrations no Supabase de produção (`kezbssjmgwtrunqeoyir`).
+- Spec: `docs/specs/FASE_10.9.6_LGPD_FUNCIONAL.md` (explica soft vs completo — LGPD exige
+  os dois: graça de 7 dias + purga real + auditoria anonimizada).
+
 ### FASE 10.9.5 — badge não aparecia após login com Google
 - **O que era:** logando com Google a sessão gravava certo (entrava automático), mas o badge
   **não aparecia** no input do ChatGPT sem recarregar. Com e-mail/senha funcionava.

@@ -102,6 +102,35 @@ function setCardLoading(card: HTMLElement, isLoading: boolean): void {
   }
 }
 
+/**
+ * Mostra uma mensagem no card. NUNCA falhar em silêncio — a regra do produto é
+ * "jamais um erro só no console". `kind` controla a cor.
+ */
+function showCardMessage(card: HTMLElement, msg: string, kind: 'error' | 'ok' | 'info' = 'error'): void {
+  const statusEl = card.querySelector('[data-export-status], [data-deletion-status]') as HTMLElement | null;
+  if (!statusEl) return;
+  const color = kind === 'error' ? 'var(--at-danger, #B23A30)'
+    : kind === 'ok' ? 'var(--at-accent, #0B6E4B)'
+    : 'var(--at-text)';
+  statusEl.innerHTML = `<div class="atenna-privacy__status-text" style="color:${color}">${safeText(msg)}</div>`;
+}
+
+/** Traduz uma resposta de erro do backend numa frase pt-BR pro usuário. */
+async function friendlyBackendError(res: Response): Promise<string> {
+  let detail = '';
+  try {
+    const body = await res.clone().json() as { detail?: unknown };
+    detail = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail ?? '');
+  } catch { /* corpo não-JSON */ }
+  const d = detail.toLowerCase();
+  if (res.status === 401 || res.status === 403) return 'Sua sessão expirou. Saia e entre de novo.';
+  if (d.includes('already has an active export')) return 'Você já tem um relatório em preparo. Verifique seu email — enviamos o link de confirmação.';
+  if (d.includes('already') && d.includes('deletion')) return 'Você já tem uma solicitação de exclusão em andamento.';
+  if (res.status === 429) return 'Muitas tentativas. Aguarde um minuto e tente de novo.';
+  if (res.status >= 500) return 'O serviço está instável agora. Tente de novo em alguns minutos.';
+  return 'Não foi possível concluir. Tente de novo em instantes.';
+}
+
 async function updateExportCardState(card: HTMLElement, token: string): Promise<void> {
   try {
     const res = await backendFetch('/user/export/status', 'GET', token);
@@ -155,12 +184,15 @@ async function handleRequestExport(card: HTMLElement, token: string): Promise<vo
     const res = await backendFetch('/user/export/request', 'POST', token);
     if (!res.ok) {
       console.error(`[privacy-data] export request failed: ${res.status}`);
+      showCardMessage(card, await friendlyBackendError(res));
       return;
     }
+    showCardMessage(card, 'Enviamos um email de confirmação. Clique no link para gerar o relatório.', 'ok');
     await new Promise(resolve => setTimeout(resolve, 500));
     await updateExportCardState(card, token);
   } catch (e) {
     console.error('[privacy-data] handleRequestExport error:', e);
+    showCardMessage(card, 'Sem conexão. Verifique sua internet e tente de novo.');
   } finally {
     setCardLoading(card, false);
   }
@@ -173,6 +205,7 @@ async function handleDownloadExport(card: HTMLElement, token: string): Promise<v
     const statusRes = await backendFetch('/user/export/status', 'GET', token);
     if (!statusRes.ok) {
       console.error(`[privacy-data] failed to get download token`);
+      showCardMessage(card, await friendlyBackendError(statusRes));
       return;
     }
 
@@ -181,6 +214,7 @@ async function handleDownloadExport(card: HTMLElement, token: string): Promise<v
 
     if (!downloadToken) {
       console.error(`[privacy-data] no download token in status`);
+      showCardMessage(card, 'O relatório ainda não está pronto. Você recebe um email quando estiver.');
       return;
     }
 
@@ -196,6 +230,7 @@ async function handleDownloadExport(card: HTMLElement, token: string): Promise<v
     await updateExportCardState(card, token);
   } catch (e) {
     console.error('[privacy-data] handleDownloadExport error:', e);
+    showCardMessage(card, 'Não foi possível baixar agora. Tente de novo em instantes.');
   } finally {
     setCardLoading(card, false);
   }
@@ -286,12 +321,15 @@ async function handleRequestDeletion(card: HTMLElement, token: string): Promise<
     const res = await backendFetch('/user/deletion/initiate', 'POST', token);
     if (!res.ok) {
       console.error(`[privacy-data] deletion initiate failed: ${res.status}`);
+      showCardMessage(card, await friendlyBackendError(res));
       return;
     }
+    showCardMessage(card, 'Enviamos um email de confirmação. A exclusão só começa depois que você confirmar.', 'ok');
     await new Promise(resolve => setTimeout(resolve, 500));
     await updateDeletionCardState(card, token);
   } catch (e) {
     console.error('[privacy-data] handleRequestDeletion error:', e);
+    showCardMessage(card, 'Sem conexão. Verifique sua internet e tente de novo.');
   } finally {
     setCardLoading(card, false);
   }
@@ -304,12 +342,15 @@ async function handleCancelDeletion(card: HTMLElement, token: string): Promise<v
     const res = await backendFetch('/user/deletion/cancel', 'POST', token);
     if (!res.ok) {
       console.error(`[privacy-data] deletion cancel failed: ${res.status}`);
+      showCardMessage(card, await friendlyBackendError(res));
       return;
     }
+    showCardMessage(card, 'Solicitação de exclusão cancelada.', 'ok');
     await new Promise(resolve => setTimeout(resolve, 500));
     await updateDeletionCardState(card, token);
   } catch (e) {
     console.error('[privacy-data] handleCancelDeletion error:', e);
+    showCardMessage(card, 'Sem conexão. Verifique sua internet e tente de novo.');
   } finally {
     setCardLoading(card, false);
   }
