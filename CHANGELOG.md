@@ -6,6 +6,24 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.9.4 — `POST /auth/admin-login` sumiu do backend (404) — painel inacessível
+- **O que era:** o painel de admin (`/nexussafe/`) chamava `POST /auth/admin-login` e recebia
+  **404**. O endpoint não existia no backend em produção nem no repo — só era citado no
+  CHANGELOG antigo e na mensagem de erro do `middleware/admin_auth.py`. Ficou pra trás na
+  migração de infra (set/2026) — o mesmo problema macro da FASE P4. Trocar a senha não
+  adiantava: não havia rota que aceitasse o login do admin.
+- **Fix:** `POST /auth/admin-login` recriado em `routes/bff_auth.py` — valida a senha no
+  Supabase **e** exige `email ∈ ADMIN_EMAILS` antes de checar a credencial; emite token
+  opaco normal (mesmo shape do `/auth/login`).
+- `require_super_admin` agora **revalida o gate por `ADMIN_EMAILS`** em toda rota `/admin/*`
+  (não depende mais só de `session["role"]`, que o `issue_token` nunca escreve) e injeta `id`
+  no dict da sessão.
+- `ADMIN_EMAILS` cai pra default `devdiegopro@gmail.com` quando a env não está setada — igual
+  `checkout.py` / `security/monitor.py`.
+- **Precisa de deploy aprovado** (GitHub Environments `production`). Enquanto não aprovar, o
+  painel segue 404.
+- 5 testes em `backend/tests/test_admin_login.py`. Spec: `docs/specs/FASE_10.9.4_ADMIN_LOGIN_404.md`.
+
 ### FASE 10.9.3 — reset de senha no painel de admin
 - **O que faltava:** `/nexussafe/` (painel de admin) não tinha "Esqueci a senha". Sem a senha,
   o único caminho era o dashboard do Supabase — e o e-mail/página de reset falavam só em

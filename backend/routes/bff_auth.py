@@ -132,6 +132,46 @@ async def login(req: LoginRequest):
 
 _EMAIL_RE = __import__("re").compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
+
+def _admin_emails() -> set[str]:
+    """Allowlist de admins — env ADMIN_EMAILS, separada por vírgula, case-insensitive."""
+    return {e.strip().lower() for e in os.getenv("ADMIN_EMAILS", "devdiegopro@gmail.com").split(",") if e.strip()}
+
+
+@router.post("/admin-login")
+async def admin_login(req: LoginRequest):
+    """
+    Login do painel de admin (/nexussafe/). Mesma validação de senha do /auth/login
+    (Supabase), MAS só emite token se o e-mail estiver em ADMIN_EMAILS.
+    O gate de admin é revalidado em TODA rota /admin/* por require_super_admin —
+    este endpoint é só o ingresso.
+    """
+    if not _check_login_rate_limit(req.email):
+        log_security_event("admin_login_rate_limited", {"email": req.email[:40]}, severity="MEDIUM")
+        raise HTTPException(429, "Muitas tentativas. Aguarde um minuto.")
+
+    if (req.email or "").strip().lower() not in _admin_emails():
+        # Não vaza se a senha está certa — nega antes de checar credencial.
+        log_security_event("admin_login_denied", {"email": req.email[:40]}, severity="HIGH")
+        raise HTTPException(403, "Acesso restrito a administradores.")
+
+    try:
+        client = get_auth_client()
+        r = client.auth.sign_in_with_password({"email": req.email, "password": req.password})
+    except Exception:
+        record_auth_failure(ip="server", user_id=req.email)
+        raise HTTPException(401, "Credenciais inválidas.")
+    if not r or not r.session:
+        record_auth_failure(ip="server", user_id=req.email)
+        raise HTTPException(401, "Credenciais inválidas.")
+
+    uid = r.user.id
+    email = r.user.email or req.email
+    out = _issue_token(r.session.access_token, r.session.refresh_token, uid, email, _get_plan(uid))
+    log_security_event("admin_login_ok", {"email": email[:40]}, severity="INFO")
+    return out
+
+
 @router.post("/signup")
 async def signup(req: SignupRequest):
     """
