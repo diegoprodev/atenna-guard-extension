@@ -6,6 +6,20 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### SEGURANÇA — Sair não apagava o dado do usuário do storage local
+- **Achado respondendo "hoje algum dado é exposto pra um user avançado":** `signOut()` só
+  zerava o `_uid` em memória — o histórico, uso, plano etc. da conta que saiu **ficavam pra
+  sempre** em `chrome.storage.local`. Numa máquina compartilhada, qualquer um com acesso ao
+  DevTools da extensão (`chrome://extensions` → inspecionar service worker → Application →
+  Storage) lia o histórico de um usuário que já deslogou. `userScopedKeys()` existia desde a
+  FASE 10 com o comentário "usado no logout" — **nunca era chamada** (código morto).
+- **Fix:** `signOut()` agora chama `userScopedKeys(uid, USER_SCOPED_BASES)` e remove todas as
+  chaves da conta que está saindo antes de zerar a sessão.
+- **Regressão:** E2E `full-flow F11` — gera um prompt como user A, confirma que a chave
+  escopada existe, sai, confirma que **nenhuma** chave `__user-A-id` sobra.
+  `auth.signOut.test.ts` (2) prova que o dado de OUTRO usuário na mesma máquina não é tocado.
+- `vitest` 339 · `full-flow` 11/11 · build limpo.
+
 ### FASE 10.9 (B11) — instrumentação de provider/latência (Gemini "mais lento")
 - **Causa raiz:** Gemini **nunca é o caminho principal** — só entra quando o OpenAI
   (primário, ~4,7s) falha, e é ~8s (quase o dobro). "Demora no Gemini" = OpenAI errando
