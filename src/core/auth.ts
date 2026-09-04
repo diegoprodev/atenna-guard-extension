@@ -1,4 +1,4 @@
-import { setStorageUser, userScopedKeys } from './scopedStorage';
+import { setStorageUser, getStorageUser, userScopedKeys } from './scopedStorage';
 import {
   getSession as bffGetSession,
   setSession as bffSetSession,
@@ -185,10 +185,20 @@ export async function saveDisplayName(session: { email: string }, name: string):
 }
 
 export async function signOut(): Promise<void> {
+  // SEGURANÇA: `userScopedKeys` existia desde a FASE 10 mas nunca era chamada —
+  // o logout só zerava o `_uid` em memória; os dados escritos sob a conta
+  // (histórico, uso, plano…) ficavam pra sempre em chrome.storage.local. Numa
+  // máquina compartilhada, qualquer um com acesso ao DevTools da extensão
+  // (chrome://extensions → inspecionar service worker → Application → Storage)
+  // conseguia ler o histórico de um usuário que já saiu. Apaga aqui.
+  const uid = getStorageUser();
   await bffLogout();
   setStorageUser(null);
   return new Promise(resolve => {
-    try { chrome.storage.local.remove(JWT_KEY, () => resolve()); }
+    try {
+      const keys = uid ? [JWT_KEY, ...userScopedKeys(uid, USER_SCOPED_BASES)] : [JWT_KEY];
+      chrome.storage.local.remove(keys, () => resolve());
+    }
     catch { resolve(); }
   });
 }

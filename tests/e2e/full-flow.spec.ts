@@ -157,6 +157,53 @@ test('F5: configurações — abre e mostra o email logado; Sair remove o badge'
   await page.close();
 });
 
+test('F11 [SEGURANÇA]: Sair apaga o dado escopado do usuário (não fica pra próxima conta)', async ({ context }) => {
+  // signOut() só zerava o _uid em memória — o histórico/uso/plano do usuário
+  // que saiu ficava pra sempre em chrome.storage.local (legível via DevTools
+  // da extensão numa máquina compartilhada). Prova que some de verdade.
+  await clearAll(context);
+  await injectSession(context, 'free', 'user-A-id', 'a@atenna.ai');
+  await new Promise((r) => setTimeout(r, 1200));
+  await mockBff(context);
+
+  const page = await openFixturePage(context);
+  await page.route('**/auth/me', (r) => r.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ user_id: 'user-A-id', email: 'a@atenna.ai', plan: 'free', expires_at: 9999999999 }),
+  }));
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 30_000 });
+
+  // gera um prompt pra ter algo escrito sob a conta do usuário A
+  await page.click('#atenna-guard-btn');
+  await page.waitForSelector('.atenna-modal__editor', { timeout: 8000 });
+  await page.fill('.atenna-modal__editor', 'pergunta que fica gravada sob o usuario A');
+  await page.click('.atenna-modal__regen');
+  await page.waitForSelector('.atenna-modal__card', { timeout: 20_000 });
+  await page.locator('.atenna-modal__close').click();
+
+  // confirma que o storage TEM chave escopada pro user-A-id antes de sair
+  const s = await sw(context);
+  const before = await s.evaluate(() => new Promise<Record<string, unknown>>(r => chrome.storage.local.get(null, r)));
+  const scopedBefore = Object.keys(before).filter(k => k.endsWith('__user-A-id'));
+  expect(scopedBefore.length).toBeGreaterThan(0);
+
+  // Sair pela engrenagem
+  await page.hover('#atenna-guard-btn');
+  await page.locator('.atenna-btn__action[aria-label="Configurações"]').click({ force: true });
+  await page.waitForSelector('#atenna-settings-overlay', { timeout: 8000 });
+  await expect(page.locator('#atenna-settings-overlay')).toContainText('a@atenna.ai'); // sanity: uid certo carregado
+  page.once('dialog', d => d.accept());
+  await page.locator('.atenna-settings__logout').click();
+  await page.waitForSelector('#atenna-guard-btn', { state: 'detached', timeout: 10_000 });
+
+  // nenhuma chave __user-A-id pode sobrar
+  const after = await s.evaluate(() => new Promise<Record<string, unknown>>(r => chrome.storage.local.get(null, r)));
+  const scopedAfter = Object.keys(after).filter(k => k.endsWith('__user-A-id'));
+  expect(scopedAfter).toEqual([]);
+
+  await page.close();
+});
+
 test('F6: usuário PRO NÃO vê upsell do produto no modal', async ({ context }) => {
   await clearAll(context);
   await injectSession(context, 'pro');
