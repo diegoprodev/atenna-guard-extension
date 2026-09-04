@@ -255,3 +255,23 @@ test('F8 [SEGURANÇA]: histórico NÃO vaza entre contas na mesma máquina', asy
   expect(txt).not.toContain('PROMPT SECRETO DE A');
   await page.close();
 });
+
+test('F9: badge aparece na aba JÁ ABERTA quando a sessão surge (login Google)', async ({ context }) => {
+  // Repro do bug do dono: no login com Google o popup já fechou quando o fluxo
+  // volta, então RELAY_INJECT_BADGE se perde. O service worker deve ser o
+  // backstop — observa atenna_session no storage e injeta nas abas suportadas.
+  await clearAll(context);
+  await mockBff(context);
+
+  // 1. abre a aba da IA SEM sessão — nenhum badge
+  const page = await openFixturePage(context);
+  await page.waitForTimeout(1500);
+  expect(await page.locator('#atenna-guard-btn').count()).toBe(0);
+
+  // 2. sessão surge depois (como no retorno do OAuth Google), aba não recarrega
+  await injectSession(context);
+
+  // 3. badge tem que aparecer sozinho, sem reload
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 15_000 });
+  await page.close();
+});

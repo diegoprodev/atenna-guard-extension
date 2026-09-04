@@ -21,6 +21,48 @@ try {
   chrome.runtime.setUninstallURL(`${BFF_BASE}/desinstalado`);
 } catch { /* setUninstallURL indisponível em contexto de teste */ }
 
+// ── Badge após login — backstop no service worker ────────────────────────
+// O popup só manda RELAY_INJECT_BADGE enquanto está vivo. No login com Google
+// (chrome.identity.launchWebAuthFlow) o popup já fechou quando o fluxo volta,
+// então a mensagem se perde e o badge só aparece no reload da página.
+// Aqui o SW observa a sessão no storage e injeta o badge em toda aba suportada
+// que já esteja aberta — funciona pra e-mail, Google e login pela welcome.
+// Fonte única: os mesmos matches do content script (o script de E2E injeta
+// localhost aqui, então o backstop também vale nos testes).
+function supportedTabMatches(): string[] {
+  try {
+    const cs = chrome.runtime.getManifest().content_scripts ?? [];
+    const all = cs.flatMap(s => s.matches ?? []);
+    return all.length ? all : ['https://chatgpt.com/*'];
+  } catch {
+    return ['https://chatgpt.com/*'];
+  }
+}
+
+function broadcastToSupportedTabs(message: { type: string }): void {
+  try {
+    chrome.tabs.query({ url: supportedTabMatches() }, tabs => {
+      void chrome.runtime.lastError;
+      for (const t of tabs) {
+        if (typeof t.id === 'number') {
+          chrome.tabs.sendMessage(t.id, message, () => void chrome.runtime.lastError);
+        }
+      }
+    });
+  } catch { /* tabs API indisponível em teste */ }
+}
+
+try {
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local' || !('atenna_session' in changes)) return;
+    const { oldValue, newValue } = changes['atenna_session'];
+    if (newValue && !oldValue) {
+      // sessão nova → injeta o badge nas abas já abertas
+      broadcastToSupportedTabs({ type: 'INJECT_BADGE' });
+    }
+  });
+} catch { /* storage.onChanged indisponível em teste */ }
+
 // Returns the BFF opaque token (accepted by all backend routes).
 async function getBffToken(): Promise<string | null> {
   try {
