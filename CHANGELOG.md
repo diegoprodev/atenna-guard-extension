@@ -6,6 +6,18 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.9 (B12) — fim do "Access to storage is not allowed from this context"
+- **O que era:** dezenas de `Unchecked runtime.lastError: Access to storage is not allowed
+  from this context` no console. Causa: `analytics.getOrCreateSessionId()` usa
+  `chrome.storage.session`, que por padrão só é acessível de `TRUSTED_CONTEXTS`
+  (background/popup) — **não do content script**. Todo `trackEvent` no content script
+  (badge, DLP scan, modal) disparava o erro.
+- **Fix:** o background chama `chrome.storage.session.setAccessLevel(TRUSTED_AND_UNTRUSTED_
+  CONTEXTS)` no startup + `getOrCreateSessionId` checa `chrome.runtime.lastError` e cai pra um
+  id em memória se ainda bloqueado. Nenhum `lastError` fica sem leitura.
+- Só frontend. Teste `analytics.test.ts` (2).
+
+
 ### FASE 10.9.2 (B9/B10) — "Reverter proteção" + "sempre gerar [estilo]"
 - **B9:** após "Proteger dados", o badge mostra **"Reverter proteção"** por 15s (ou até abrir
   o modal / próximo envio). O texto original fica **só em memória**, nunca em storage.

@@ -102,15 +102,29 @@ async function getUserId(): Promise<string> {
   });
 }
 
+// Fallback em memória — usado quando storage.session não é acessível deste
+// contexto (content script antes do background setar o accessLevel, ou Chrome
+// antigo). Evita o spam de "Access to storage is not allowed from this context".
+let _memSessionId: string | undefined;
+
 export function getOrCreateSessionId(): Promise<string> {
   return new Promise<string>(resolve => {
     try {
       chrome.storage.session?.get(SESSION_ID_KEY, (result?: Record<string, unknown>) => {
+        if (chrome.runtime.lastError) {
+          _memSessionId ??= genSessionId();
+          resolve(_memSessionId);
+          return;
+        }
         const id = (result?.[SESSION_ID_KEY] as string | undefined) || genSessionId();
-        chrome.storage.session?.set({ [SESSION_ID_KEY]: id }, () => resolve(id));
+        chrome.storage.session?.set({ [SESSION_ID_KEY]: id }, () => {
+          void chrome.runtime.lastError; // não vaza lastError não-lido
+          resolve(id);
+        });
       });
     } catch {
-      resolve(genSessionId());
+      _memSessionId ??= genSessionId();
+      resolve(_memSessionId);
     }
   });
 }
