@@ -50,15 +50,34 @@ Os fluxos de usuário **derivam `user_id` do token**, nunca do cliente:
 2. `docs/THREAT_MODEL.md` — atacante = usuário avançado com o próprio token opaco, faz
    replay de request e troca de ID. Resposta-alvo: **nada além da própria cota/dado**.
 
-### Parte 2 — RLS como barreira (fase seguinte, mexe em prod)
-1. `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` + policy `auth.uid() = user_id` (select/
-   update/delete) em: `profiles`, `dlp_events`, `user_dlp_stats`, `user_export_requests`,
-   `user_deletion_requests`, `account_status_history`, `bff_sessions`.
-   *(algumas já têm — `user_deletion_requests`/`account_status_history` da migration 20260507.)*
-2. Onde o dado é do próprio usuário, o backend passa a usar um cliente Supabase com o
-   **JWT do usuário** (não o service_role) → RLS bloqueia cross-user mesmo com bug no código.
-   `service_role` fica só pra: webhooks, jobs agendados, `execute_account_purge`.
-3. Rodar a suíte da Parte 1 antes e depois → prova que RLS não quebrou nada.
+### Parte 2 — RLS (executada em 2026-09-04) — **achado: já estava lá**
+
+Antes de escrever qualquer `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`, auditei o estado
+real do banco (`pg_class.relrowsecurity`, `pg_policies`, `information_schema.role_table_grants`).
+Resultado: **RLS já estava habilitada nas 9 tabelas de dado de usuário**, com policies
+`auth.uid() = user_id` corretas (nenhuma `USING (true)` encontrada) —
+`profiles`, `dlp_events`, `user_dlp_stats`, `user_export_requests`, `user_deletion_requests`,
+`account_status_history`, `bff_sessions`, `user_plans`, `user_settings`.
+
+`service_role` (usado pelo backend) tem `rolbypassrls=true` — confirmado — então nada disto
+muda o comportamento do app.
+
+**Dois problemas reais achados, não "RLS ausente":**
+
+| # | Item | Risco |
+|---|------|-------|
+| ZT-9 | `anon` **e** `authenticated` têm GRANT completo (SELECT/INSERT/UPDATE/DELETE/**TRUNCATE**/REFERENCES/TRIGGER) nas 9 tabelas, incluindo `bff_sessions` (tokens de sessão). RLS neutraliza a maior parte hoje, mas **TRUNCATE não é filtrado por RLS** (é tudo-ou-nada) e o grant aberto vira exposição total imediata se uma policy nova algum dia for escrita errada. | Médio — **corrigido**: `anon` revogado por completo; `authenticated` normalizado pro mínimo que as policies já autorizam (nunca truncate/references/trigger). |
+| ZT-10 | Policies **duplicadas** (`dlp_events`, `user_dlp_stats`, `user_plans`, `user_settings` — 2 policies idênticas pro mesmo comando, sobra de migrations repetidas) | Baixo (Postgres faz OR entre elas, inofensivo) — **corrigido**: dedup, mantida 1 canônica por tabela+comando. |
+| ZT-11 | `dlp_events` tem policy `DELETE` pra `authenticated` na própria linha — nenhum caller conhecido usa isso (o purge roda via `service_role`); deixa o usuário apagar a própria trilha de auditoria LGPD Art. 37 direto via PostgREST se algum dia tiver um JWT bruto em mãos | Baixo/Médio — **documentado, não removido nesta fase** (mudar autorização exige confirmar que nada depende disso; decisão do dono) |
+
+Migration: `supabase/migrations/20260904_rls_hardening.sql`. Idempotente (`revoke`/
+`drop policy if exists`). Verificação embutida no final do arquivo (lista os grants que
+sobraram).
+
+**Pendente:** trocar o backend de `service_role` pra JWT do usuário nas rotas onde o dado é
+só do próprio usuário (2ª barreira de verdade contra bug de `user_id`) — não feito nesta
+fase, é uma refatoração maior (cliente Supabase por request, revisar toda query). RLS +
+grants mínimos já reduzem bastante a superfície mesmo sem isso.
 
 ### Parte 3 — audit + guard permanente
 1. `private.pii_access_log` — trigger/wrapper que registra `SELECT` em massa nas tabelas de PII.

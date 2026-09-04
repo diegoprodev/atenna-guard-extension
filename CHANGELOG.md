@@ -6,6 +6,24 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE P-ZT parte 2 — RLS: auditoria achou que já estava lá, endureceu grants
+- **Antes de escrever `ENABLE ROW LEVEL SECURITY`, auditei o banco de verdade.** RLS já
+  estava habilitada nas 9 tabelas de dado de usuário (`profiles`, `dlp_events`,
+  `user_dlp_stats`, `user_export_requests`, `user_deletion_requests`,
+  `account_status_history`, `bff_sessions`, `user_plans`, `user_settings`), com policies
+  `auth.uid() = user_id` corretas — nenhuma `USING (true)`. `service_role` (o que o backend
+  usa) tem `rolbypassrls=true`, confirmado — nada disso muda o app.
+- **2 problemas reais, não "RLS ausente":** (1) `anon`/`authenticated` tinham GRANT completo
+  (inclusive **TRUNCATE**, que RLS não filtra) nas 9 tabelas — `anon` revogado por completo,
+  `authenticated` normalizado pro mínimo que as policies já autorizavam; (2) policies
+  **duplicadas** em 4 tabelas (sobra de migrations repetidas) — deduplicadas.
+- **Achado documentado, não corrigido:** `dlp_events` permite `authenticated` deletar a
+  própria linha de auditoria LGPD Art. 37 — nenhum caller conhecido usa isso; decisão de
+  remover fica pro dono (spec `ZT-11`).
+- Migration: `supabase/migrations/20260904_rls_hardening.sql` — idempotente, com verificação
+  embutida. **Pendente de aplicar em produção** (dono roda no SQL Editor).
+- Spec atualizada: `docs/specs/FASE_P-ZT_ANTI_IDOR.md`.
+
 ### SEGURANÇA — Sair não apagava o dado do usuário do storage local
 - **Achado respondendo "hoje algum dado é exposto pra um user avançado":** `signOut()` só
   zerava o `_uid` em memória — o histórico, uso, plano etc. da conta que saiu **ficavam pra
