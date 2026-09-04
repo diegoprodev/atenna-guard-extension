@@ -65,6 +65,13 @@ const NAME_STOPWORDS = new Set([
   'OBSERVER', 'PATTERN', 'TYPESCRIPT', 'JAVASCRIPT', 'GENERICS', 'IMPLEMENTAR',
   'IMPLEMENTACAO', 'INTERFACE', 'FUNCTION', 'CLASS', 'ASYNC', 'AWAIT', 'IMPORT',
   'EXPORT', 'RETURN', 'CONST', 'REACT', 'ANGULAR', 'NODEJS', 'PYTHON', 'GOLANG',
+  // Cloud / infra / vendor terms — "Google Cloud Platform", "Azure Functions"
+  // etc. eram detectados como NOME (falso positivo relatado no uso real).
+  'GOOGLE', 'CLOUD', 'PLATFORM', 'PLATAFORMA', 'AZURE', 'GCP', 'FIREBASE',
+  'KUBERNETES', 'DOCKER', 'TERRAFORM', 'LAMBDA', 'FUNCTIONS', 'COMPUTE',
+  'ENGINE', 'STORAGE', 'BIGQUERY', 'VERTEX', 'OPENAI', 'ANTHROPIC', 'CLAUDE',
+  'GEMINI', 'COPILOT', 'GITHUB', 'GITLAB', 'VERCEL', 'NETLIFY', 'SUPABASE',
+  'FUNDAMENTOS', 'COMECE', 'PELOS',
   // Portuguese common words that must not be interpreted as name parts
   'NOME', 'MEU', 'TEU', 'SEU', 'MINHA', 'MEUS', 'SEUS', 'TEUS',
   'EU', 'ELE', 'ELA', 'OU', 'OS', 'AS', 'UM', 'UMA', 'COM',

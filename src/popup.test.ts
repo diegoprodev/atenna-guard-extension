@@ -19,12 +19,14 @@ describe('popup.ts — no Copilot references', () => {
   });
 });
 
-describe('popup.ts — personalized error messages', () => {
-  it('has specific error mappings for email_not_found, wrong_password, email_not_confirmed', () => {
+describe('popup.ts — error messages (FASE 10.9 B1)', () => {
+  it('login errors go through messageFor(), never render err.message raw', () => {
     const src = fs.readFileSync('src/popup.ts', 'utf-8');
-    expect(src).toContain('email_not_found');
-    expect(src).toContain('Senha incorreta');
-    expect(src).toContain('email_not_confirmed');
+    // catch de login / Google / reset devem usar messageFor, não `e.message` cru
+    expect(src).toContain('messageFor(e)');
+    expect(src).toContain("import { messageFor } from './core/errors'");
+    // padrão antigo que vazava o código em inglês não pode voltar
+    expect(src).not.toMatch(/errEl\.textContent\s*=\s*msg\b/);
   });
 });
 

@@ -6,6 +6,27 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.9 — bugs encontrados no uso real (lote do dono)
+- **B1 — erro de login em inglês.** Senha errada mostrava **"INVALID_CREDENTIALS"** cru no
+  popup. `bffLogin` lança `AppError` cujo `.message` é só o código; o popup renderizava
+  `e.message` direto. Agora `errors.messageFor()` é a fonte canônica e o popup (login, Google,
+  reset) passa por ela → **"Email ou senha incorretos."** em pt-BR, igual ao welcome.
+- **B2/B3 — LGPD 400.** "Solicitar relatório", "Solicitar exclusão" e "Exportar documento"
+  davam **400 "User info incomplete"**. `require_auth` devolve `user_id`, mas
+  `export.py`/`deletion.py`/`documents.py`/`protect.py`/`retention.py`/`report_problem.py`
+  liam `_user.get("id")`/`_user.get("sub")` → `None` → 400. `require_auth` agora expõe `id` e
+  `sub` como aliases de `user_id` — conserta ~8 rotas num lugar só.
+- **B4 — DLP confundia "cloud" com nome.** "Google Cloud Platform" virava `[NOME]`. Termos de
+  cloud/infra/vendor (Google, Cloud, Platform, Azure, GCP, Kubernetes, Docker, OpenAI, Claude,
+  Gemini…) + as palavras do exemplo entraram na `NAME_STOPWORDS` (padrão anti-loop #8).
+- **O que ficou pra depois** (spec `docs/specs/FASE_10.9_BUGS_USO_REAL.md`): B5 `[TELEFONE]`
+  em texto benigno (precisa do input real), B7 canetinha regenera o mesmo prompt, B8 alerta
+  "você já gerou com o mesmo conteúdo", B9 botão "Reverter proteção", B10 preferência "sempre
+  gerar [direto/estruturado/estratégico]", B11 latência Gemini (medir), B12 ruído
+  `Access to storage is not allowed` — FASES 10.9.1 e 10.9.2.
+- **Validado:** `vitest` **325 / 0 / 1 skip** · `npm run build` limpo · pytest
+  `test_privacy_auth_alias` (CI).
+
 ### SEGURANÇA — vazamento de histórico entre contas na mesma máquina (CRÍTICO)
 - **O que era:** `scopedStorage.sk()` caía na chave **global crua** (`atenna_history`) quando
   `_uid` estava null, e o modal in-page **nunca fixava** o `_uid` da sessão atual. Resultado:
