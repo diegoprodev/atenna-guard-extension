@@ -356,3 +356,23 @@ test('F10: canetinha NÃO regera calada — pergunta se o conteúdo é o mesmo',
   await expect(page.locator('.atenna-modal__suggest-btn--primary')).toHaveText('Gerar de novo');
   await page.close();
 });
+
+test('F12: canetinha com a caixa VAZIA mostra dica em vez de title nativo', async ({ context }) => {
+  // O dono pediu: tooltip visível (não o title do navegador, que demora e
+  // passa despercebido) pedindo texto antes de gerar/proteger.
+  await clearAll(context);
+  await injectSession(context);
+  await new Promise((r) => setTimeout(r, 1500));
+  await mockBff(context);
+
+  const page = await openFixturePage(context);
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 30_000 });
+
+  await page.locator('.atenna-btn__action[aria-label="Gerar prompt"]').dispatchEvent('click');
+
+  await page.waitForSelector('#atenna-wand-hint', { timeout: 5000 });
+  await expect(page.locator('#atenna-wand-hint')).toContainText('Digite um texto');
+  // não deve ter aberto o modal / gerado nada
+  expect(await page.$('#atenna-modal-overlay')).toBeNull();
+  await page.close();
+});

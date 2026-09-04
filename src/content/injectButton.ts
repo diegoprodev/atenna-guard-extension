@@ -94,6 +94,38 @@ function clearRevert(): void {
   revertState = undefined;
 }
 
+// FASE 10.9 — dica quando clica na canetinha sem texto no campo. O `title`
+// nativo (tooltip do navegador) demora pra aparecer e o dono não via.
+// Reusa o visual do banner de proteção (já tem quebra de linha e tema
+// claro/escuro), só com a mensagem, sem botões, some sozinho em 4s.
+let wandHintEl: HTMLElement | undefined;
+let wandHintTimer: ReturnType<typeof setTimeout> | undefined;
+
+function showWandHint(anchor: HTMLButtonElement): void {
+  if (wandHintTimer) clearTimeout(wandHintTimer);
+  wandHintEl?.remove();
+  document.getElementById('atenna-wand-hint')?.remove();
+
+  const dark = isDarkPage();
+  const b = document.createElement('div');
+  b.id = 'atenna-wand-hint';
+  b.className = 'atenna-protection-banner' + (dark ? ' atenna-protection-banner--dark' : '');
+
+  const msg = document.createElement('p');
+  msg.className = 'atenna-protection-banner__msg';
+  msg.style.margin = '0';
+  msg.style.whiteSpace = 'normal';
+  msg.style.fontWeight = '500';
+  msg.textContent = 'Digite um texto para gerarmos um prompt e/ou protegermos seus dados antes do envio pro servidor.';
+
+  b.appendChild(msg);
+  document.body.appendChild(b);
+  wandHintEl = b;
+  positionBannerAbove(anchor, b);
+
+  wandHintTimer = setTimeout(() => { b.remove(); wandHintEl = undefined; }, 4000);
+}
+
 function showRevertBanner(anchor: HTMLButtonElement): void {
   // remove um banner anterior sem mexer em revertState (o caller acabou de setar)
   if (revertTimer) { clearTimeout(revertTimer); revertTimer = undefined; }
@@ -451,11 +483,10 @@ export function injectButton(config: PlatformConfig, onToggle: () => void): void
       const currentInput = document.querySelector(config.inputSelector) as HTMLElement | null;
       const text = currentInput ? getInputText(currentInput).trim() : '';
       if (text.length < 10) {
-        // Visual feedback: shake the wand button
+        // Visual feedback: balão de dica (o title nativo demora e passa despercebido)
         wandBtn.style.animation = 'none';
         wandBtn.offsetHeight; // reflow
-        wandBtn.setAttribute('title', 'Digite algo no campo de texto primeiro');
-        setTimeout(() => wandBtn.setAttribute('title', 'Gerar prompt'), 1500);
+        showWandHint(wandBtn);
         return;
       }
       void trackEvent('badge_action_wand');

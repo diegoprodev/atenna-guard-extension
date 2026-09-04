@@ -6,6 +6,14 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.9 — canetinha com caixa vazia mostra dica visível
+- **O que era:** clicar na canetinha sem texto no campo só mudava o `title` nativo do botão
+  (tooltip do navegador) — demora pra aparecer, o dono nunca via.
+- **Fix:** balão de dica (reusa o visual do banner de proteção, quebra de linha, tema
+  claro/escuro) com o texto: _"Digite um texto para gerarmos um prompt e/ou protegermos seus
+  dados antes do envio pro servidor."_ Some sozinho em 4s.
+- **Regressão:** E2E `full-flow F12`. `vitest` 339 · build limpo.
+
 ### FASE P-ZT parte 2 — RLS: auditoria achou que já estava lá, endureceu grants
 - **Antes de escrever `ENABLE ROW LEVEL SECURITY`, auditei o banco de verdade.** RLS já
   estava habilitada nas 9 tabelas de dado de usuário (`profiles`, `dlp_events`,
