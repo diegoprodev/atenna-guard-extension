@@ -164,6 +164,39 @@ def render_magic_link(magic_url: str, email: str) -> str:
 #  admin.generate_link(type="recovery") no _promote_to_pro quando is_new.)
 
 
+def render_data_export_confirmation(confirm_url: str, email: str) -> str:
+    """LGPD Art. 18 — confirmação de pedido de relatório de dados."""
+    content = f"""
+<div class="icon-wrap"><div class="icon">📄</div></div>
+<h1>Confirme o pedido do seu relatório</h1>
+<p>Recebemos um pedido para gerar um relatório com os dados associados a <strong>{email}</strong> no {PRODUCT_NAME}.</p>
+<div class="btn-wrap">
+  <a href="{confirm_url}" class="btn">Confirmar e gerar o relatório →</a>
+</div>
+<hr class="divider">
+<p style="font-size:13px;color:#555">Este link expira em <strong style="color:#666">24 horas</strong>. Depois de confirmar, o relatório fica disponível para download por 48 horas. Se você não pediu isso, ignore este email.</p>
+<p class="link-fallback">Se o botão não funcionar, copie este link:<br><a href="{confirm_url}">{confirm_url[:80]}...</a></p>
+"""
+    return _base(content, preheader=f"Confirme o pedido do seu relatório de dados no {PRODUCT_NAME}")
+
+
+def render_account_deletion_confirmation(confirm_url: str, email: str) -> str:
+    """LGPD Art. 18 VI — confirmação de pedido de exclusão de conta."""
+    content = f"""
+<div class="icon-wrap"><div class="icon">⚠️</div></div>
+<h1>Confirme a exclusão da sua conta</h1>
+<p>Recebemos um pedido para excluir a conta <strong>{email}</strong> no {PRODUCT_NAME}.</p>
+<p>Ao confirmar, sua conta entra em um <strong>período de reversão de 7 dias</strong>. Depois disso, seus dados pessoais são apagados de forma permanente.</p>
+<div class="btn-wrap">
+  <a href="{confirm_url}" class="btn">Confirmar exclusão →</a>
+</div>
+<hr class="divider">
+<p style="font-size:13px;color:#555">Este link expira em <strong style="color:#666">24 horas</strong>. <strong>Se você não pediu isso, ignore este email</strong> — nada acontece com a sua conta sem essa confirmação.</p>
+<p class="link-fallback">Se o botão não funcionar, copie este link:<br><a href="{confirm_url}">{confirm_url[:80]}...</a></p>
+"""
+    return _base(content, preheader=f"Confirme a exclusão da sua conta no {PRODUCT_NAME}")
+
+
 def render_welcome(email: str) -> str:
     """L1 — Boas-vindas pós-confirmação de email."""
     content = f"""

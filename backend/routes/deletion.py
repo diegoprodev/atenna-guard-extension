@@ -5,7 +5,9 @@ Endpoints para gerenciar ciclo de vida seguro de deleção de conta.
 Conforme LGPD Art. 17 (Direito ao esquecimento).
 """
 
+import os
 from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi.responses import HTMLResponse
 from typing import Optional
 import logging
 
@@ -14,6 +16,23 @@ from dlp.deletion_manager import get_deletion_manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/user/deletion", tags=["Account Deletion"])
+
+_SITE_URL = os.getenv("SITE_URL", "https://api.atennaia.com.br")
+
+
+def _page(title: str, body: str, ok: bool = True) -> HTMLResponse:
+    color = "#0B6E4B" if ok else "#B23A30"
+    html = f"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{title} — Atenna</title>
+<style>
+  body{{margin:0;font:16px/1.6 -apple-system,Segoe UI,Roboto,sans-serif;background:#FBFAF7;color:#1A2B24;
+       display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px}}
+  .card{{max-width:440px;background:#fff;border:1px solid #E7E3DA;border-radius:14px;padding:36px;text-align:center}}
+  h1{{font-size:20px;margin:0 0 12px;color:{color}}}
+  p{{margin:0 0 8px;color:#5B6B63}}
+</style></head><body><div class="card"><h1>{title}</h1><p>{body}</p></div></body></html>"""
+    return HTMLResponse(html, status_code=200 if ok else 400)
 
 
 @router.post("/initiate")
@@ -61,13 +80,47 @@ async def initiate_deletion(
             detail=f"Could not initiate deletion: {result.get('error')}",
         )
 
-    # No expose token to user (sent via email only)
+    # Envia o e-mail de confirmação (antes: a rota dizia "enviado" e nada saía).
+    token = result.get("confirmation_token")
+    email_sent = False
+    if token:
+        confirm_url = f"{_SITE_URL}/user/deletion/confirm?token={token}"
+        try:
+            from routes.email_service import render_account_deletion_confirmation, send_email
+            email_sent = await send_email(
+                email,
+                "Confirme a exclusão da sua conta — Atenna Safe Prompt",
+                render_account_deletion_confirmation(confirm_url, email),
+            )
+        except Exception as e:
+            logger.error(f"deletion confirmation email failed for {email[:40]}: {e}")
+
     return {
         "success": True,
-        "message": f"Email de confirmação enviado para {email}",
-        "note": "Clique no link no email para confirmar exclusão",
+        "message": (f"Email de confirmação enviado para {email}" if email_sent
+                    else "Pedido registrado. Se o email não chegar em alguns minutos, tente de novo."),
+        "email_sent": email_sent,
+        "note": "Clique no link no email para confirmar exclusão. Nada acontece com a conta antes disso.",
         "expires_in": "24 horas",
     }
+
+
+@router.get("/confirm")
+async def confirm_deletion_page(token: str = Query(...)):
+    """Landing do link do e-mail (GET). Confirma a exclusão e mostra uma página."""
+    manager = get_deletion_manager()
+    result = manager.confirm_deletion(confirmation_token=token, grace_period_days=7)
+    if not result.get("success"):
+        return _page(
+            "Link inválido ou expirado",
+            "Solicite a exclusão de novo na extensão, em Configurações → Exclusão de conta.",
+            ok=False,
+        )
+    return _page(
+        "Exclusão confirmada",
+        "Sua conta será excluída em 7 dias. Até lá, você pode cancelar na extensão, "
+        "em Configurações → Exclusão de conta.",
+    )
 
 
 @router.post("/confirm")

@@ -4,8 +4,9 @@ FASE 3.1B: User Data Export API
 Endpoints para gerenciar ciclo de vida seguro de exports conforme LGPD Art. 18.
 """
 
+import os
 from fastapi import APIRouter, HTTPException, Depends, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
 from typing import Optional
 import logging
 
@@ -14,6 +15,23 @@ from dlp.export_manager import get_export_manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/user/export", tags=["User Data Export"])
+
+_SITE_URL = os.getenv("SITE_URL", "https://api.atennaia.com.br")
+
+
+def _confirm_page(title: str, body: str, ok: bool = True) -> HTMLResponse:
+    color = "#0B6E4B" if ok else "#B23A30"
+    html = f"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{title} — Atenna</title>
+<style>
+  body{{margin:0;font:16px/1.6 -apple-system,Segoe UI,Roboto,sans-serif;background:#FBFAF7;color:#1A2B24;
+       display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px}}
+  .card{{max-width:440px;background:#fff;border:1px solid #E7E3DA;border-radius:14px;padding:36px;text-align:center}}
+  h1{{font-size:20px;margin:0 0 12px;color:{color}}}
+  p{{margin:0;color:#5B6B63}}
+</style></head><body><div class="card"><h1>{title}</h1><p>{body}</p></div></body></html>"""
+    return HTMLResponse(html, status_code=200 if ok else 400)
 
 
 @router.post("/request")
@@ -59,12 +77,48 @@ async def request_export(
             detail=f"Could not initiate export: {result.get('error')}"
         )
 
+    # Envia o e-mail de confirmação de verdade (antes: a rota dizia "enviado"
+    # e nada saía). O token vem do manager (mesmo usado por confirm_export).
+    token = result.get("download_token")
+    email_sent = False
+    if token:
+        confirm_url = f"{_SITE_URL}/user/export/confirm?token={token}"
+        try:
+            from routes.email_service import render_data_export_confirmation, send_email
+            email_sent = await send_email(
+                email,
+                "Confirme o pedido do seu relatório de dados — Atenna Safe Prompt",
+                render_data_export_confirmation(confirm_url, email),
+            )
+        except Exception as e:
+            logger.error(f"export confirmation email failed for {email[:40]}: {e}")
+
     return {
         "success": True,
-        "message": f"Email de confirmação enviado para {email}",
+        "message": (f"Email de confirmação enviado para {email}" if email_sent
+                    else "Pedido registrado. Se o email não chegar em alguns minutos, tente de novo."),
+        "email_sent": email_sent,
         "note": "Clique no link no email para confirmar o export",
         "expires_in": result.get("expires_in")
     }
+
+
+@router.get("/confirm")
+async def confirm_export_page(token: str = Query(...)):
+    """Landing do link do e-mail (GET). Confirma o export e mostra uma página."""
+    manager = get_export_manager()
+    result = manager.confirm_export(confirmation_token=token, expires_in_hours=48)
+    if not result.get("success"):
+        return _confirm_page(
+            "Link inválido ou expirado",
+            "Solicite um novo relatório na extensão, em Configurações → Seus dados.",
+            ok=False,
+        )
+    return _confirm_page(
+        "Relatório confirmado",
+        "Estamos montando seu relatório. Você recebe um email com o link de download em instantes. "
+        "O arquivo fica disponível por 48 horas.",
+    )
 
 
 @router.post("/confirm")

@@ -6,6 +6,17 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.9.7 — os e-mails de LGPD não saíam
+- **O que era:** "Solicitar relatório" respondia "email enviado" e **nada chegava**.
+  `export.py`/`deletion.py` nunca chamavam `send_email` — só criavam a linha no banco.
+- **Fix:** `render_data_export_confirmation()` + `render_account_deletion_confirmation()` em
+  `email_service.py`; as rotas mandam o e-mail de verdade (Resend) com o token que o manager
+  já devolve. Novos `GET /user/export/confirm` e `GET /user/deletion/confirm` — landing do
+  link do e-mail, confirmam o pedido e mostram uma página HTML.
+- A resposta da API agora traz `email_sent: bool` — se o Resend falhar, a mensagem é honesta.
+- **Pendente de deploy do backend.** Spec: `docs/specs/FASE_10.9.7_LGPD_EMAILS.md`.
+
+
 ### FASE 10.9.6 — LGPD funcional + fim dos erros silenciosos
 - **O que era:** "Solicitar relatório" e "Excluir dados" davam **503** e o frontend engolia
   em silêncio (`console.error` e nada na tela). Diagnóstico pelos **logs do backend**
