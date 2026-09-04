@@ -161,10 +161,9 @@ async function updateExportCardState(card: HTMLElement, token: string): Promise<
       actionEl.innerHTML = '<button class="atenna-privacy__btn">Reenviar email</button>';
       actionEl.querySelector('button')?.addEventListener('click',
         () => void handleResend(card, token, '/user/export/resend'));
-    } else if (status === 'ready') {
+    } else if (status === 'ready' || status === 'confirmed') {
       const remaining = formatTimeRemaining(expiresAt || '');
-      const downloads = `${downloadCount} download${(downloadCount ?? 0) !== 1 ? 's' : ''} restante${(downloadCount ?? 0) !== 1 ? 's' : ''}`;
-      statusEl.innerHTML = `<div class="atenna-privacy__status-text">Relatório disponível.<br><span style="font-size: 11px; color: var(--at-muted);">Disponível por mais ${safeText(remaining)} · ${safeText(downloads)}</span></div>`;
+      statusEl.innerHTML = `<div class="atenna-privacy__status-text">Relatório pronto.<br><span style="font-size: 11px; color: var(--at-muted);">${expiresAt ? `Disponível por mais ${safeText(remaining)}. ` : ''}O link de download está na página que você abriu pelo email.</span></div>`;
       actionEl.innerHTML = '<button class="atenna-privacy__btn">Fazer download</button>';
       const btn = actionEl.querySelector('button') as HTMLButtonElement;
       btn?.addEventListener('click', () => void handleDownloadExport(card, token));

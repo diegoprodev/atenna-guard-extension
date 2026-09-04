@@ -316,17 +316,22 @@ async def usage(creds: HTTPAuthorizationCredentials = Depends(_bearer)):
         protected_count = sum(1 for e in dlp_events if e.get("was_rewritten"))
         scans_total = len(dlp_events)
 
-        # Usage: today, monthly, total from telemetry_persistence
+        # Gerações: contadas em dlp_events (event_type='generate_prompt') — a MESMA
+        # fonte que o rate limiter usa. (Antes lia 'telemetry_persistence', tabela
+        # que não existe → today/monthly/total ficavam sempre 0.)
         now = datetime.now(timezone.utc)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-        telemetry_data = client.table("telemetry_persistence").select("created_at, prompt_type").eq("user_id", user_id).execute()
-        telemetry = telemetry_data.data or []
+        def _dt(s: str):
+            return datetime.fromisoformat(s.replace("Z", "+00:00"))
 
-        today = sum(1 for t in telemetry if datetime.fromisoformat(t["created_at"].replace("Z", "+00:00")) >= today_start)
-        monthly = sum(1 for t in telemetry if datetime.fromisoformat(t["created_at"].replace("Z", "+00:00")) >= month_start)
-        total = len(telemetry)
+        gen = (client.table("dlp_events").select("created_at")
+               .eq("user_id", user_id).eq("event_type", "generate_prompt").execute())
+        gens = gen.data or []
+        today = sum(1 for t in gens if _dt(t["created_at"]) >= today_start)
+        monthly = sum(1 for t in gens if _dt(t["created_at"]) >= month_start)
+        total = len(gens)
 
         return {
             "today": today,

@@ -131,19 +131,87 @@ async def resend_export_email(_user: dict = Depends(require_auth)):
 
 @router.get("/confirm")
 async def confirm_export_page(token: str = Query(...)):
-    """Landing do link do e-mail (GET). Confirma o export e mostra uma página."""
+    """
+    Landing do link do e-mail (GET). Confirma, marca pronto e mostra o link de
+    download DIRETO na página (não depende de um 2º e-mail que nunca era enviado).
+    """
     manager = get_export_manager()
     result = manager.confirm_export(confirmation_token=token, expires_in_hours=48)
-    if not result.get("success"):
+    already = (not result.get("success")
+               and "already confirmed" in str(result.get("error", "")).lower())
+    if not result.get("success") and not already:
         return _confirm_page(
             "Link inválido ou expirado",
             "Solicite um novo relatório na extensão, em Configurações → Seus dados.",
             ok=False,
         )
+    try:
+        manager.mark_export_ready(token)
+    except Exception as e:
+        logger.warning(f"mark_export_ready falhou (segue mesmo assim): {e}")
+
+    dl = f"{_SITE_URL}/user/export/download-file?token={token}"
     return _confirm_page(
-        "Relatório confirmado",
-        "Estamos montando seu relatório. Você recebe um email com o link de download em instantes. "
-        "O arquivo fica disponível por 48 horas.",
+        "Relatório pronto",
+        f'Seu relatório com os dados da conta está pronto.<br><br>'
+        f'<a href="{dl}" style="display:inline-block;background:#0B6E4B;color:#fff;'
+        f'text-decoration:none;padding:11px 20px;border-radius:9px;font-weight:600">'
+        f'Baixar relatório (PDF)</a><br><br>'
+        f'<span style="font-size:13px">Este link vale por 48 horas e permite até 3 downloads.</span>',
+    )
+
+
+@router.get("/download-file")
+async def download_file(token: str = Query(...)):
+    """
+    Download do PDF pelo token (sem auth — o token de 32 bytes É o segredo,
+    igual ao fluxo de reset de senha). Valida token, gera o PDF, incrementa o
+    contador de downloads.
+    """
+    from services.supabase_admin import get_admin_client
+    try:
+        r = (get_admin_client().table("user_export_requests")
+             .select("user_id,status,download_count,max_downloads")
+             .eq("download_token", token).limit(1).execute())
+    except Exception as e:
+        logger.error(f"download-file lookup failed: {e}")
+        raise HTTPException(503, "Serviço indisponível. Tente de novo em alguns minutos.")
+    if not r.data:
+        raise HTTPException(404, "Relatório não encontrado ou link inválido.")
+    row = r.data[0]
+    if row["status"] not in ("ready", "confirmed"):
+        raise HTTPException(409, "Este relatório ainda não está pronto ou já expirou.")
+    if (row.get("download_count") or 0) >= (row.get("max_downloads") or 3):
+        raise HTTPException(410, "Limite de downloads deste relatório atingido.")
+
+    manager = get_export_manager()
+    uid = row["user_id"]
+    # e-mail/plano pro cabeçalho do PDF
+    email, plan = "", "Free"
+    try:
+        prof = get_admin_client().table("profiles").select("plan").eq("id", uid).single().execute()
+        if prof.data:
+            plan = prof.data.get("plan") or "Free"
+    except Exception:
+        pass
+    try:
+        u = get_admin_client().auth.admin.get_user_by_id(uid)
+        email = getattr(getattr(u, "user", None), "email", "") or ""
+    except Exception:
+        pass
+
+    pdf_bytes = manager.generate_pdf(user_id=uid, email=email, plan=plan)
+    if not pdf_bytes:
+        raise HTTPException(500, "Erro ao gerar o PDF.")
+    try:
+        manager.get_download_stream(download_token=token)  # incrementa o contador
+    except Exception:
+        pass
+
+    return StreamingResponse(
+        iter([pdf_bytes]),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=relatorio_dados_{uid[:8]}.pdf"},
     )
 
 
