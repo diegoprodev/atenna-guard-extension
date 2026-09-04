@@ -39,8 +39,15 @@ def require_auth(
             observability.set_request_user(session["user_id"], session.get("email"), session.get("plan"))
         except Exception:
             pass
+        uid = session["user_id"]
+        # Aliases: várias rotas leem _user.get("id") / _user.get("sub")
+        # (export, deletion, documents, protect, retention, report_problem…).
+        # require_auth é a ÚNICA fonte do dict — expor os três nomes evita
+        # 400 "User info incomplete" e user_id=None espalhados pelo backend.
         return {
-            "user_id": session["user_id"],
+            "user_id": uid,
+            "id":      uid,
+            "sub":     uid,
             "email":   session["email"],
             "plan":    session["plan"],
         }

@@ -312,6 +312,19 @@ describe('DLP — edge cases', () => {
     expect(r.entities.some(e => e.type === 'NAME' && e.value === 'CPF CODIGO')).toBe(false);
   });
 
+  // Regressão FASE 10.9 B4 — DLP confundia "cloud" / vendor com NOME
+  it('termos de cloud não viram NAME', () => {
+    for (const t of ['Google Cloud Platform', 'Azure Functions', 'Comece pelos Fundamentos']) {
+      const r = scan(t);
+      expect(r.entities.some(e => e.type === 'NAME')).toBe(false);
+    }
+  });
+
+  it('nome real ainda é detectado (não regrediu)', () => {
+    const r = scan('falei com Diego Rodrigues ontem');
+    expect(r.entities.some(e => e.type === 'NAME')).toBe(true);
+  });
+
 });
 
 // ─────────────────────────────────────────────────────────────

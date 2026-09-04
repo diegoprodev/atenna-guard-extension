@@ -1,6 +1,7 @@
 import { initObservability } from './core/observability';
 initObservability('popup');
 import { signUpWithPassword } from './core/auth';
+import { messageFor } from './core/errors';
 import { bffLogin, bffLogout, bffMe, bffResetPassword, bffGoogleLogin } from './auth/bffClient';
 import { openSettingsOverlay } from './ui/modal';
 import { icon } from './ui/icons';
@@ -257,8 +258,7 @@ function renderLogin(container: HTMLElement, tabId: number | null, tabSupported 
       await bffResetPassword(email);
       renderPasswordResetConfirmation(container, email);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao enviar email.';
-      errEl.textContent = msg; errEl.style.display = 'block';
+      errEl.textContent = messageFor(err); errEl.style.display = 'block';
     }
   });
 
@@ -317,17 +317,17 @@ function renderLogin(container: HTMLElement, tabId: number | null, tabSupported 
         }
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Erro.';
-      if (msg.includes('email_not_found') || msg.includes('user_not_found')) {
-        errEl.textContent = 'Email não encontrado. Verifique o endereço ou crie uma conta.';
-      } else if (msg.includes('wrong_password') || msg.includes('Invalid login credentials') || msg.includes('invalid_credentials')) {
-        errEl.textContent = 'Senha incorreta. Verifique sua senha e tente novamente.';
-      } else if (msg.includes('email_not_confirmed') || msg.includes('Email not confirmed')) {
+      // signUpWithPassword já devolve mensagem em pt-BR (via new Error(texto)).
+      // bffLogin lança AppError, cujo .message é só o código ("INVALID_CREDENTIALS")
+      // — nunca renderizar cru: passa por messageFor() pra virar pt-BR.
+      const raw = e instanceof Error ? e.message : '';
+      const isCode = /^[A-Z_]+$/.test(raw);
+      if (!isCode && raw.includes('email_not_confirmed')) {
         errEl.textContent = 'Conta não confirmada. Verifique seu email e clique no link de ativação.';
-      } else if (msg.includes('too_many_requests') || msg.includes('rate_limit')) {
-        errEl.textContent = 'Muitas tentativas. Aguarde alguns minutos.';
+      } else if (!isCode && raw && !/error|fail|exception/i.test(raw)) {
+        errEl.textContent = raw; // mensagem pt-BR do signUpWithPassword
       } else {
-        errEl.textContent = msg || 'Erro inesperado. Tente novamente.';
+        errEl.textContent = messageFor(e);
       }
       errEl.style.display = 'block';
       btn.disabled = false; btn.textContent = mode === 'signup' ? 'Criar conta' : 'Entrar';
@@ -347,8 +347,8 @@ function renderLogin(container: HTMLElement, tabId: number | null, tabSupported 
       if (tabId && tabSupported) { relayInjectBadge(tabId); window.close(); }
       else { renderOnboarding(container); }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Erro no login com Google.';
-      errEl.textContent = msg.includes('NETWORK') ? 'Sem conexão ou login cancelado.' : msg;
+      const raw = e instanceof Error ? e.message : '';
+      errEl.textContent = raw.includes('NETWORK') ? 'Sem conexão ou login cancelado.' : messageFor(e);
       errEl.style.display = 'block';
       googleBtn.disabled = false;
       googleBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.17 2.86l6.1-6.1C34.46 3.01 29.5 1 24 1 14.85 1 7.08 6.48 3.69 14.24l7.1 5.52C12.53 13.1 17.83 9.5 24 9.5z"/><path fill="#4285F4" d="M46.52 24.5c0-1.64-.15-3.22-.43-4.75H24v9h12.7c-.55 2.99-2.2 5.53-4.68 7.24l7.18 5.58C43.44 37.44 46.52 31.42 46.52 24.5z"/><path fill="#FBBC05" d="M10.8 28.5A14.52 14.52 0 0 1 9.5 24c0-1.57.27-3.09.76-4.5l-7.1-5.52A23.94 23.94 0 0 0 0 24c0 3.87.93 7.53 2.57 10.76l8.23-6.26z"/><path fill="#34A853" d="M24 47c5.5 0 10.12-1.83 13.49-4.96l-7.18-5.58C28.54 37.77 26.38 38.5 24 38.5c-6.17 0-11.47-3.6-13.2-8.76l-8.23 6.26C6.08 43.52 14.45 47 24 47z"/></svg> Entrar com Google`;

@@ -51,6 +51,16 @@ export function classifyError(err: unknown): AppErrorCode {
   return E.UNKNOWN;
 }
 
+/**
+ * Canonical user-facing message for any error.
+ * AppError carries only its code as `.message` (e.g. "INVALID_CREDENTIALS") —
+ * rendering `err.message` raw leaks that code to the UI in English. Always route
+ * login/auth catch blocks through here.
+ */
+export function messageFor(err: unknown): string {
+  return MESSAGES[classifyError(err)];
+}
+
 export function friendlyError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
   if (msg.includes('email_not_found') || msg.includes('user_not_found'))
