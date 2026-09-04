@@ -164,6 +164,7 @@ def audit_log(
     quota_count: Optional[int] = None,
     session_id: Optional[str] = None,
     metadata: dict = None,
+    duration_ms: int = 0,
 ) -> None:
     """Write audit event to dlp_events. Non-blocking."""
     sb = _get_client()
@@ -180,7 +181,7 @@ def audit_log(
         'had_mismatch':     False,
         'timeout_occurred': False,
         'error_occurred':   False,
-        'duration_ms':      0,
+        'duration_ms':      duration_ms,
         'session_id':       session_id,
         'metadata':         metadata or {},
     }

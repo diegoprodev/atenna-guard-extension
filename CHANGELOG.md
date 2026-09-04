@@ -6,6 +6,17 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.9 (B11) — instrumentação de provider/latência (Gemini "mais lento")
+- **Causa raiz:** Gemini **nunca é o caminho principal** — só entra quando o OpenAI
+  (primário, ~4,7s) falha, e é ~8s (quase o dobro). "Demora no Gemini" = OpenAI errando
+  com mais frequência, não o Gemini ficando mais lento.
+- **Sem número real ainda:** o contador de provider é só em memória (Prometheus) e zera a
+  cada deploy — hoje o backend reiniciou ~10x. Nenhuma medição de duração existia antes.
+- **Fix:** `generate_prompts()` marca `_provider`/`_provider_ms`/`_total_ms`; `/generate-
+  prompts` grava em `dlp_events` (persistente) via `audit_log(duration_ms=...)`. Em alguns
+  dias dá pra rodar uma query e ter p50/p95 real por provider.
+- Teste `test_provider_instrumentation.py` (4). Spec: `docs/specs/FASE_10.9_B11_LATENCIA_GEMINI.md`.
+
 ### FASE P-ZT — blindagem anti-IDOR (parte 1: auditoria + guard)
 - **Auditoria:** os fluxos de usuário derivam `user_id` do **token**, nunca do cliente —
   nenhum IDOR estrutural nas rotas `/user/*`, `/auth/*`. O vazamento que o dono pegou era

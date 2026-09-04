@@ -290,6 +290,9 @@ async def generate(
 
     # ─── AUDIT LOG ────────────────────────────────────────────────────────────
     # Record every successful generation for LGPD Art. 37 audit trail
+    # FASE 10.9 (B11): guarda provider + duração — é a única fonte durável
+    # (o Counter do Prometheus zera a cada deploy). Dá pra tirar p50/p95 por
+    # provider depois com uma query em dlp_events.metadata.
     if user_id:
         audit_log(
             user_id,
@@ -301,7 +304,12 @@ async def generate(
             user_override=dlp_meta.get("dlp_user_override", False),
             quota_count=quota.get("count", 0) + 1,
             session_id=session_id,
-            metadata={"plan": plan, "mismatch": mismatch.has_mismatch},
+            duration_ms=result.get("_total_ms", result.get("_provider_ms")) or 0,
+            metadata={
+                "plan": plan, "mismatch": mismatch.has_mismatch,
+                "provider": result.get("_provider", "unknown"),
+                "provider_ms": result.get("_provider_ms"),
+            },
         )
 
     return PromptResponse(**result)
