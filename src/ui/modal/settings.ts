@@ -3,8 +3,8 @@ import { renderUpgradeModal, renderPricingCards } from './plans-modal';
 import { openCheckout } from './network';
 import { DAILY_LIMIT, MONTHLY_LIMIT, getUsage, getMonthlyUsage, getTotalCount } from '../../core/usageCounter';
 import { bffUsage } from '../../auth/bffClient';
-import { getBadgeColor, saveBadgeColor, applyBadgeColorToDom } from '../../core/userSettings';
-import type { BadgeColor } from '../../core/userSettings';
+import { getBadgeColor, saveBadgeColor, applyBadgeColorToDom, getAutoGenStyle, saveAutoGenStyle } from '../../core/userSettings';
+import type { BadgeColor, AutoGenStyle } from '../../core/userSettings';
 import { getDlpStats } from '../../core/dlpStats';
 import { renderPrivacyDataSection } from '../privacy-data';
 import { trackEvent } from '../../core/analytics';
@@ -416,6 +416,37 @@ export function renderSettingsPage(
       toggleRow.appendChild(toggleLabel);
       toggleRow.appendChild(toggleInput);
       personalSection.appendChild(toggleRow);
+
+      // ── FASE 10.9.2 B10 — estilo padrão da canetinha ──────
+      {
+        const styleRow = document.createElement('div');
+        styleRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 14px;gap:12px;box-sizing:border-box;';
+
+        const styleLabel = document.createElement('span');
+        styleLabel.style.cssText = `font-size:13px;color:${_tc};font-weight:500;white-space:nowrap;opacity:0.85;font-family:inherit;`;
+        styleLabel.textContent = 'Geração pela canetinha';
+
+        const styleSelect = document.createElement('select');
+        styleSelect.className = 'atenna-modal__login-input';
+        styleSelect.style.cssText = 'padding:6px 10px;font-size:12px;width:170px;';
+        [
+          ['ask', 'Perguntar (mostrar 3)'],
+          ['direct', 'Sempre Direto'],
+          ['structured', 'Sempre Estruturado'],
+          ['strategic', 'Sempre Estratégico'],
+        ].forEach(([v, label]) => {
+          const opt = document.createElement('option');
+          opt.value = v; opt.textContent = label;
+          styleSelect.appendChild(opt);
+        });
+        styleSelect.value = await getAutoGenStyle();
+        styleSelect.addEventListener('change', () => { void saveAutoGenStyle(styleSelect.value as AutoGenStyle); });
+
+        styleRow.appendChild(styleLabel);
+        styleRow.appendChild(styleSelect);
+        personalSection.appendChild(styleRow);
+      }
+
       body.appendChild(personalSection);
 
       // ── Seção: Documentos (FASE 4.1 Multimodal) ───────────

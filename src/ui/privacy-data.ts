@@ -157,8 +157,10 @@ async function updateExportCardState(card: HTMLElement, token: string): Promise<
       const btn = actionEl.querySelector('button') as HTMLButtonElement;
       btn?.addEventListener('click', () => void handleRequestExport(card, token));
     } else if (status === 'requested') {
-      statusEl.innerHTML = '<div class="atenna-privacy__status-text">Confirmação enviada para seu email.<br><span style="font-size: 11px; color: var(--at-muted);">Verifique sua caixa de entrada.</span></div>';
-      actionEl.innerHTML = '';
+      statusEl.innerHTML = '<div class="atenna-privacy__status-text">Confirmação enviada para seu email.<br><span style="font-size: 11px; color: var(--at-muted);">Verifique a caixa de entrada e o spam.</span></div>';
+      actionEl.innerHTML = '<button class="atenna-privacy__btn">Reenviar email</button>';
+      actionEl.querySelector('button')?.addEventListener('click',
+        () => void handleResend(card, token, '/user/export/resend'));
     } else if (status === 'ready') {
       const remaining = formatTimeRemaining(expiresAt || '');
       const downloads = `${downloadCount} download${(downloadCount ?? 0) !== 1 ? 's' : ''} restante${(downloadCount ?? 0) !== 1 ? 's' : ''}`;
@@ -174,6 +176,25 @@ async function updateExportCardState(card: HTMLElement, token: string): Promise<
     }
   } catch (e) {
     console.error('[privacy-data] updateExportCardState error:', e);
+  }
+}
+
+/** Reenvia o e-mail de confirmação (export ou exclusão) — B: "deve ter opção de reenviar". */
+async function handleResend(card: HTMLElement, token: string, path: string): Promise<void> {
+  setCardLoading(card, true);
+  try {
+    const res = await backendFetch(path, 'POST', token);
+    const body = await res.json().catch(() => ({})) as { message?: string; email_sent?: boolean };
+    if (!res.ok) {
+      showCardMessage(card, await friendlyBackendError(res));
+      return;
+    }
+    showCardMessage(card, body.message ?? 'Email reenviado. Verifique a caixa de entrada e o spam.',
+      body.email_sent === false ? 'error' : 'ok');
+  } catch {
+    showCardMessage(card, 'Sem conexão. Verifique sua internet e tente de novo.');
+  } finally {
+    setCardLoading(card, false);
   }
 }
 
@@ -296,8 +317,10 @@ async function updateDeletionCardState(card: HTMLElement, token: string): Promis
       const btn = actionEl.querySelector('button') as HTMLButtonElement;
       btn?.addEventListener('click', () => void handleRequestDeletion(card, token));
     } else if (status === 'pending_confirmation') {
-      statusEl.innerHTML = '<div class="atenna-privacy__status-text">Confirmação enviada para seu email.<br><span style="font-size: 11px; color: var(--at-muted);">Esta solicitação pode ser cancelada.</span></div>';
-      actionEl.innerHTML = '';
+      statusEl.innerHTML = '<div class="atenna-privacy__status-text">Confirmação enviada para seu email.<br><span style="font-size: 11px; color: var(--at-muted);">Verifique a caixa de entrada e o spam. Nada acontece sem você confirmar.</span></div>';
+      actionEl.innerHTML = '<button class="atenna-privacy__btn">Reenviar email</button>';
+      actionEl.querySelector('button')?.addEventListener('click',
+        () => void handleResend(card, token, '/user/deletion/resend'));
     } else if (status === 'deletion_scheduled') {
       const daysRemaining = formatDaysRemaining(scheduledAt || '');
       const formattedDate = scheduledAt

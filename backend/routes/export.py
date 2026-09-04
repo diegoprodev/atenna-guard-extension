@@ -77,30 +77,56 @@ async def request_export(
             detail=f"Could not initiate export: {result.get('error')}"
         )
 
-    # Envia o e-mail de confirmação de verdade (antes: a rota dizia "enviado"
-    # e nada saía). O token vem do manager (mesmo usado por confirm_export).
-    token = result.get("download_token")
-    email_sent = False
-    if token:
-        confirm_url = f"{_SITE_URL}/user/export/confirm?token={token}"
-        try:
-            from routes.email_service import render_data_export_confirmation, send_email
-            email_sent = await send_email(
-                email,
-                "Confirme o pedido do seu relatório de dados — Atenna Safe Prompt",
-                render_data_export_confirmation(confirm_url, email),
-            )
-        except Exception as e:
-            logger.error(f"export confirmation email failed for {email[:40]}: {e}")
+    email_sent = await _send_export_email(email, result.get("download_token"))
 
     return {
         "success": True,
         "message": (f"Email de confirmação enviado para {email}" if email_sent
-                    else "Pedido registrado. Se o email não chegar em alguns minutos, tente de novo."),
+                    else "Pedido registrado. Se o email não chegar em alguns minutos, use \"Reenviar\"."),
         "email_sent": email_sent,
         "note": "Clique no link no email para confirmar o export",
         "expires_in": result.get("expires_in")
     }
+
+
+async def _send_export_email(email: str, token: str | None) -> bool:
+    if not token:
+        return False
+    confirm_url = f"{_SITE_URL}/user/export/confirm?token={token}"
+    try:
+        from routes.email_service import render_data_export_confirmation, send_email
+        return await send_email(
+            email,
+            "Confirme o pedido do seu relatório de dados — Atenna Safe Prompt",
+            render_data_export_confirmation(confirm_url, email),
+        )
+    except Exception as e:
+        logger.error(f"export confirmation email failed for {email[:40]}: {e}")
+        return False
+
+
+@router.post("/resend")
+async def resend_export_email(_user: dict = Depends(require_auth)):
+    """Reenvia o e-mail de confirmação do pedido de export ativo (status 'requested')."""
+    user_id = _user.get("id") or _user.get("sub")
+    email = _user.get("email")
+    if not user_id or not email:
+        raise HTTPException(status_code=400, detail="User info incomplete")
+    try:
+        from services.supabase_admin import get_admin_client
+        r = (get_admin_client().table("user_export_requests")
+             .select("download_token,status")
+             .eq("user_id", user_id).eq("status", "requested")
+             .order("created_at", desc=True).limit(1).execute())
+    except Exception as e:
+        logger.error(f"resend_export lookup failed: {e}")
+        raise HTTPException(503, "Não foi possível reenviar agora.")
+    if not r.data:
+        raise HTTPException(404, "Nenhum pedido de relatório aguardando confirmação.")
+    email_sent = await _send_export_email(email, r.data[0].get("download_token"))
+    return {"email_sent": email_sent,
+            "message": (f"Email reenviado para {email}" if email_sent
+                        else "Não foi possível reenviar agora. Tente em alguns minutos.")}
 
 
 @router.get("/confirm")

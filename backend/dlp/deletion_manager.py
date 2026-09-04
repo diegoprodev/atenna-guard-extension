@@ -337,8 +337,8 @@ class DeletionManager:
                 .select("*")
                 .eq("user_id", user_id)
                 .in_("status", [
-                    DeletionStatus.PENDING_CONFIRMATION,
-                    DeletionStatus.DELETION_SCHEDULED,
+                    DeletionStatus.PENDING_CONFIRMATION.value,
+                    DeletionStatus.DELETION_SCHEDULED.value,
                 ])
                 .order("created_at", desc=True)
                 .limit(1)

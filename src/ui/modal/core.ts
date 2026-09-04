@@ -28,6 +28,7 @@ import {
   renderDuplicateConfirm,
 } from './prompt-states';
 import { isSameAsLastGeneration, signatureOf, setLastGenSignature } from '../../core/lastGeneration';
+import { getAutoGenStyle, autoGenStyleKey } from '../../core/userSettings';
 
 // External
 import { getCurrentInput, getInputText, setInputText } from '../../core/inputHandler';
@@ -423,10 +424,13 @@ async function openModal(autoGenerate = false): Promise<void> {
       );
     };
 
+    // B10: estilo padrão da canetinha (null = mostrar os 3 cards)
+    const autoApplyKey = autoGenStyleKey(await getAutoGenStyle());
+
     const startGeneration = (forceFresh = false): void => {
-      if (cacheHit && !forceFresh) { renderCached(); return; }
+      if (cacheHit && !forceFresh && !autoApplyKey) { renderCached(); return; }
       renderLoading(resultsView);
-      const shouldShowSuggestion = pro && (isVagueInput(userText) || shouldSuggestBuilder(userText));
+      const shouldShowSuggestion = !autoApplyKey && pro && (isVagueInput(userText) || shouldSuggestBuilder(userText));
       if (shouldShowSuggestion) {
         void trackEvent('auto_suggestion_shown');
         renderSuggestion(
@@ -437,10 +441,10 @@ async function openModal(autoGenerate = false): Promise<void> {
             builderEl.classList.add('atenna-modal__builder--open');
             builderToggleEl.classList.add('atenna-modal__builder-toggle--open');
           },
-          () => runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro, _modalOpenTime),
+          () => runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro, _modalOpenTime, autoApplyKey),
         );
       } else {
-        void runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro, _modalOpenTime);
+        void runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro, _modalOpenTime, autoApplyKey);
       }
     };
 
@@ -487,6 +491,7 @@ async function runFlow(
   origin:        PromptOrigin = 'manual',
   pro:           boolean = false,
   openTime:      number = Date.now(),
+  autoApplyKey?: 'direct' | 'structured' | 'technical' | null,
 ): Promise<void> {
   renderLoading(container);
 
@@ -548,6 +553,17 @@ async function runFlow(
 
     modalState.promptCache = { forText: userText, data };
     void setLastGenSignature(signatureOf(userText)); // B7/B8: lembra o conteúdo gerado
+
+    // B10: preferência "sempre gerar [estilo]" — aplica direto no chat, sem escolher card.
+    const applied = autoApplyKey ? (data[autoApplyKey] as string | undefined) : undefined;
+    if (applied && platformInput) {
+      void trackEvent('autogen_style_applied', { style: autoApplyKey });
+      setInputText(platformInput, applied);
+      showToast('Prompt aplicado no chat', 'success');
+      overlay.remove();
+      clearMsgInterval();
+      return;
+    }
 
     renderPrompts(container, data, platformInput, overlay, origin, newTotalCount, pro);
   } catch (error) {

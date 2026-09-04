@@ -6,6 +6,26 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.9.2 (B9/B10) — "Reverter proteção" + "sempre gerar [estilo]"
+- **B9:** após "Proteger dados", o badge mostra **"Reverter proteção"** por 15s (ou até abrir
+  o modal / próximo envio). O texto original fica **só em memória**, nunca em storage.
+- **B10:** Configurações → Personalização → **"Geração pela canetinha"**: Perguntar (padrão) /
+  Sempre Direto / Sempre Estruturado / Sempre Estratégico. Se != Perguntar, a canetinha
+  aplica o estilo direto no chat e fecha o modal.
+
+### FASE 10.9.7-fix — status da exclusão + reenviar e-mail
+- **Botão de exclusão não atualizava:** `deletion_manager.get_deletion_status` filtrava por
+  `DeletionStatus.PENDING_CONFIRMATION` (membro de `str`-Enum) → o PostgREST recebia
+  `"DeletionStatus.PENDING_CONFIRMATION"` e não casava nada → o card voltava pra "Solicitar
+  exclusão". Corrigido pra `.value`.
+- **Reenviar:** `POST /user/export/resend` e `POST /user/deletion/resend` — reenviam o e-mail
+  de confirmação do pedido pendente. Botão **"Reenviar email"** nos cards (`requested` /
+  `pending_confirmation`). Copy agora cita o spam.
+- O e-mail do **relatório** não saía porque o dono tinha 1 pedido preso em `requested` de
+  02:16 (pré-fix) → `initiate_export_request` recusava novos (503) antes do código de e-mail.
+  Pedido expirado; próximo "Solicitar relatório" envia normal.
+
+
 ### FASE 10.9.2 (B7/B8) — canetinha não regera calada + alerta "mesmo conteúdo"
 - **B7:** a canetinha sempre regerava. Agora, se o conteúdo da caixa tem a **mesma
   assinatura** da última geração, ela **não gera** — pergunta antes.
