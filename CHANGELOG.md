@@ -6,6 +6,21 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.9.5 — badge não aparecia após login com Google
+- **O que era:** logando com Google a sessão gravava certo (entrava automático), mas o badge
+  **não aparecia** no input do ChatGPT sem recarregar. Com e-mail/senha funcionava.
+- **Causa:** a injeção do badge dependia do **popup** mandar `RELAY_INJECT_BADGE` enquanto
+  vivo. No Google, `launchWebAuthFlow` abre a janela do Google e o popup **fecha** — quando o
+  fluxo volta, a mensagem se perde.
+- **Fix:** o **service worker** virou backstop — observa `atenna_session` no storage e, quando
+  surge uma sessão nova, manda `INJECT_BADGE` pra toda aba já aberta em host suportado.
+  Independe do popup (vale pra e-mail, Google e login pela welcome). Matches vêm do
+  `manifest.content_scripts`.
+- **Regressão:** E2E `full-flow F9` — aba de IA aberta sem sessão → sessão surge → badge injeta
+  sozinho, sem reload. 9/9 no full-flow.
+- Só frontend — recarregar a extensão em `chrome://extensions`, sem deploy de backend.
+- Spec: `docs/specs/FASE_10.9.5_BADGE_APOS_GOOGLE_LOGIN.md`.
+
 ### FASE 10.9.4 — `POST /auth/admin-login` sumiu do backend (404) — painel inacessível
 - **O que era:** o painel de admin (`/nexussafe/`) chamava `POST /auth/admin-login` e recebia
   **404**. O endpoint não existia no backend em produção nem no repo — só era citado no
