@@ -74,7 +74,7 @@ async def generate_prompts_gemini(input_text: str, retry_count: int = 0, max_ret
         return None
 
     if not GEMINI_API_KEY or GEMINI_API_KEY == "cole_sua_chave_aqui":
-        print("[Atenna] GEMINI_API_KEY não configurada")
+        logger.error("gemini: GEMINI_API_KEY não configurada")
         return None
 
     canary = generate_canary()
@@ -129,22 +129,25 @@ async def generate_prompts_gemini(input_text: str, retry_count: int = 0, max_ret
         return result
 
     except httpx.TimeoutException:
-        print("[Atenna] Gemini timeout")
+        logger.warning("gemini: timeout")
         return None
     except httpx.HTTPStatusError as e:
         status = e.response.status_code
-        print(f"[Atenna] Gemini HTTP {status}")
+        # FASE 10.9 — antes engolia o corpo do erro (só um print). O corpo do
+        # Gemini distingue RESOURCE_EXHAUSTED (quota/créditos) de outros 429.
+        body_text = e.response.text[:300]
         if status in (503, 429) and retry_count < max_retries:
             wait = 2 ** retry_count
-            print(f"[Atenna] Retry em {wait}s... ({retry_count+1}/{max_retries})")
+            logger.warning("gemini: HTTP %s (retry %s/%s em %ss) body=%s", status, retry_count + 1, max_retries, wait, body_text)
             await asyncio.sleep(wait)
             return await generate_prompts_gemini(input_text, retry_count + 1, max_retries, user_id=user_id)
+        logger.error("gemini: HTTP %s body=%s", status, body_text)
         return None
     except (json.JSONDecodeError, KeyError, ValueError) as e:
-        print(f"[Atenna] Gemini parse erro: {e}")
+        logger.error("gemini: parse erro: %s", e)
         return None
     except Exception as e:
-        print(f"[Atenna] Gemini erro: {e}")
+        logger.error("gemini: erro inesperado: %s", e)
         return None
 
 
