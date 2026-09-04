@@ -13,6 +13,9 @@ All notable changes to **Atenna Guard Extension** are documented here.
 - **`backend/tests/test_anti_idor.py`** — guard que falha o CI se um PR adicionar uma rota
   que: (a) filtra query de banco por `user_id` vindo de Query/Path/body, ou (b) expõe rota
   `/user/*` sem `Depends(require_auth)`.
+- **O guard já pegou 2 rotas reais sem auth nenhuma:** `POST /user/export/purge` e
+  `GET /user/export/summary` estavam **abertas pra qualquer um na internet** (disparar
+  purga de exports / ler estatísticas agregadas). Gate `require_super_admin` adicionado.
 - **Achados menores** (spec): `/dlp/image` usa `request.user_id` na telemetria (baixo);
   `admin/compliance.py` interpola filtros crus no PostgREST (baixo, admin-only).
 - **Falta (parte 2, mexe em prod):** RLS como 2ª barreira nas 7 tabelas de PII + backend

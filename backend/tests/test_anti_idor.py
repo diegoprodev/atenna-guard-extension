@@ -60,9 +60,18 @@ def test_no_db_filter_by_client_user_id():
 
 
 def test_user_routes_require_auth():
-    """Todo handler de rota com prefix /user exige Depends(require_auth) — exceto os
-    landings de e-mail (GET /confirm), que usam token no lugar de sessão."""
-    auth_dep = re.compile(r"Depends\(\s*require_auth\s*\)")
+    """
+    Todo handler de rota com prefix /user exige Depends(require_auth) — exceto:
+      - landings de e-mail (GET /confirm, /download-file): token de 32 bytes no
+        lugar de sessão, é o mesmo padrão do reset de senha (/auth/callback)
+      - GET /deletion/lifecycle: conteúdo estático público (explica os estados)
+      - rotas gated por Depends(require_super_admin) em vez de require_auth
+        (achado do guard: /export/purge e /export/summary não tinham NENHUM
+        auth — corrigido pra admin nesta mesma fase)
+    """
+    auth_dep = re.compile(r"Depends\(\s*(require_auth|require_super_admin)\s*\)")
+    # rotas token-based ou públicas por design — o nome da função identifica.
+    TOKEN_OR_PUBLIC = ("confirm", "download_file", "lifecycle")
     missing = []
     for path in _route_files():
         src = path.read_text(encoding="utf-8", errors="ignore")
@@ -72,10 +81,10 @@ def test_user_routes_require_auth():
         for i in range(1, len(parts), 2):
             verb, block = parts[i], parts[i + 1]
             head = block[:700]
-            first_line = head.split("\n", 1)[0]
-            if "confirm" in first_line:  # landing de e-mail (GET, token-based)
+            fn = re.search(r"def\s+(\w+)", head)
+            fn_name = fn.group(1) if fn else ""
+            if any(tok in fn_name for tok in TOKEN_OR_PUBLIC):
                 continue
             if not auth_dep.search(head):
-                fn = re.search(r"def\s+(\w+)", head)
-                missing.append(f"{path.name}:{verb} {fn.group(1) if fn else '?'}")
-    assert not missing, f"Rotas /user/* sem require_auth: {missing}"
+                missing.append(f"{path.name}:{verb} {fn_name or '?'}")
+    assert not missing, f"Rotas /user/* sem require_auth/require_super_admin: {missing}"

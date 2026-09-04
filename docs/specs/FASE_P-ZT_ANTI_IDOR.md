@@ -35,6 +35,7 @@ Os fluxos de usuário **derivam `user_id` do token**, nunca do cliente:
 | ZT-5 | Guard de código faltando | nada impede um PR futuro de adicionar uma rota que lê `user_id` do body/query. | Médio → **feito** (`test_anti_idor.py`) |
 | ZT-6 | `/dlp/image` usa `request.user_id` (campo do body) na telemetria em vez de `_user["user_id"]` | cliente pode mentir o `user_id` da própria telemetria de scan. Sem exposição de dado (o scan só analisa o texto enviado), mas sujo. | Baixo |
 | ZT-7 | `admin/compliance.py` interpola `user_id`/`risk_level`/`entity_type` crus na URL do PostgREST | injeção de filtro por um admin autenticado. Admin já tem acesso total → severidade baixa, mas parametrizar. | Baixo |
+| ZT-8 | `POST /user/export/purge` e `GET /user/export/summary` **sem NENHUM auth** — achado direto pelo guard (`test_user_routes_require_auth` falhou no CI) | qualquer um na internet disparava a purga de exports ou lia estatísticas agregadas | Médio → **corrigido nesta fase** (gate `require_super_admin`) |
 
 ## Plano
 
