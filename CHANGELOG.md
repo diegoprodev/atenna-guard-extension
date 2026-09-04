@@ -6,6 +6,22 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE P-ZT — blindagem anti-IDOR (parte 1: auditoria + guard)
+- **Auditoria:** os fluxos de usuário derivam `user_id` do **token**, nunca do cliente —
+  nenhum IDOR estrutural nas rotas `/user/*`, `/auth/*`. O vazamento que o dono pegou era
+  client-side (storage sem escopo), já corrigido (#40).
+- **`backend/tests/test_anti_idor.py`** — guard que falha o CI se um PR adicionar uma rota
+  que: (a) filtra query de banco por `user_id` vindo de Query/Path/body, ou (b) expõe rota
+  `/user/*` sem `Depends(require_auth)`.
+- **O guard já pegou 2 rotas reais sem auth nenhuma:** `POST /user/export/purge` e
+  `GET /user/export/summary` estavam **abertas pra qualquer um na internet** (disparar
+  purga de exports / ler estatísticas agregadas). Gate `require_super_admin` adicionado.
+- **Achados menores** (spec): `/dlp/image` usa `request.user_id` na telemetria (baixo);
+  `admin/compliance.py` interpola filtros crus no PostgREST (baixo, admin-only).
+- **Falta (parte 2, mexe em prod):** RLS como 2ª barreira nas 7 tabelas de PII + backend
+  usando o JWT do usuário em vez de `service_role` onde o dado é do próprio user.
+- Spec: `docs/specs/FASE_P-ZT_ANTI_IDOR.md`.
+
 ### FASE 10.9.8 — contador de uso zerado + download do relatório
 - **"Uso de prompts" mostrava 0 / ∞ / "nenhum ainda"** mesmo com gerações feitas.
   `/auth/usage` lia de `telemetry_persistence` — **tabela que não existe** → todo request

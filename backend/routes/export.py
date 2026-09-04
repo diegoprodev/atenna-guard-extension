@@ -11,6 +11,7 @@ from typing import Optional
 import logging
 
 from middleware.auth import require_auth
+from middleware.admin_auth import require_super_admin
 from dlp.export_manager import get_export_manager
 
 logger = logging.getLogger(__name__)
@@ -376,11 +377,14 @@ async def download_export(
 
 
 @router.post("/purge")
-async def purge_expired_exports():
+async def purge_expired_exports(_admin: dict = Depends(require_super_admin)):
     """
     Purgar exports expirados (job automático).
 
     Admin/interno: Remove arquivos de exports que expiraram.
+    Achado do guard anti-IDOR (FASE P-ZT): rota estava sem QUALQUER auth —
+    qualquer um na internet podia disparar a purga. Nenhum job interno chama
+    isto via HTTP (a purga roda direto no manager); gate de admin adicionado.
 
     Returns:
         {
@@ -403,11 +407,13 @@ async def purge_expired_exports():
 
 
 @router.get("/summary")
-async def get_export_summary():
+async def get_export_summary(_admin: dict = Depends(require_super_admin)):
     """
     Obter sumário de operações de export (compliance).
 
     Admin/interno: Estatísticas para auditoria e conformidade.
+    Achado do guard anti-IDOR (FASE P-ZT): rota devolvia estatísticas agregadas
+    sem auth nenhuma. Gate de admin adicionado.
 
     Returns:
         {
