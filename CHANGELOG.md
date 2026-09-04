@@ -6,6 +6,23 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### SEGURANÇA/OBSERVABILIDADE — 429 dos providers de LLM não chegava no GlitchTip
+- **O que era:** o dono perguntou "chegou uma mensagem de créditos de 429, qual a origem?".
+  Achei nos logs: `[Atenna] OpenAI rate limit atingido` — mas era um `print()`, nunca um
+  `logger.error()`. `observability.py` tem `LoggingIntegration(event_level="ERROR")` — todo
+  `logger.error` vira evento no GlitchTip automaticamente — só que esses erros usavam
+  `print()`, que morre no stdout efêmero do container. **A observabilidade nunca via esses erros.**
+- **Também descartava o detalhe:** `except RateLimitError:` sem capturar o corpo — não dava
+  pra saber se era `rate_limit_exceeded` (transitório) ou `insufficient_quota` (créditos
+  acabaram). Mesmo padrão em `gemini_service.py` (`httpx.HTTPStatusError` sem logar o body).
+- **Fix:** todo erro real de provider (chave ausente, 429 com corpo completo, timeout, parse)
+  agora usa `logger.error`/`logger.warning` com o detalhe — flui pro GlitchTip → Discord
+  automaticamente, sem mudar nenhum comportamento de fallback.
+- **Validado:** o dono pagou a fatura do Gemini — testei a chamada real (direto e via
+  Cloudflare AI Gateway, o caminho que produção usa) → **HTTP 200** nos dois. Gemini
+  funcionando.
+- Teste `test_provider_error_observability.py` (3).
+
 ### FASE P-ZT parte 2 — RLS: auditoria achou que já estava lá, endureceu grants
 - **Antes de escrever `ENABLE ROW LEVEL SECURITY`, auditei o banco de verdade.** RLS já
   estava habilitada nas 9 tabelas de dado de usuário (`profiles`, `dlp_events`,

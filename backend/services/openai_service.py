@@ -66,7 +66,7 @@ async def generate_prompts_openai(input_text: str, user_id: str = "") -> dict | 
         return None
 
     if not OPENAI_API_KEY:
-        print("[Atenna] OPENAI_API_KEY não configurada")
+        logger.error("openai: OPENAI_API_KEY não configurada")
         return None
 
     canary = generate_canary()
@@ -129,7 +129,7 @@ async def generate_prompts_openai(input_text: str, user_id: str = "") -> dict | 
         result = json.loads(raw, strict=False)
 
         if not all(k in result for k in ("direct", "technical", "structured")):
-            print("[Atenna] OpenAI: chaves obrigatórias faltando")
+            logger.error("openai: chaves obrigatórias faltando no JSON: %s", list(result.keys()))
             return None
 
         for key in ("direct", "technical", "structured"):
@@ -139,11 +139,16 @@ async def generate_prompts_openai(input_text: str, user_id: str = "") -> dict | 
         print(f"[Atenna] OpenAI OK via {via} ({len(raw)} chars)")
         return result
 
-    except RateLimitError:
-        print("[Atenna] OpenAI rate limit atingido")
+    except RateLimitError as exc:
+        # FASE 10.9 — antes engolia o detalhe (só um print, nunca chegava no
+        # GlitchTip). Corpo da OpenAI distingue rate_limit_exceeded (transitório)
+        # de insufficient_quota (créditos acabaram, não resolve sozinho).
+        body = getattr(exc, "body", None)
+        err_type = (body.get("error") or {}).get("type") if isinstance(body, dict) else None
+        logger.error("openai: 429 type=%s message=%s", err_type, exc.message)
         return None
     except APITimeoutError:
-        print("[Atenna] OpenAI timeout")
+        logger.warning("openai: timeout")
         return None
     except AuthenticationError:
         logger.error("openai: autenticação falhou — verifique OPENAI_API_KEY")
