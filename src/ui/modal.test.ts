@@ -325,27 +325,40 @@ describe('toggleModal', () => {
 
   // ── Cache: no re-generation on reopen with same text ─────
 
-  it('reopening with same text shows cached prompts without calling backend again', async () => {
+  it('canetinha com MESMO conteúdo pergunta antes de regerar (FASE 10.9.2 B7/B8)', async () => {
     addTextarea('texto cacheado');
     generateFromBadge();
     await waitForFlow();
-    // Count only ATENNA_FETCH calls (analytics ATENNA_TRACK calls are also present)
     const fetchCallsAfterFirst = (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls
       .filter(([msg]: [{ type?: string }]) => msg.type === 'ATENNA_FETCH').length;
+    expect(fetchCallsAfterFirst).toBe(1);
 
-    // Close and reopen
+    // Close and reopen via canetinha com o MESMO texto
     toggleModal();
-    stubChrome(); // re-stub so we can track calls
+    stubChrome();
     document.body.innerHTML = '';
     addTextarea('texto cacheado');
     generateFromBadge();
     await waitForFlow();
 
-    const fetchCallsOnReopen = (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls
+    // 1) NÃO regera calado — mostra o alerta
+    const dupeText = document.querySelector('.atenna-modal__suggest-text');
+    expect(dupeText?.textContent).toContain('mesmo conteúdo');
+    let fetchCalls = (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls
       .filter(([msg]: [{ type?: string }]) => msg.type === 'ATENNA_FETCH').length;
-    expect(fetchCallsOnReopen).toBe(0);
+    expect(fetchCalls).toBe(0);
+
+    // 2) "Ver o anterior" → mostra os 3 cards do cache, sem backend
+    const verAnterior = [...document.querySelectorAll('.atenna-modal__suggest-btn')]
+      .find(b => b.textContent === 'Ver o anterior') as HTMLButtonElement;
+    expect(verAnterior).toBeTruthy();
+    verAnterior.click();
+    await waitForFlow();
+
+    fetchCalls = (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls
+      .filter(([msg]: [{ type?: string }]) => msg.type === 'ATENNA_FETCH').length;
+    expect(fetchCalls).toBe(0);
     expect(document.querySelectorAll('.atenna-modal__card').length).toBe(3);
-    expect(fetchCallsAfterFirst).toBe(1);
   });
 
   // ── Usage counter ────────────────────────────────────────

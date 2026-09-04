@@ -80,6 +80,61 @@ let lastEntities:    DetectedEntity[] = [];
 let lastScanInput:   HTMLElement | undefined;
 let lastBannerBtn:   HTMLButtonElement | undefined;
 
+// FASE 10.9.2 (B9) — "Reverter proteção". Guarda o texto original SÓ em memória,
+// nunca em storage (é dado sensível). Some em 15s ou no próximo envio.
+let revertState: { input: HTMLElement; original: string } | undefined;
+let revertBannerEl: HTMLElement | undefined;
+let revertTimer: ReturnType<typeof setTimeout> | undefined;
+
+function clearRevert(): void {
+  if (revertTimer) { clearTimeout(revertTimer); revertTimer = undefined; }
+  revertBannerEl?.remove();
+  document.getElementById('atenna-revert-banner')?.remove();
+  revertBannerEl = undefined;
+  revertState = undefined;
+}
+
+function showRevertBanner(anchor: HTMLButtonElement): void {
+  // remove um banner anterior sem mexer em revertState (o caller acabou de setar)
+  if (revertTimer) { clearTimeout(revertTimer); revertTimer = undefined; }
+  revertBannerEl?.remove();
+  document.getElementById('atenna-revert-banner')?.remove();
+  const dark = isDarkPage();
+  const b = document.createElement('div');
+  b.id = 'atenna-revert-banner';
+  b.className = 'atenna-protection-banner' + (dark ? ' atenna-protection-banner--dark' : '');
+  b.style.display = 'flex';
+  b.style.alignItems = 'center';
+  b.style.gap = '10px';
+  b.style.minWidth = 'auto';
+
+  const msg = document.createElement('span');
+  msg.className = 'atenna-protection-banner__msg';
+  msg.style.margin = '0';
+  msg.textContent = 'Proteção aplicada';
+
+  const revertBtn = document.createElement('button');
+  revertBtn.className = 'atenna-protection-banner__btn';
+  revertBtn.textContent = 'Reverter';
+  revertBtn.addEventListener('click', () => {
+    if (revertState) {
+      revertState.input.focus();
+      setInputText(revertState.input, revertState.original);
+      void trackEvent('dlp_protection_reverted');
+      cancelDlpTimers?.(); // não deixa o re-scan reabrir o banner de proteção
+    }
+    clearRevert();
+  });
+
+  b.appendChild(msg);
+  b.appendChild(revertBtn);
+  document.body.appendChild(b);
+  revertBannerEl = b;
+  positionBannerAbove(anchor, b);
+
+  revertTimer = setTimeout(() => clearRevert(), 15_000);
+}
+
 function showProtectionBanner(
   input:    HTMLElement,
   btn:      HTMLButtonElement,
@@ -153,6 +208,10 @@ function showProtectionBanner(
     updateBadgeDotRisk('NONE', 0);
     const entityTypes = [...new Set(entities.map(e => e.type))];
     void incrementProtected(charsSaved, entityTypes, entities.length);
+
+    // B9: oferece "Reverter proteção" por 15s (texto original só em memória)
+    revertState = { input: inputEl, original: text };
+    showRevertBanner(btn);
   });
 
   const ignoreBtn = document.createElement('button');
@@ -291,6 +350,7 @@ function addDragBehavior(btn: HTMLButtonElement, onToggle: () => void): void {
   // Click fires after mouseup — skip it if a drag just occurred.
   btn.addEventListener('click', () => {
     if (dragMoved) { dragMoved = false; return; }
+    clearRevert(); // abrir o modal encerra a janela de "reverter"
     // When auto-banner is OFF and there are HIGH entities: show banner on click
     if (!autoBannerEnabled && lastEntities.length > 0 && lastScanInput) {
       showProtectionBanner(lastScanInput, btn, lastEntities);
@@ -581,6 +641,7 @@ export function removeButton(inputSelector: string): void {
 
   currentCleanup?.();
   currentCleanup = undefined;
+  clearRevert();
   document.getElementById(BTN_ID)?.remove();
 }
 

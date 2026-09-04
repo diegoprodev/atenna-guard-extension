@@ -21,6 +21,8 @@ const USER_SCOPED_BASES = [
   'atenna_upload_count',
   'atenna_plan',
   'atenna_pro_welcome_pending',
+  'atenna_last_gen_sig',
+  'atenna_autogen_style',
 ];
 
 export interface Session {

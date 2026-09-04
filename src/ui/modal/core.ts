@@ -25,7 +25,10 @@ import {
 } from './prompt-cards';
 import {
   renderOnboarding, renderEmptyState, renderLoading, renderSuccess, renderLimitReached,
+  renderDuplicateConfirm,
 } from './prompt-states';
+import { isSameAsLastGeneration, signatureOf, setLastGenSignature } from '../../core/lastGeneration';
+import { getAutoGenStyle, autoGenStyleKey } from '../../core/userSettings';
 
 // External
 import { getCurrentInput, getInputText, setInputText } from '../../core/inputHandler';
@@ -413,14 +416,21 @@ async function openModal(autoGenerate = false): Promise<void> {
     // Magic wand path: run generation directly in the edit tab (results appear there)
     switchTab('edit');
 
-    // Cache hit: same text was generated before — render instantly, skip backend
-    if (modalState.promptCache && modalState.promptCache.forText === userText) {
+    const cacheHit = !!(modalState.promptCache && modalState.promptCache.forText === userText);
+
+    const renderCached = (): void => {
       void renderSuccess(resultsView).then(() =>
         renderPrompts(resultsView, modalState.promptCache!.data, platformInput, overlay, 'manual', 0, pro)
       );
-    } else {
+    };
+
+    // B10: estilo padrão da canetinha (null = mostrar os 3 cards)
+    const autoApplyKey = autoGenStyleKey(await getAutoGenStyle());
+
+    const startGeneration = (forceFresh = false): void => {
+      if (cacheHit && !forceFresh && !autoApplyKey) { renderCached(); return; }
       renderLoading(resultsView);
-      const shouldShowSuggestion = pro && (isVagueInput(userText) || shouldSuggestBuilder(userText));
+      const shouldShowSuggestion = !autoApplyKey && pro && (isVagueInput(userText) || shouldSuggestBuilder(userText));
       if (shouldShowSuggestion) {
         void trackEvent('auto_suggestion_shown');
         renderSuggestion(
@@ -431,11 +441,31 @@ async function openModal(autoGenerate = false): Promise<void> {
             builderEl.classList.add('atenna-modal__builder--open');
             builderToggleEl.classList.add('atenna-modal__builder-toggle--open');
           },
-          () => runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro, _modalOpenTime),
+          () => runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro, _modalOpenTime, autoApplyKey),
         );
       } else {
-        void runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro, _modalOpenTime);
+        void runFlow(resultsView, usageBadge, userText, platformInput, overlay, 'manual', pro, _modalOpenTime, autoApplyKey);
       }
+    };
+
+    // FASE 10.9.2 (B7/B8): mesmo conteúdo da última geração (mesmo após DLP)?
+    // Não regera calado — SEMPRE pergunta antes (o alerta é o portão).
+    const isDupe = await isSameAsLastGeneration(userText);
+    if (isDupe) {
+      void trackEvent('dupe_content_prompt_shown');
+      const firstName = (me.email?.split('@')[0] ?? '').replace(/^\w/, c => c.toUpperCase());
+      renderDuplicateConfirm(
+        resultsView,
+        firstName,
+        () => { void trackEvent('dupe_content_regen'); startGeneration(true); },
+        () => {
+          void trackEvent('dupe_content_declined');
+          if (modalState.promptCache) renderCached();
+          else renderOnboarding(resultsView, (ex: string) => { editorEl.value = ex; editorEl.focus(); }, pro);
+        },
+      );
+    } else {
+      startGeneration();
     }
   } else {
     // Normal badge click: always open in edit tab
@@ -461,6 +491,7 @@ async function runFlow(
   origin:        PromptOrigin = 'manual',
   pro:           boolean = false,
   openTime:      number = Date.now(),
+  autoApplyKey?: 'direct' | 'structured' | 'technical' | null,
 ): Promise<void> {
   renderLoading(container);
 
@@ -521,6 +552,18 @@ async function runFlow(
     }
 
     modalState.promptCache = { forText: userText, data };
+    void setLastGenSignature(signatureOf(userText)); // B7/B8: lembra o conteúdo gerado
+
+    // B10: preferência "sempre gerar [estilo]" — aplica direto no chat, sem escolher card.
+    const applied = autoApplyKey ? (data[autoApplyKey] as string | undefined) : undefined;
+    if (applied && platformInput) {
+      void trackEvent('autogen_style_applied', { style: autoApplyKey });
+      setInputText(platformInput, applied);
+      showToast('Prompt aplicado no chat', 'success');
+      overlay.remove();
+      clearMsgInterval();
+      return;
+    }
 
     renderPrompts(container, data, platformInput, overlay, origin, newTotalCount, pro);
   } catch (error) {
