@@ -446,9 +446,12 @@ create index if not exists idx_user_deletion_requests_user_id
 create index if not exists idx_user_deletion_requests_status
   on public.user_deletion_requests(status);
 
+-- Predicado só com constante — `now()` não é IMMUTABLE e o Postgres rejeita
+-- funções não-imutáveis em predicado de índice parcial (42P17). O filtro de
+-- tempo (`deletion_scheduled_at <= now()`) fica na query, não no índice.
 create index if not exists idx_user_deletion_requests_scheduled
   on public.user_deletion_requests(deletion_scheduled_at)
-  where status = 'deletion_scheduled' and deletion_scheduled_at <= now();
+  where status = 'deletion_scheduled';
 
 create index if not exists idx_account_status_history_user_id
   on public.account_status_history(user_id);
