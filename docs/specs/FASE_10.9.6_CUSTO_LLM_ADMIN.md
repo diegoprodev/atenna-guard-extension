@@ -25,7 +25,7 @@ Pedido original, várias queixas juntas:
 | 3 | Preço "atual" dos modelos | **3 cópias divergentes** da mesma tabela de preço (`costs.py`, `overview.py`, `usage.py`), todas com uma taxa única "cega" pra input+output, `openai: $0.002/1k` = **US$2/1M** — **~10-20x** o preço real do `gpt-4.1-nano` (o modelo que o sistema de fato usa, não o que tava cotado). Frontend (`admin/src/pages/Costs.tsx`) tinha uma **4ª cópia**, hardcoded, com `gpt-4o-mini` (modelo errado, nem é o usado) e o mesmo preço velho. | grep em `routes/admin/{costs,overview,usage}.py` + `admin/src/pages/Costs.tsx:104-114` |
 | 4 | Cache de prompt | Investigado e **descartado**: o system prompt (OpenAI/Gemini) tem ~250-300 tokens — abaixo do mínimo de 1024 tokens que o cache automático da OpenAI exige pra sequer ativar. Não há ganho de cache possível no tamanho atual do prompt, independente de qualquer reordenação. Documentado aqui pra não reabrir a mesma investigação depois. | cálculo de tokens do `_SYSTEM_PROMPT_TEMPLATE` |
 | 5 | Admin "mockado" | **Não é mock** — `routes/admin/costs.py`, `overview.py`, `usage.py` já chamam Cloudflare/Supabase de verdade, com fallback pra estimativa só quando a chamada real falha. `admin/src/pages/Costs.tsx` já tem os 2 estados (real vs. estimado) e até **já mostra o motivo exato** do 404 ("Token sem permissão" + instrução de correção). O que tava errado era o dado de fallback (preço stale), não a arquitetura. | leitura completa dos 3 arquivos backend + `Costs.tsx` |
-| 6 | CF AI Gateway 404 | Causa raiz confirmada: `CF_ACCOUNT_ID` **não está setado** no `.env` da VPS (só `CF_AIG_TOKEN` existe) → URL da API da Cloudflare fica com o segmento de conta vazio → 404. Tentei descobrir o Account ID via API usando o token existente (`GET /accounts`) — respondeu `success:true` mas lista vazia: o token é **escopado só pra AI Gateway**, sem permissão `Account Settings: Read` pra listar contas. | `ssh atenna-vps` + curl direto (ver Riscos/Bloqueios) |
+| 6 | CF AI Gateway 404 | Causa raiz: `CF_ACCOUNT_ID` não estava setado no `.env` da VPS → URL da API Cloudflare com segmento de conta vazio → 404. **RESOLVIDO**: o Account ID (`e6d552f924497f01ac4a986ef8f8c342`) já estava hardcoded nas URLs do AI Gateway em `openai_service.py`/`gemini_service.py`/`costs.py` (`.../v1/<ACCOUNT_ID>/<GATEWAY_ID>/...`) — extraí dali, setei no `.env` da VPS, recriei o container. Testado ao vivo: `logs API = 200`, 20 logs reais, custo real por provider. O token **já tinha** a permissão certa — só faltava o ID. | `ssh atenna-vps` + curl direto |
 | 7 | API keys configuradas certas? | `OPENAI_API_KEY`/`GEMINI_API_KEY` presentes no `.env` da VPS (confirmado nesta sessão anterior — Gemini validado com HTTP 200 real, direto e via CF Gateway). Não há verificação **visível no admin** hoje — proposto abaixo. | sessão anterior (429/observabilidade) |
 | 8 | USD→BRL | **Já existe**: `backend/utils/fx_rate.py` (`get_usd_brl()`, frankfurter.app/ECB, fallback 5.06) — só `overview.py` tinha uma cópia própria duplicada em vez de usar o helper. Corrigido (ver Decisões). | `utils/fx_rate.py` |
 
@@ -40,7 +40,8 @@ Pedido original, várias queixas juntas:
 | Provider desconhecido | taxa alta de propósito (`_DEFAULT_PRICING = {input:1.0, output:1.0}`) em vez de barata | nunca esconder custo de um provider novo/não catalogado |
 | USD→BRL duplicado | `overview.py` passa a usar `utils/fx_rate.get_usd_brl()` — removida a cópia local `_fetch_usd_brl` | 1 fonte, mesmo comportamento (frankfurter.app, fallback 5.06) |
 | Cache de prompt | **Não implementar** — prompt curto demais pro cache automático ajudar. Reavaliar só se o system prompt crescer além de ~1000 tokens no futuro | evita esforço sem ganho real |
-| CF_ACCOUNT_ID / token | **Bloqueado no dono** — preciso do Account ID (visível no dashboard Cloudflare) e, se o token atual não tiver `Account Settings: Read` ou `Account → AI Gateway → Read` a nível de conta, um token novo/re-escopado | não dá pra descobrir isso sem acesso ao dashboard; API confirma que o token atual não lista contas |
+| CF_ACCOUNT_ID / token | **RESOLVIDO** — Account ID extraído das URLs do AI Gateway já no código; setado no `.env` da VPS; container recriado; dados reais confirmados ao vivo. Não precisou de nada do dono. | o ID não é segredo, aparece na própria URL do gateway |
+| Usar o custo nativo da Cloudflare | **Follow-up** — os logs do CF AI Gateway agora trazem um campo `cost` calculado pela própria Cloudflare. `cost_usd()` do `llm_pricing.py` continua como fallback/sanity-check, mas dá pra preferir `l.get('cost')` quando presente (mais preciso, acompanha mudança de preço sozinho) | Cloudflare adicionou isso depois que o código foi escrito |
 | Validação de API keys no admin | **Follow-up, não nesta spec** — checar `OPENAI_API_KEY`/`GEMINI_API_KEY` fazendo uma chamada mínima (`GET /v1/models` já existe em `overview.py` pro OpenAI; falta o mesmo pro Gemini) e mostrar status no admin | escopo maior, merece PR própria com teste de bypass (não vazar a key no payload) |
 
 ## Arquivos
@@ -72,12 +73,8 @@ admin/src/pages/Costs.tsx                           # corrige preço/modelo hard
 
 ## Riscos / Bloqueios
 
-- **CF_ACCOUNT_ID ausente + token sem permissão de listar conta** — bloqueia dados reais do Cloudflare
-  em `/admin/costs`, `/admin/overview`, `/admin/usage` até o dono: (1) pegar o Account ID no dashboard
-  Cloudflare (barra lateral direita de qualquer página da conta, ou na URL) e setar `CF_ACCOUNT_ID` no
-  `.env` da VPS; (2) confirmar que o `CF_AIG_TOKEN` atual tem permissão **Account → AI Gateway → Read**
-  a nível de CONTA (não só a permissão de roteamento que já funciona pras chamadas de LLM em si) — se
-  não tiver, criar um token novo com esse escopo.
+- ~~**CF_ACCOUNT_ID ausente**~~ — RESOLVIDO (ver tabela de investigação #6). Dados reais do Cloudflare
+  já aparecem em `/admin/costs`, `/admin/overview`, `/admin/usage`.
 - **Preço de modelo muda com o tempo** — `MODEL_PRICING_PER_1M` é hardcoded; se OpenAI/Google mudarem
   preço, precisa atualizar manualmente. Aceitável por ora (mudança rara, comentário no arquivo aponta
   onde atualizar); automatizar via API de preço fica de fora do escopo.
@@ -85,8 +82,9 @@ admin/src/pages/Costs.tsx                           # corrige preço/modelo hard
 
 ## Rollout
 
-1. ✅ `max_retries=0` (já em produção, PR #62).
-2. ✅ `/auth/me` paralelizado + `llm_pricing.py` + fix do frontend — nesta spec, pronto pra PR.
-3. ⏳ **Dono**: fornecer `CF_ACCOUNT_ID` (+ confirmar/recriar escopo do token) — sem isso, `/admin/costs`
-   continua no modo estimado (que já funciona, só não é "dado real do Cloudflare").
-4. ⏳ Follow-up (PR separada): validação de API key visível no admin.
+1. ✅ `max_retries=0` (produção, PR #62).
+2. ✅ `/auth/me` paralelizado + `llm_pricing.py` + fix do frontend (produção, PR #63).
+3. ✅ `CF_ACCOUNT_ID` setado no `.env` da VPS + container recriado — dados reais do Cloudflare
+   confirmados ao vivo (`/admin/costs` fora do modo estimado).
+4. ⏳ Follow-up (PR separada): validação de API key visível no admin; preferir `l.get('cost')`
+   nativo da Cloudflare sobre a estimativa quando presente.
