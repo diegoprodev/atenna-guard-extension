@@ -1,7 +1,7 @@
 import { initObservability } from '../core/observability';
 initObservability('content');
 import { detectPlatform } from './detectInput';
-import { injectButton, removeButton, disconnectInjector } from './injectButton';
+import { injectButton, removeButton, disconnectInjector, injectFallbackButton, isFallbackButton, isRealButtonInjected } from './injectButton';
 import { toggleModal, openSettingsOverlay } from '../ui/modal';
 import { getSession } from '../auth/sessionManager';
 import { setStorageUser } from '../core/scopedStorage';
@@ -67,10 +67,16 @@ function tryInject(): void {
 
   const input = document.querySelector(config.inputSelector);
   if (!input) {
-    // Input gone — remove stale badge
-    removeBadge();
+    // FASE 10.9 (B13): sem o composer da plataforma no DOM (ex.: usuário
+    // ainda não logado no ChatGPT/Claude/etc) — mostra o badge mínimo mesmo
+    // assim, em vez de sumir. Vira o badge completo assim que o composer
+    // aparecer (próxima chamada de tryInject, via o MutationObserver).
+    injectFallbackButton(() => toggleModal());
     return;
   }
+
+  // O composer chegou — se o badge atual era o "de espera", troca pelo completo.
+  if (isFallbackButton()) removeBadge();
 
   // Don't inject badge when the input is not visible (hidden pages, collapsed UI)
   if (!isElementVisible(input)) return;
@@ -83,11 +89,26 @@ function tryInject(): void {
   attachImageInterceptor(config.inputSelector);
 }
 
+// FASE B13.1 — tryInject() sozinho só roda 1x por evento (init, nav, login).
+// O MutationObserver cobre re-tentativas SE algo mutar o childList da página,
+// mas um composer que só muda de opacity/visibility (sem nó entrando/saindo
+// da árvore) não dispara esse observer — o badge ficava perdido pra sempre
+// numa página que já carregou e não muta mais. Poll curto e limitado cobre
+// esse buraco sem depender de mutação nenhuma.
+const REINJECT_POLL_MS  = 500;
+const REINJECT_POLL_MAX = 20; // 20 x 500ms = 10s
+
+function tryInjectWithRetry(attemptsLeft = REINJECT_POLL_MAX): void {
+  tryInject();
+  if (isRealButtonInjected() || attemptsLeft <= 0) return;
+  setTimeout(() => tryInjectWithRetry(attemptsLeft - 1), REINJECT_POLL_MS);
+}
+
 async function init(): Promise<void> {
   const authed = await checkAuth();
 
   // Only inject if authenticated
-  if (authed) tryInject();
+  if (authed) tryInjectWithRetry();
 
   // Re-inject on DOM changes (SPA navigation, conversation switch)
   // Throttle callback to 150ms leading-edge to prevent excessive DOM operations
@@ -105,7 +126,7 @@ async function init(): Promise<void> {
       const newSession = changes['atenna_session']?.newValue ?? changes['atenna_jwt']?.newValue;
       if (newSession && !_isAuthenticated) {
         // Storage has a token — re-resolve o usuário (pode ser OUTRA conta) antes de injetar
-        void checkAuth().then(authed => { if (authed) tryInject(); });
+        void checkAuth().then(authed => { if (authed) tryInjectWithRetry(); });
       } else if (newSession && _isAuthenticated) {
         // token trocou com a extensão já autenticada → possível troca de conta.
         // Re-resolve o namespace de storage pra não misturar dados entre contas.
@@ -128,19 +149,19 @@ try {
       // Verify session before injecting badge — prevent auth bypass
       if (!_isAuthenticated) {
         void checkAuth().then(authed => {
-          if (authed) tryInject();
+          if (authed) tryInjectWithRetry();
         });
       } else {
-        tryInject();
+        tryInjectWithRetry();
       }
       void toggleModal();
     }
     if (msg?.type === 'INJECT_BADGE') {
       // Inject badge without opening modal — used after login from popup/welcome
       if (!_isAuthenticated) {
-        void checkAuth().then(authed => { if (authed) tryInject(); });
+        void checkAuth().then(authed => { if (authed) tryInjectWithRetry(); });
       } else {
-        tryInject();
+        tryInjectWithRetry();
       }
     }
     if (msg?.type === 'OPEN_LOGIN_MODAL') {
@@ -224,7 +245,7 @@ if (window === window.top) {
     _origPushState(...args);
     disconnectInjector();
     // Give the SPA a tick to update the DOM before re-evaluating
-    setTimeout(tryInject, 0);
+    setTimeout(tryInjectWithRetry, 0);
   };
-  window.addEventListener('popstate', () => { disconnectInjector(); setTimeout(tryInject, 0); });
+  window.addEventListener('popstate', () => { disconnectInjector(); setTimeout(tryInjectWithRetry, 0); });
 }

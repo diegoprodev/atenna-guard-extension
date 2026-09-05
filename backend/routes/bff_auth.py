@@ -319,9 +319,14 @@ async def usage(creds: HTTPAuthorizationCredentials = Depends(_bearer)):
         # Gerações: contadas em dlp_events (event_type='generate_prompt') — a MESMA
         # fonte que o rate limiter usa. (Antes lia 'telemetry_persistence', tabela
         # que não existe → today/monthly/total ficavam sempre 0.)
-        now = datetime.now(timezone.utc)
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        # FASE 10.9.5 — "hoje" tem que virar no fuso de negócio (BUSINESS_TZ,
+        # mesmo usado pelo rate limiter), não em meia-noite UTC (21h em
+        # Brasília) — senão o contador exibido diverge do limite realmente
+        # aplicado e o usuário vê "1/5" tendo usado 2x no mesmo dia local.
+        from dlp.rate_limit import BUSINESS_TZ
+        now_local = datetime.now(BUSINESS_TZ)
+        today_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
+        month_start = now_local.replace(day=1, hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
 
         def _dt(s: str):
             return datetime.fromisoformat(s.replace("Z", "+00:00"))

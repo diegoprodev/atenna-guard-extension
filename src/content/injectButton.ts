@@ -17,6 +17,7 @@ import { icon } from '../ui/icons';
 const INJECTED_ATTR      = 'data-atenna-injected';
 const BTN_ID             = 'atenna-guard-btn';
 const BTN_CLASS          = 'atenna-btn';
+const FALLBACK_ATTR      = 'data-atenna-fallback';
 const BADGE_RIGHT_OFFSET = 90;
 const BADGE_GAP          = 10; // px gap between badge bottom and input top
 
@@ -57,7 +58,7 @@ const ENTITY_LABELS: Record<string, string> = {
   API_KEY: 'Chave API', TOKEN: 'Token', PASSWORD: 'Senha',
   CREDIT_CARD: 'Cartão', ADDRESS: 'Endereço', PROCESS_NUM: 'Processo',
   MEDICAL: 'Dado médico', LEGAL: 'Dado legal', GENERIC_PII: 'Dado pessoal',
-  NAME: 'Nome',
+  NAME: 'Nome', CREF: 'CREF', BANK_ACCOUNT: 'Conta bancária',
 };
 
 function entityLabel(type: string): string {
@@ -365,6 +366,53 @@ function addDragBehavior(btn: HTMLButtonElement, onToggle: () => void): void {
 export function disconnectInjector(): void {
   currentCleanup?.();
   currentCleanup = undefined;
+}
+
+// FASE 10.9 (B13) — badge sempre visível, mesmo sem o composer da plataforma
+// no DOM ainda (ex.: usuário logado na Atenna mas AINDA não logado no
+// ChatGPT/Claude/etc — a página deles não tem campo de texto real nesse
+// estado). Canto fixo da tela, sem as ações que dependem de input real
+// (varinha, DLP em tempo real) — só abre o modal. Some sozinho quando o
+// composer de verdade aparece e a injeção completa assume o lugar.
+export function injectFallbackButton(onToggle: () => void): void {
+  if (document.getElementById(BTN_ID)) return; // já tem badge (de espera ou completo)
+
+  const btn = document.createElement('button');
+  btn.id    = BTN_ID;
+  btn.className = BTN_CLASS;
+  btn.setAttribute(FALLBACK_ATTR, 'true');
+  btn.setAttribute('aria-label', 'Atenna Prompt');
+  btn.title = 'Faça login na plataforma para a proteção automática ficar disponível';
+
+  const logoUrl = getLogoUrl();
+  const iconWrap = document.createElement('span');
+  iconWrap.className = 'atenna-btn__icon-wrap';
+  if (logoUrl) {
+    const img = document.createElement('img');
+    img.className = 'atenna-btn__icon';
+    img.src = logoUrl; img.width = 28; img.height = 28; img.alt = '';
+    img.setAttribute('aria-hidden', 'true');
+    iconWrap.appendChild(img);
+  }
+  btn.appendChild(iconWrap);
+
+  btn.style.position = 'fixed';
+  btn.style.bottom   = '24px';
+  btn.style.right    = '24px';
+  btn.style.zIndex   = '2147483000';
+
+  btn.addEventListener('click', () => onToggle());
+  document.body.appendChild(btn);
+}
+
+/** true se o badge atual na página é o de espera (sem composer ainda). */
+export function isFallbackButton(): boolean {
+  return document.getElementById(BTN_ID)?.hasAttribute(FALLBACK_ATTR) ?? false;
+}
+
+/** true se o badge COMPLETO (não o de espera) já está injetado no composer real. */
+export function isRealButtonInjected(): boolean {
+  return document.getElementById(BTN_ID) !== null && !isFallbackButton();
 }
 
 export function injectButton(config: PlatformConfig, onToggle: () => void): void {

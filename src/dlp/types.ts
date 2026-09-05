@@ -6,9 +6,9 @@ export type EntityType =
   | 'ADDRESS' | 'MEDICAL' | 'LEGAL' | 'GENERIC_PII'
   | 'PROCESS_NUM' | 'NAME'
   | 'RG' | 'CNH' | 'OAB' | 'PLACA' | 'CRM'
-  | 'CRN' | 'CRO' | 'CREA' | 'CRP' | 'COREN'
+  | 'CRN' | 'CRO' | 'CREA' | 'CRP' | 'COREN' | 'CREF'
   | 'PIS' | 'TITULO_ELEITOR' | 'PASSAPORTE'
-  | 'PIX';
+  | 'PIX' | 'BANK_ACCOUNT';
 
 export interface DetectedEntity {
   type:       EntityType;

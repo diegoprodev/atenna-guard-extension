@@ -356,3 +356,72 @@ test('F10: canetinha NÃO regera calada — pergunta se o conteúdo é o mesmo',
   await expect(page.locator('.atenna-modal__suggest-btn--primary')).toHaveText('Gerar de novo');
   await page.close();
 });
+
+test('F13 [B13]: badge aparece mesmo SEM o composer da plataforma (ainda não logado nela)', async ({ context }) => {
+  // O dono: "a prioridade é aparecer o badge sem o user estar logado na
+  // plataforma". Antes: sem #prompt-textarea no DOM, tryInject() só dava
+  // removeBadge() e nunca mais tentava de novo. Agora mostra um badge mínimo
+  // (canto fixo) e troca pelo completo assim que o composer aparecer.
+  await clearAll(context);
+  await injectSession(context);
+  await new Promise((r) => setTimeout(r, 1500));
+  await mockBff(context);
+
+  const page = await context.newPage();
+  await page.route('**/auth/me', (r) => r.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ user_id: 'e2e-user-id', email: 'e2e@atenna.ai', plan: 'free', expires_at: 9999999999 }),
+  }));
+  await page.goto('http://localhost:4200/chatgpt-sem-composer.html');
+
+  // sem composer: aparece o badge "de espera"
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 15_000 });
+  expect(await page.locator('#atenna-guard-btn').getAttribute('data-atenna-fallback')).toBe('true');
+
+  // "login concluído" — composer aparece no DOM
+  await page.evaluate(() => (window as unknown as { __atennaAddComposer: () => void }).__atennaAddComposer());
+
+  // o badge completo assume o lugar (perde o atributo de fallback)
+  await expect.poll(async () =>
+    page.locator('#atenna-guard-btn').getAttribute('data-atenna-fallback'),
+    { timeout: 10_000 },
+  ).toBeNull();
+
+  await page.close();
+});
+
+test('F14 [B13.1]: badge aparece mesmo sem mutação nenhuma no DOM (composer só muda opacity)', async ({ context }) => {
+  // Bug real relatado pelo dono: logado na extensão E na plataforma, composer
+  // já existe e é visível — mas o badge não aparecia. Causa raiz: tryInject()
+  // só reinjeta via MutationObserver (childList/subtree), que NÃO dispara
+  // quando o composer só troca de opacity/visibility (nenhum nó entra/sai da
+  // árvore) — só style. Sem retry por polling, uma falha na primeira tentativa
+  // (isElementVisible() ainda opacity:0) nunca mais tenta de novo numa página
+  // idle. Este teste NUNCA chama __atennaRevealComposer() via evento de DOM
+  // que a extensão observe — só troca o style, provando que só o poll salva.
+  await clearAll(context);
+  await injectSession(context);
+  await new Promise((r) => setTimeout(r, 1500));
+  await mockBff(context);
+
+  const page = await context.newPage();
+  await page.route('**/auth/me', (r) => r.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ user_id: 'e2e-user-id', email: 'e2e@atenna.ai', plan: 'free', expires_at: 9999999999 }),
+  }));
+  await page.goto('http://localhost:4200/chatgpt-composer-fade-in.html');
+
+  // Composer existe mas invisível (opacity:0) — 1ª tentativa de tryInject() falha
+  // em isElementVisible(). Espera menos que o poll inteiro pra confirmar que
+  // ainda NÃO injetou (senão o teste não prova nada sobre o retry).
+  await page.waitForTimeout(300);
+  expect(await page.locator('[data-atenna-injected]').count()).toBe(0);
+
+  // Só troca o style — NENHUM nó entra/sai da árvore, MutationObserver não dispara.
+  await page.evaluate(() => (window as unknown as { __atennaRevealComposer: () => void }).__atennaRevealComposer());
+
+  // O poll de retry (não o MutationObserver) tem que pegar isso dentro da janela de 10s.
+  await page.waitForSelector('#atenna-guard-btn:not([data-atenna-fallback])', { timeout: 11_000 });
+
+  await page.close();
+});

@@ -30,11 +30,13 @@ const ENTITY_BASE_SCORES: Record<string, number> = {
   CREA:            68,
   CRP:             68,
   COREN:           68,
+  CREF:            68,
   PLACA:           45,
   // Financial / civil identifiers
   PIS:             75,
   TITULO_ELEITOR:  70,
   PASSAPORTE:      80,
+  BANK_ACCOUNT:    60,
 };
 
 // Intent multipliers — applied to the max entity score

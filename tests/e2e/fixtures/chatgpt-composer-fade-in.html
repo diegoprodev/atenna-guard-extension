@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Atenna E2E Fixture — composer existe mas invisível (B13.1)</title>
+  <style>
+    body { margin: 0; background: #212121; color: #ececec; font-family: sans-serif; }
+    .main { display: flex; flex-direction: column; align-items: center; padding-top: 40vh; }
+    #prompt-textarea {
+      width: 600px; height: 52px; padding: 12px 16px;
+      background: #2f2f2f; border: 1px solid #444; border-radius: 12px;
+      color: #ececec; font-size: 16px; resize: none; outline: none;
+    }
+  </style>
+</head>
+<body>
+  <!--
+    FASE 10.9.3 (B13.1) — reproduz o bug real: o composer JÁ EXISTE no DOM
+    desde o carregamento (nenhum nó entra/sai da árvore depois), só está
+    com opacity:0 (fade-in da SPA). Isso NÃO dispara o MutationObserver
+    (childList/subtree não observa mudança de style/atributo). Sem retry
+    por polling, tryInject() roda 1x, falha em isElementVisible(), e o
+    badge nunca mais tenta de novo — window.__atennaRevealComposer() só
+    muda o style, nunca move nó nenhum na árvore.
+  -->
+  <div class="main" id="main">
+    <div id="prompt-textarea" contenteditable="true" style="opacity:0"></div>
+  </div>
+  <script>
+    window.__atennaRevealComposer = function () {
+      document.getElementById('prompt-textarea').style.opacity = '1';
+    };
+  </script>
+</body>
+</html>
