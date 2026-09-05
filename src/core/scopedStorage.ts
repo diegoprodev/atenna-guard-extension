@@ -38,3 +38,41 @@ export function sk(base: string): string {
 export function userScopedKeys(uid: string, bases: string[]): string[] {
   return bases.map(b => `${b}__${uid}`);
 }
+
+/**
+ * Todo dado escrito sob a conta de um usuário. Fonte única — mora aqui (junto
+ * da lógica de scoping), não em auth.ts, porque tem que ser purgado de DOIS
+ * lugares: o logout explícito (signOut) E o auto-clear de sessão expirada
+ * dentro de bffFetch (401 + refresh falhou). Antes só o signOut purgava →
+ * sessão que expirava sozinha deixava histórico/uso/plano pra trás.
+ */
+export const USER_SCOPED_BASES = [
+  'atenna_history',
+  'atenna_usage',
+  'atenna_total_count',
+  'atenna_monthly_usage',
+  'atenna_dlp_stats',
+  'atenna_badge_color',
+  'atenna_settings',
+  'atenna_upload_count',
+  'atenna_plan',
+  'atenna_pro_welcome_pending',
+  'atenna_last_gen_sig',
+  'atenna_autogen_style',
+];
+
+/**
+ * Apaga do chrome.storage.local todo dado escopado no `uid`. Idempotente e
+ * seguro se `uid` for null/vazio (nesse caso não faz nada — nunca apaga
+ * chave global crua).
+ */
+export function purgeScopedData(uid: string | null | undefined): Promise<void> {
+  return new Promise(resolve => {
+    if (!uid) { resolve(); return; }
+    try {
+      chrome.storage.local.remove(userScopedKeys(uid, USER_SCOPED_BASES), () => resolve());
+    } catch {
+      resolve();
+    }
+  });
+}
