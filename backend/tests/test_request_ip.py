@@ -4,7 +4,7 @@ FASE P-ZT.4 — get_client_ip: fonte única do IP real. Teste de bypass
 """
 import re
 
-from services.client_ip import get_client_ip, ip_key, mask_ip
+from services.request_ip import get_client_ip, ip_key, mask_ip
 
 
 class _Req:

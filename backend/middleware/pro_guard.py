@@ -13,7 +13,7 @@ import logging
 from fastapi import Depends, HTTPException, Request
 
 from middleware.auth import require_auth
-from services.client_ip import get_client_ip, mask_ip
+from services.request_ip import get_client_ip, mask_ip
 from services.pro_ip_lock import check_and_claim_ip, get_mode
 
 try:

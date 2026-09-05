@@ -114,7 +114,7 @@ def _claim_ip_lock_if_pro(user_id: str, plan: str, request: Request) -> None:
     if plan != "pro":
         return
     try:
-        from services.client_ip import get_client_ip
+        from services.request_ip import get_client_ip
         from services.pro_ip_lock import claim_on_login
         claim_on_login(user_id, get_client_ip(request))
     except Exception:
