@@ -9,7 +9,7 @@ import {
 import { modalState, clearPromptCache, UPGRADE_TRIGGER } from './state';
 
 // Network
-import { syncPlanFromBff, fetchPrompts, openCheckout, QuotaExceededError } from './network';
+import { syncPlanFromBff, fetchPrompts, openCheckout, QuotaExceededError, DeviceConflictError } from './network';
 import type { PromptResponse } from './network';
 
 // Sub-views
@@ -571,6 +571,29 @@ async function runFlow(
       // Server-side quota exceeded — user bypassed client-side limit
       void trackEvent('quota_limit_reached_server', { origin, count: error.count, limit: error.limit });
       renderLimitReached(container, error.limit <= 5 ? 'daily' : 'monthly');
+      return;
+    }
+    if (error instanceof DeviceConflictError) {
+      // FASE P-ZT.4 — conta PRO usada em 2 dispositivos/IPs ao mesmo tempo.
+      void trackEvent('pro_device_conflict', { origin });
+      container.textContent = '';
+      const box = document.createElement('div');
+      box.style.cssText = 'padding:28px 22px;text-align:center;';
+      const emoji = document.createElement('div');
+      emoji.style.cssText = 'font-size:32px;margin-bottom:12px;';
+      emoji.textContent = '🔒';
+      const msg = document.createElement('div');
+      msg.style.cssText = `font-size:15px;font-weight:600;line-height:1.4;margin-bottom:10px;color:${isDark() ? '#fff' : '#1a1a1a'};`;
+      msg.textContent = error.friendlyMessage;
+      box.appendChild(emoji);
+      box.appendChild(msg);
+      if (error.hint) {
+        const hint = document.createElement('div');
+        hint.style.cssText = 'font-size:12.5px;line-height:1.5;opacity:0.7;';
+        hint.textContent = error.hint;
+        box.appendChild(hint);
+      }
+      container.appendChild(box);
       return;
     }
     void trackEvent('prompt_generate_error', { origin, error: String(error) });

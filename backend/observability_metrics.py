@@ -57,6 +57,11 @@ if _ENABLED:
         "Falhas de autenticação no BFF, por motivo",
         ["reason"],  # raw_jwt | expired | invalid_session | error
     )
+    pro_ip_lock_blocks_total = Counter(
+        "atenna_pro_ip_lock_blocks_total",
+        "Conta PRO usada de um 2º IP simultâneo — barrada (enforce) ou observada (shadow)",
+        ["mode"],  # shadow | enforce
+    )
     bff_session_store = Gauge(
         "atenna_bff_session_store",
         "1 = sessões BFF persistidas no Postgres; 0 = fallback in-memory (perde durabilidade)",
@@ -96,6 +101,7 @@ else:
     generate_prompts_total = _NoopMetric()
     checkout_events_total = _NoopMetric()
     auth_failures_total = _NoopMetric()
+    pro_ip_lock_blocks_total = _NoopMetric()
     bff_session_store = _NoopMetric()
     subscriptions_gauge = _NoopMetric()
     subscription_sync_mismatch = _NoopMetric()
@@ -151,6 +157,13 @@ def record_auth_failure(reason: str) -> None:
         auth_failures_total.labels(reason=(reason or "unknown")).inc()
     except Exception:  # pragma: no cover
         _log.debug("record_auth_failure falhou", exc_info=True)
+
+
+def record_pro_ip_lock_block(mode: str) -> None:
+    try:
+        pro_ip_lock_blocks_total.labels(mode=(mode or "unknown")).inc()
+    except Exception:  # pragma: no cover
+        _log.debug("record_pro_ip_lock_block falhou", exc_info=True)
 
 
 def set_bff_session_store(healthy: bool) -> None:

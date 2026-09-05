@@ -34,6 +34,7 @@ from routes.uninstall_feedback import router as uninstall_feedback_router
 from routes.upload import router as upload_router
 from routes.upload_large import router as upload_large_router
 from middleware.auth import require_auth
+from middleware.pro_guard import enforce_pro_limits
 from middleware.security_headers import SecurityHeadersMiddleware
 from routes.metrics import router as metrics_router
 from dlp.enforcement import evaluate_strict_enforcement
@@ -145,7 +146,9 @@ async def health():
 @app.post("/generate-prompts", response_model=PromptResponse, tags=["Prompts"])
 async def generate(
     request: PromptRequest,
-    _user: dict = Depends(require_auth),   # 401 if no valid JWT
+    # FASE P-ZT.4 — enforce_pro_limits = require_auth + (se PRO) lock de IP
+    # único. Não muda nada pro free nem quando PRO_IP_LOCK_MODE=off.
+    _user: dict = Depends(enforce_pro_limits),
 ):
     """
     Recebe o texto do usuário e retorna 3 versões otimizadas via Gemini.

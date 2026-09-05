@@ -6,6 +6,30 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE P-ZT.4 — anti-abuso de conta PRO (spec `docs/specs/FASE_P-ZT_PARTE4_ANTI_ABUSO_PRO.md`)
+- **Teto PRO/hora: 20 → 12** (`PRO_HOURLY_LIMIT`). Pedido do dono: um assento PRO é 1 pessoa;
+  12/h cobre uso individual com folga e corta o abuso de login compartilhado (família/time
+  usando a mesma conta) que multiplicava o custo de API por assento. **Ativo no deploy.**
+- **Lock de IP único por conta PRO** (`pro_ip_locks` + `services/pro_ip_lock.py` +
+  `middleware/pro_guard.py`). 1 IP ativo; IP diferente dentro da janela de graça (15 min de
+  atividade) → **429** com a mensagem: *"Você só pode usar o Atenna Safe Prompt em um único
+  dispositivo de forma simultânea."* IP antigo ocioso > 15 min é adotado (não trava quem trocou
+  de rede/viajou); login explícito reivindica o lock (quem foi bloqueado só entra de novo).
+  IP vem do `X-Real-IP` (nginx sobrescreve — cliente não forja). Fail-open no erro de Supabase.
+- **Rollout faseado**: `PRO_IP_LOCK_MODE` = `off` (default — nada muda até o dono rodar a
+  migration e ligar) → `shadow` (observa e loga o que bloquearia, ~1 semana) → `enforce`.
+  **Pré-req duro pro `enforce`**: firewall só-Cloudflare no 443 (P7.3) — senão dá pra forjar o
+  IP batendo direto na origem.
+- Frontend: 429 `account_in_use_elsewhere` → `DeviceConflictError` → modal mostra a mensagem
+  amigável + dica (🔒), sem cair no fallback genérico.
+- Migration: `supabase/migrations/20260905_pro_ip_locks.sql` (idempotente, RLS só service_role).
+- Métrica: `atenna_pro_ip_lock_blocks_total{mode}`.
+- **Testes**: `test_rate_limit_pro_hourly.py` (4), `test_client_ip.py` (6 — inclui bypass de
+  header), `test_pro_ip_lock.py` (8 — todos os caminhos + fail-open + shadow + IPv6/64),
+  `modal.test.ts` +1 (DeviceConflictError). vitest 351/352, backend local 28 passed nos
+  arquivos novos+relacionados. Build limpo.
+
+
 ### FASE 10.9.6 — investigação de custo/latência de LLM (spec `docs/specs/FASE_10.9.6_CUSTO_LLM_ADMIN.md`)
 - **Modal ~3s pra abrir (achado do dono):** causa raiz era `GET /auth/me` fazendo 3 chamadas
   Supabase em SÉRIE, bloqueantes. A 2ª e a 3ª (`_get_plan`, `_get_onboarding_seen`) não
