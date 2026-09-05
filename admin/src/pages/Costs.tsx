@@ -103,13 +103,13 @@ export function Costs({ token }: { token: string }) {
                 <tr>
                   <td>Gemini</td>
                   <td className="mono text-muted">gemini-2.5-flash-lite</td>
-                  <td className="mono">$0.00015</td>
+                  <td className="mono">$0.00010</td>
                   <td className="mono" style={{ fontWeight: 600 }}>${data.cost_breakdown.gemini_usd.toFixed(4)}</td>
                 </tr>
                 <tr>
                   <td>OpenAI</td>
-                  <td className="mono text-muted">gpt-4o-mini</td>
-                  <td className="mono">$0.00200</td>
+                  <td className="mono text-muted">gpt-4.1-nano</td>
+                  <td className="mono">$0.00010</td>
                   <td className="mono" style={{ fontWeight: 600 }}>${data.cost_breakdown.openai_usd.toFixed(4)}</td>
                 </tr>
               </tbody>

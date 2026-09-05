@@ -6,6 +6,38 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.9.6 — investigação de custo/latência de LLM (spec `docs/specs/FASE_10.9.6_CUSTO_LLM_ADMIN.md`)
+- **Modal ~3s pra abrir (achado do dono):** causa raiz era `GET /auth/me` fazendo 3 chamadas
+  Supabase em SÉRIE, bloqueantes. A 2ª e a 3ª (`_get_plan`, `_get_onboarding_seen`) não
+  dependem uma da outra — agora rodam em paralelo (`asyncio.to_thread` + `gather`), corta ~1
+  round trip do tempo de abertura.
+- **Preço de LLM desatualizado em 4 lugares:** `costs.py`/`overview.py`/`usage.py` (backend)
+  e `Costs.tsx` (admin frontend) tinham cada um sua PRÓPRIA tabela de preço, todas com
+  `openai: $0.002/1k` (~10-20x o preço real do `gpt-4.1-nano`, o modelo de fato usado) e o
+  frontend ainda citava o modelo errado (`gpt-4o-mini`). Centralizado numa fonte única
+  (`backend/services/llm_pricing.py`) com preço real separado input/output; frontend corrigido
+  pra citar o modelo certo com o preço certo.
+- **"Admin mockado" (achado do dono) — não era mock:** as 3 rotas já chamavam Cloudflare/Supabase
+  de verdade, com fallback só quando a chamada real falha; `Costs.tsx` já mostrava o motivo exato
+  do erro. O problema real: `CF_ACCOUNT_ID` não está setado no `.env` da VPS (só `CF_AIG_TOKEN`
+  existe) → URL da API Cloudflare fica malformada → 404. **Bloqueado no dono**: preciso do
+  Account ID (dashboard Cloudflare) — tentei descobrir via API com o token atual, mas ele é
+  escopado só pra AI Gateway, sem permissão de listar contas.
+- **USD→BRL duplicado:** `overview.py` tinha sua própria cópia de busca de câmbio; agora usa o
+  helper compartilhado `utils/fx_rate.py` que `usage.py` já usava.
+- **Cache de prompt — investigado, não implementado:** o system prompt (~250-300 tokens) está
+  abaixo do mínimo de 1024 tokens que o cache automático da OpenAI exige. Sem ganho possível no
+  tamanho atual; documentado pra não reabrir a investigação à toa depois.
+- **Achado durante o próprio fix:** ao migrar pra `llm_pricing.cost_usd`, `overview.py` e
+  `usage.py` tinham uma variável LOCAL também chamada `cost_usd` que sombreava a função
+  importada — `UnboundLocalError` em runtime (não aparece no import). Corrigido antes de
+  chegar em produção; teste de regressão (`test_admin_cost_no_name_shadowing.py`) confirmado
+  falhando com o bug reintroduzido de propósito.
+- Testes novos: `test_llm_pricing.py` (4), `test_me_endpoint_parallel.py` (1, prova o
+  paralelismo com delay artificial), `test_admin_cost_no_name_shadowing.py` (1). Backend local
+  184 passed (mesmos 6 failed + 24 errors pré-existentes de dependência ausente — presidio/fpdf
+  — não relacionados). `admin && npx tsc --noEmit` limpo.
+
 ### FASE 10.9.5 — B13.1: badge sumia em página idle; cota/contador "Hoje" com bug de fuso; geração ~15s; UX
 - **B13.1 — badge não reaparecia sem interação do usuário.** Achado real: dono viu o badge
   ausente numa aba ChatGPT logada e ativa; ao apagar texto do composer o badge reapareceu
