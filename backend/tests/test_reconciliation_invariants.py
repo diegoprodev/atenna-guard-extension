@@ -62,12 +62,18 @@ def test_R2_rotas_sensiveis_tem_require_auth(arquivo, paths):
 
 def test_R2_generate_prompts_tem_require_auth():
     src = _read("main.py")
-    # o endpoint /generate-prompts deve depender de require_auth
-    m = re.search(r'@app\.post\(\s*["\']/generate-prompts["\'].*?\ndef |@app\.post\(\s*["\']/generate-prompts["\'].*?async def ', src, re.S)
     assert "require_auth" in src
-    assert re.search(r'/generate-prompts.*?Depends\(require_auth\)', src, re.S), (
-        "/generate-prompts sem Depends(require_auth)"
-    )
+    # /generate-prompts tem que exigir auth — direto via Depends(require_auth)
+    # OU via Depends(enforce_pro_limits), que É require_auth + lock de IP PRO
+    # (FASE P-ZT.4). Se for o wrapper, confere que ele mesmo depende de require_auth.
+    direct = re.search(r'/generate-prompts.*?Depends\(require_auth\)', src, re.S)
+    wrapped = re.search(r'/generate-prompts.*?Depends\(enforce_pro_limits\)', src, re.S)
+    assert direct or wrapped, "/generate-prompts sem Depends(require_auth | enforce_pro_limits)"
+    if wrapped and not direct:
+        guard_src = _read("middleware/pro_guard.py")
+        assert "Depends(require_auth)" in guard_src, (
+            "enforce_pro_limits não depende de require_auth — /generate-prompts ficaria sem auth"
+        )
 
 
 # ─── R3: JWT bruto rejeitado ───
