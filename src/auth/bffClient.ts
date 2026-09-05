@@ -2,6 +2,7 @@ import { getSession, setSession, clearSession, Session } from './sessionManager'
 import { withRefreshLock } from './refreshLock';
 import { AppError, E } from '../core/errors';
 import { BFF_BASE, SUPABASE_PROJECT_REF } from '../config';
+import { getStorageUser, purgeScopedData } from '../core/scopedStorage';
 
 interface MeResponse {
   user_id: string;
@@ -47,7 +48,13 @@ export async function bffFetch<T>(
   if (r.status === 401 && retry && session) {
     const refreshed = await withRefreshLock(() => bffRefresh(session.token));
     if (refreshed) return bffFetch<T>(path, init, false);
+    // Sessão expirou e o refresh falhou → derruba a sessão. TEM que purgar o
+    // dado escopado no usuário também (histórico/uso/plano) — senão fica pra
+    // trás pra sempre no chrome.storage.local (mesmo vazamento que o signOut
+    // já cobria, mas por outro caminho: expiração em vez de logout manual).
+    const uid = getStorageUser();
     await clearSession();
+    await purgeScopedData(uid);
     throw new AppError(E.SESSION_EXPIRED);
   }
   if (r.status === 429) throw new AppError(E.RATE_LIMIT);

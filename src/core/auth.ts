@@ -1,4 +1,4 @@
-import { setStorageUser, getStorageUser, userScopedKeys } from './scopedStorage';
+import { setStorageUser, getStorageUser, purgeScopedData } from './scopedStorage';
 import {
   getSession as bffGetSession,
   setSession as bffSetSession,
@@ -9,21 +9,6 @@ import { AppError, E } from '../core/errors';
 import { BFF_BASE } from '../config';
 
 const JWT_KEY = 'atenna_jwt';
-
-const USER_SCOPED_BASES = [
-  'atenna_history',
-  'atenna_usage',
-  'atenna_total_count',
-  'atenna_monthly_usage',
-  'atenna_dlp_stats',
-  'atenna_badge_color',
-  'atenna_settings',
-  'atenna_upload_count',
-  'atenna_plan',
-  'atenna_pro_welcome_pending',
-  'atenna_last_gen_sig',
-  'atenna_autogen_style',
-];
 
 export interface Session {
   access_token:  string;  // opaque BFF token (not a raw JWT)
@@ -194,11 +179,9 @@ export async function signOut(): Promise<void> {
   const uid = getStorageUser();
   await bffLogout();
   setStorageUser(null);
-  return new Promise(resolve => {
-    try {
-      const keys = uid ? [JWT_KEY, ...userScopedKeys(uid, USER_SCOPED_BASES)] : [JWT_KEY];
-      chrome.storage.local.remove(keys, () => resolve());
-    }
+  await purgeScopedData(uid);
+  await new Promise<void>(resolve => {
+    try { chrome.storage.local.remove([JWT_KEY], () => resolve()); }
     catch { resolve(); }
   });
 }
