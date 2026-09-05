@@ -2,6 +2,7 @@ import os, httpx
 from fastapi import APIRouter, Depends
 from middleware.admin_auth import require_super_admin
 from services.llm_pricing import MODEL_PRICING_PER_1M, cost_usd
+from utils.fx_rate import get_usd_brl
 
 router = APIRouter()
 
@@ -91,9 +92,14 @@ async def cost_summary(admin: dict = Depends(require_super_admin)):
     est_gemini = round(tokens_dlp / 1000 * COST_PER_1K['gemini'], 4)
     est_openai = round(tokens_dlp / 1000 * COST_PER_1K['openai'], 4)
 
+    # FASE 10.9.7 — câmbio USD→BRL ao vivo (frankfurter.app/ECB, mesmo helper
+    # de overview.py/usage.py) pro toggle de moeda com 1 clique no admin.
+    usd_brl = await get_usd_brl()
+
     return {
         'tokens_estimated_total': tokens_dlp,
         'cost_breakdown': {'gemini_usd': est_gemini, 'openai_usd': est_openai},
         'cloudflare': cf,
+        'usd_brl_rate': round(usd_brl, 4),
         'note': 'Estimates based on DLP token counters. Actual costs visible in Cloudflare AI Gateway.',
     }
