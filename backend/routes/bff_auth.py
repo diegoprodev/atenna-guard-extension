@@ -25,6 +25,7 @@ If the table doesn't exist, sessions fall back to in-memory (restart = logout).
 import os
 import uuid
 import time
+import asyncio
 import logging
 from collections import deque
 from fastapi import APIRouter, HTTPException, Depends
@@ -105,6 +106,14 @@ def _get_plan(user_id: str) -> str:
     except Exception as e:
         logger.warning(f"_get_plan failed: {e}")
         return "free"
+
+def _get_onboarding_seen(user_id: str) -> bool:
+    try:
+        client = get_admin_client()
+        r = client.table("profiles").select("onboarding_seen").eq("id", user_id).single().execute()
+        return bool(r.data.get("onboarding_seen", False)) if r.data else False
+    except Exception:
+        return False
 
 @router.post("/login")
 async def login(req: LoginRequest):
@@ -252,19 +261,19 @@ async def me(creds: HTTPAuthorizationCredentials = Depends(_bearer)):
             status_code=401,
             detail="Raw JWT not accepted — authenticate via POST /auth/login",
         )
-    session = resolve_token(token)
-    current_plan = _get_plan(session["user_id"])
+    # FASE 10.9.6 — achado real do dono: modal demora ~3s só pra ABRIR (antes
+    # de qualquer geração). Causa: /auth/me fazia 3 chamadas ao Supabase em
+    # SÉRIE (resolve_token → _get_plan → onboarding_seen), cada uma um round
+    # trip de rede bloqueante (supabase-py é síncrono) — a segunda e a
+    # terceira não dependem uma da outra, só do user_id que a primeira
+    # resolve. Rodá-las em paralelo (asyncio.to_thread, já que o client é
+    # síncrono) corta ~1 round trip inteiro do tempo total.
+    session = await asyncio.to_thread(resolve_token, token)
+    current_plan, onboarding_seen = await asyncio.gather(
+        asyncio.to_thread(_get_plan, session["user_id"]),
+        asyncio.to_thread(_get_onboarding_seen, session["user_id"]),
+    )
     session["plan"] = current_plan
-
-    # Fetch onboarding_seen flag from user profile (Supabase)
-    onboarding_seen = False
-    try:
-        client = get_admin_client()
-        user_data = client.table("profiles").select("onboarding_seen").eq("id", session["user_id"]).single().execute()
-        if user_data.data:
-            onboarding_seen = user_data.data.get("onboarding_seen", False)
-    except Exception:
-        onboarding_seen = False
 
     return {
         "user_id": session["user_id"],

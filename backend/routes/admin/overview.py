@@ -1,6 +1,8 @@
 import os, httpx, datetime
 from fastapi import APIRouter, Depends
 from middleware.admin_auth import require_super_admin
+from services.llm_pricing import cost_usd
+from utils.fx_rate import get_usd_brl
 
 router = APIRouter()
 SUPABASE_URL      = os.getenv('SUPABASE_URL', 'https://kezbssjmgwtrunqeoyir.supabase.co')
@@ -8,8 +10,6 @@ SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY', '')
 CF_TOKEN          = os.getenv('CF_AIG_TOKEN', '')
 CF_ACCOUNT_ID     = os.getenv('CF_ACCOUNT_ID', '')
 CF_GATEWAY_ID     = os.getenv('CF_GATEWAY_ID', 'atenna-safe-plugin')
-
-PROVIDER_COST = {'google-ai-studio': 0.00015, 'openai': 0.00200}
 
 def _svc():
     return {'apikey': SUPABASE_SERVICE_KEY, 'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}'}
@@ -21,28 +21,15 @@ async def _check_url(client, url, headers=None, timeout=3.0):
     except Exception:
         return False
 
-async def _fetch_usd_brl(client: httpx.AsyncClient) -> float:
-    """Fetch live USD→BRL from frankfurter.app (free, no key, ECB-based)."""
-    try:
-        r = await client.get(
-            'https://api.frankfurter.app/latest?from=USD&to=BRL',
-            timeout=4.0
-        )
-        if r.is_success:
-            rate = r.json().get('rates', {}).get('BRL')
-            if rate:
-                return float(rate)
-    except Exception:
-        pass
-    return 5.06  # fallback if API unreachable
-
 @router.get('/overview')
 async def admin_overview(_: dict = Depends(require_super_admin)):
     today = datetime.date.today().isoformat()
 
     async with httpx.AsyncClient(timeout=10.0) as c:
         # ── 0. Live USD/BRL rate ───────────────────────────────
-        usd_brl = await _fetch_usd_brl(c)
+        # FASE 10.9.6 — usava um _fetch_usd_brl() próprio, duplicando
+        # utils/fx_rate.py (que usage.py já usa). Fonte única.
+        usd_brl = await get_usd_brl()
 
         # ── 1. Auth users (real count) ─────────────────────────
         users_total = 0
@@ -91,7 +78,7 @@ async def admin_overview(_: dict = Depends(require_super_admin)):
             pass
 
         # ── 4. CF Gateway cost (real) ──────────────────────────
-        cost_usd = 0.0
+        cost_total_usd = 0.0
         cf_requests_today = 0
         try:
             if CF_TOKEN:
@@ -106,10 +93,10 @@ async def admin_overview(_: dict = Depends(require_super_admin)):
                         ti = l.get('tokens_in') or 0
                         to_ = l.get('tokens_out') or 0
                         p = l.get('provider', '')
-                        cost_usd += (ti + to_) / 1000 * PROVIDER_COST.get(p, 0.001)
+                        cost_total_usd += cost_usd(p, ti, to_)
                         if (l.get('created_at') or '')[:10] == today:
                             cf_requests_today += 1
-                    cost_usd = round(cost_usd, 6)
+                    cost_total_usd = round(cost_total_usd, 6)
         except Exception:
             pass
 
@@ -133,7 +120,7 @@ async def admin_overview(_: dict = Depends(require_super_admin)):
                                        timeout=4.0)
         gemini_ok   = True
 
-    cost_brl = round(cost_usd * usd_brl, 2)
+    cost_brl = round(cost_total_usd * usd_brl, 2)
 
     return {
         'users_total':         users_total,
@@ -143,7 +130,7 @@ async def admin_overview(_: dict = Depends(require_super_admin)):
         'dlp_scans_total':     dlp_scans_total,
         'dlp_protected_total': dlp_protected_total,
         'errors_5xx_today':    errors_5xx_today,
-        'cost_estimate_usd':   cost_usd,
+        'cost_estimate_usd':   cost_total_usd,
         'cost_estimate_brl':   cost_brl,
         'usd_brl_rate':        round(usd_brl, 4),
         'cf_requests_today':   cf_requests_today,

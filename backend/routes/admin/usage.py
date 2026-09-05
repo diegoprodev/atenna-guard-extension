@@ -1,6 +1,7 @@
 """Cost + token usage per user — combines auth.users, dlp_stats, CF Gateway logs."""
 import os, httpx
 from utils.fx_rate import get_usd_brl
+from services.llm_pricing import cost_usd
 from fastapi import APIRouter, Depends, Query
 from middleware.admin_auth import require_super_admin
 
@@ -10,8 +11,6 @@ SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY', '')
 CF_TOKEN          = os.getenv('CF_AIG_TOKEN', '')
 CF_ACCOUNT_ID     = os.getenv('CF_ACCOUNT_ID', '')
 CF_GATEWAY_ID     = os.getenv('CF_GATEWAY_ID', 'atenna-safe-plugin')
-
-PROVIDER_COST     = {'google-ai-studio': 0.00015, 'openai': 0.00200}
 
 def _svc():
     return {'apikey': SUPABASE_SERVICE_KEY, 'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}'}
@@ -57,7 +56,7 @@ async def usage_per_user(
                         uid = meta.get('user_id', '__shared__')
                         ti = l.get('tokens_in') or 0
                         to_ = l.get('tokens_out') or 0
-                        cost = (ti + to_) / 1000 * PROVIDER_COST.get(l.get('provider', ''), 0.001)
+                        cost = cost_usd(l.get('provider', ''), ti, to_)
                         cf_cost_by_user[uid] = cf_cost_by_user.get(uid, 0.0) + cost
                         cf_tokens_by_user[uid] = cf_tokens_by_user.get(uid, 0) + ti + to_
             except Exception:
@@ -73,7 +72,7 @@ async def usage_per_user(
         scans = dlp.get('scans_total', 0)
         tokens_dlp = dlp.get('tokens_estimated', 0)
         protected = dlp.get('protected_count', 0)
-        cost_usd = round(cf_cost_by_user.get(uid, 0.0), 6)
+        user_cost_usd = round(cf_cost_by_user.get(uid, 0.0), 6)
         tokens_cf = cf_tokens_by_user.get(uid, 0)
 
         rows.append({
@@ -86,8 +85,8 @@ async def usage_per_user(
             'protected':     protected,
             'tokens_dlp':    tokens_dlp,
             'tokens_cf':     tokens_cf,
-            'cost_usd':      cost_usd,
-            'cost_brl':      round(cost_usd * USD_BRL, 2),
+            'cost_usd':      user_cost_usd,
+            'cost_brl':      round(user_cost_usd * USD_BRL, 2),
         })
 
     # Sort

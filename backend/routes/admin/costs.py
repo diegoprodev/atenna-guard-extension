@@ -1,6 +1,7 @@
 import os, httpx
 from fastapi import APIRouter, Depends
 from middleware.admin_auth import require_super_admin
+from services.llm_pricing import MODEL_PRICING_PER_1M, cost_usd
 
 router = APIRouter()
 
@@ -10,12 +11,14 @@ CF_TOKEN           = os.getenv('CF_AIG_TOKEN', '')
 CF_ACCOUNT_ID      = os.getenv('CF_ACCOUNT_ID', '')
 CF_GATEWAY_ID      = os.getenv('CF_GATEWAY_ID', 'atenna-safe-plugin')
 
-COST_PER_1K = {'gemini': 0.00015, 'openai': 0.00200}
-
-# USD per 1k tokens by provider prefix
-PROVIDER_COST = {
-    'google-ai-studio': 0.00015,
-    'openai': 0.00200,
+# Estimativa grosseira (tokens_estimated do DLP, não é o que de fato foi
+# enviado ao LLM) — usa a taxa de INPUT, mais barata, pra não superestimar
+# o que já é só uma aproximação de topo de funil. O número real de verdade
+# é o de `cloudflare.totals.cost_usd` (logs reais do AI Gateway, via
+# services/llm_pricing.py — fonte única, ver ali o porquê).
+COST_PER_1K = {
+    'gemini': MODEL_PRICING_PER_1M['google-ai-studio']['input'] / 1000,
+    'openai': MODEL_PRICING_PER_1M['openai']['input'] / 1000,
 }
 
 
@@ -48,7 +51,7 @@ async def _fetch_cf_metrics() -> dict | None:
             m = l.get('model', 'unknown')
             ti = l.get('tokens_in') or 0
             to_ = l.get('tokens_out') or 0
-            cost = (ti + to_) / 1000 * PROVIDER_COST.get(p, 0.001)
+            cost = cost_usd(p, ti, to_)
 
             if p not in by_provider:
                 by_provider[p] = {'requests': 0, 'tokens_in': 0, 'tokens_out': 0, 'cost_usd': 0.0, 'model': m}
