@@ -8,13 +8,31 @@ function fmt(n: number) {
   return String(n);
 }
 
+type Currency = 'USD' | 'BRL';
+
 export function Costs({ token }: { token: string }) {
   const [data, setData] = useState<CostSummary | null>(null);
   const [error, setError] = useState('');
+  const [currency, setCurrency] = useState<Currency>(() => {
+    try { return (localStorage.getItem('atenna_admin_currency') as Currency) || 'USD'; }
+    catch { return 'USD'; }
+  });
+
+  function setCur(c: Currency) {
+    setCurrency(c);
+    try { localStorage.setItem('atenna_admin_currency', c); } catch { /* */ }
+  }
 
   useEffect(() => {
     api.costs(token).then(setData).catch(e => setError(e.message));
   }, [token]);
+
+  // Conversão USD→BRL ao vivo (câmbio real vem do backend, frankfurter.app/ECB).
+  const rate = data?.usd_brl_rate ?? 1;
+  const money = (usd: number, digits = 4) =>
+    currency === 'BRL'
+      ? `R$ ${(usd * rate).toFixed(digits === 6 ? 4 : 2).replace('.', ',')}`
+      : `$${usd.toFixed(digits)}`;
 
   if (error) return <div className="admin-empty"><div className="admin-empty__title">Erro</div><div className="admin-empty__sub">{error}</div></div>;
   if (!data) return <div className="admin-empty"><div className="admin-empty__sub">Carregando...</div></div>;
@@ -30,15 +48,40 @@ export function Costs({ token }: { token: string }) {
 
   return (
     <>
-      <div className="admin-page-header">
-        <h1>Uso e Custos</h1>
-        <p>{hasCfData ? 'Dados reais do Cloudflare AI Gateway.' : 'Estimativas baseadas em contadores DLP.'}</p>
+      <div className="admin-page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+        <div>
+          <h1>Uso e Custos</h1>
+          <p>{hasCfData ? 'Dados reais do Cloudflare AI Gateway.' : 'Estimativas baseadas em contadores DLP.'}</p>
+        </div>
+        {/* Toggle de moeda — 1 clique, câmbio real ao vivo */}
+        <div role="group" aria-label="Moeda" style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
+          {(['USD', 'BRL'] as Currency[]).map(c => (
+            <button
+              key={c}
+              onClick={() => setCur(c)}
+              aria-pressed={currency === c}
+              style={{
+                padding: '6px 14px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
+                background: currency === c ? 'var(--blue)' : 'var(--surface)',
+                color: currency === c ? '#fff' : 'var(--text-2)',
+              }}
+            >
+              {c === 'USD' ? '$ USD' : 'R$ BRL'}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {currency === 'BRL' && (
+        <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 0 12px' }}>
+          Câmbio ao vivo: 1 USD = R$ {rate.toFixed(2).replace('.', ',')} (fonte: ECB/frankfurter.app)
+        </p>
+      )}
 
       <div className="admin-kpi-grid">
         <MetricCard
           label="Custo Total"
-          value={`$${totalUsd.toFixed(4)}`}
+          value={money(totalUsd, 4)}
           sub={hasCfData ? 'real · CF Gateway' : 'estimado · DLP'}
           color={totalUsd > 10 ? 'amber' : 'default'}
         />
@@ -54,8 +97,8 @@ export function Costs({ token }: { token: string }) {
           </>
         ) : (
           <>
-            <MetricCard label="Gemini (est.)" value={`$${data.cost_breakdown.gemini_usd.toFixed(4)}`} />
-            <MetricCard label="OpenAI (est.)" value={`$${data.cost_breakdown.openai_usd.toFixed(4)}`} />
+            <MetricCard label="Gemini (est.)" value={money(data.cost_breakdown.gemini_usd, 4)} />
+            <MetricCard label="OpenAI (est.)" value={money(data.cost_breakdown.openai_usd, 4)} />
           </>
         )}
       </div>
@@ -70,7 +113,7 @@ export function Costs({ token }: { token: string }) {
           <div className="admin-table-wrap">
             <table className="admin-table">
               <thead>
-                <tr><th>Provedor</th><th>Modelo</th><th>Tokens In</th><th>Tokens Out</th><th>Custo Real</th></tr>
+                <tr><th>Provedor</th><th>Modelo</th><th>Tokens In</th><th>Tokens Out</th><th>Custo Real ({currency === 'BRL' ? 'R$' : '$'})</th></tr>
               </thead>
               <tbody>
                 {Object.entries(cf.by_provider).map(([provider, stats]) => (
@@ -79,7 +122,7 @@ export function Costs({ token }: { token: string }) {
                     <td className="mono text-muted">{stats.model}</td>
                     <td className="mono">{fmt(stats.tokens_in)}</td>
                     <td className="mono">{fmt(stats.tokens_out)}</td>
-                    <td className="mono" style={{ fontWeight: 600 }}>${stats.cost_usd.toFixed(6)}</td>
+                    <td className="mono" style={{ fontWeight: 600 }}>{money(stats.cost_usd, 6)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -97,20 +140,20 @@ export function Costs({ token }: { token: string }) {
           <div className="admin-table-wrap">
             <table className="admin-table">
               <thead>
-                <tr><th>Provedor</th><th>Modelo</th><th>Preço / 1k tokens</th><th>Custo estimado</th></tr>
+                <tr><th>Provedor</th><th>Modelo</th><th>Preço / 1k tokens (in)</th><th>Custo estimado ({currency === 'BRL' ? 'R$' : '$'})</th></tr>
               </thead>
               <tbody>
                 <tr>
                   <td>Gemini</td>
                   <td className="mono text-muted">gemini-2.5-flash-lite</td>
                   <td className="mono">$0.00010</td>
-                  <td className="mono" style={{ fontWeight: 600 }}>${data.cost_breakdown.gemini_usd.toFixed(4)}</td>
+                  <td className="mono" style={{ fontWeight: 600 }}>{money(data.cost_breakdown.gemini_usd, 4)}</td>
                 </tr>
                 <tr>
                   <td>OpenAI</td>
                   <td className="mono text-muted">gpt-4.1-nano</td>
                   <td className="mono">$0.00010</td>
-                  <td className="mono" style={{ fontWeight: 600 }}>${data.cost_breakdown.openai_usd.toFixed(4)}</td>
+                  <td className="mono" style={{ fontWeight: 600 }}>{money(data.cost_breakdown.openai_usd, 4)}</td>
                 </tr>
               </tbody>
             </table>

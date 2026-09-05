@@ -269,6 +269,7 @@ export interface CostSummary {
   tokens_estimated_total: number;
   cost_breakdown: { gemini_usd: number; openai_usd: number };
   cloudflare: CfMetrics | null;
+  usd_brl_rate: number;
   note: string;
 }
 
