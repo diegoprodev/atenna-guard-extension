@@ -9,15 +9,12 @@ fallback (que sozinho já leva ~8s).
 
 Este teste falha ANTES do fix (max_retries=2) e passa depois (max_retries=0).
 """
-import os
 from unittest.mock import patch
-
-os.environ.setdefault("OPENAI_API_KEY", "sk-test-fake")
 
 import services.openai_service as svc
 
 
-def test_openai_client_has_no_internal_retries():
+def test_openai_client_has_no_internal_retries(monkeypatch):
     captured = {}
 
     class FakeCompletions:
@@ -32,6 +29,13 @@ def test_openai_client_has_no_internal_retries():
 
         def __init__(self, *_a, **kw):
             captured.update(kw)
+
+    # svc.OPENAI_API_KEY é lido uma vez no import do módulo — setar a env var
+    # aqui não adianta se outro teste já importou o módulo antes (ordem de
+    # coleta do pytest). monkeypatch no atributo do módulo, como
+    # test_provider_error_observability.py já faz, é o jeito que funciona
+    # independente de ordem de coleta.
+    monkeypatch.setattr(svc, "OPENAI_API_KEY", "sk-test-fake")
 
     with patch.object(svc, "AsyncOpenAI", FakeClient):
         import asyncio
