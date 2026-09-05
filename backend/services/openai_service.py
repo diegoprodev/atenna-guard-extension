@@ -92,7 +92,15 @@ async def generate_prompts_openai(input_text: str, user_id: str = "") -> dict | 
         api_key=OPENAI_API_KEY,
         base_url=base_url,
         default_headers=extra_headers if extra_headers else None,
-        max_retries=2,
+        # FASE 10.9.5 — achado real do dono: geração demorando ~15s. Causa:
+        # max_retries=2 fazia o SDK da OpenAI tentar de novo (com backoff)
+        # ANTES de sequer devolver o erro pra cá — e prompt_service.py JÁ
+        # cai pro Gemini (~8s) quando o OpenAI falha. As duas camadas de
+        # retry somavam: retry interno da OpenAI + fallback pro Gemini.
+        # Um 429 (rate_limit_exceeded/insufficient_quota) quase nunca resolve
+        # tentando de novo no mesmo segundo — falhar rápido e cair pro
+        # fallback é estritamente melhor que empilhar retry.
+        max_retries=0,
         timeout=15.0,
     )
 

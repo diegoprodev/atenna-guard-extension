@@ -104,6 +104,20 @@ function validateCNH(raw: string): boolean {
   return d.length === 11 && !/^(\d)\1{10}$/.test(d);
 }
 
+// ── Genérico: "rótulo + sequência numérica" ────────────────────
+// Primitiva reusável pra qualquer sigla/rótulo novo (RG, CPF, CNPJ, OAB,
+// CREA, CREF, CRM, "conta", "tel" etc.) seguido de números — não exige
+// bater um formato exato, só a contagem de dígitos numa faixa plausível.
+// Pedido do dono: "sempre no dlp caso haja numero...haja um nome ou
+// abreviação...e depois em seguida vir uma sequência de número" tem que
+// ser identificado, mesmo sem casar um formato específico de documento.
+function validateLabeledDigits(min: number, max: number) {
+  return (raw: string): boolean => {
+    const d = raw.replace(/\D/g, '');
+    return d.length >= min && d.length <= max && !/^(\d)\1+$/.test(d);
+  };
+}
+
 // ── Pattern definitions ───────────────────────────────────────
 
 const PATTERNS: PatternDef[] = [
@@ -139,6 +153,17 @@ const PATTERNS: PatternDef[] = [
     type: 'PHONE',
     pattern: /(?:\+55\s?)?(?:\(?\d{2}\)?\s?)(?:9\s?)?\d{4}[-\s]?\d{4}\b/g,
     confidence: 0.72,
+  },
+  // Telefone/celular/whatsapp com rótulo explícito — aceita QUALQUER
+  // sequência de 7 a 11 dígitos (com ou sem DDD/formatação), porque o
+  // rótulo já garante que não é um número qualquer no texto.
+  // Ex.: "tel 8331234567", "whatsapp: 99999-8888" (achado real do dono —
+  // esse caso não batia no regex de telefone com formato fixo).
+  {
+    type: 'PHONE',
+    pattern: /\b(?:tel\.?|telefone|fone|cel\.?|celular|whats\.?app|whats|zap|contato)[:\s.]*\(?\d[\d\s().\-]{5,15}\d\b/gi,
+    confidence: 0.9,
+    validate: validateLabeledDigits(7, 11),
   },
   // OpenAI sk-proj- / sk-
   {
@@ -268,6 +293,13 @@ const PATTERNS: PatternDef[] = [
     pattern: /\bCOREN[/\-][A-Z]{2}\s*\d{4,7}\b/gi,
     confidence: 0.95,
   },
+  // CREF — Educação Física: CREF 012345-G/SP ou CREF: 12345
+  {
+    type: 'CREF',
+    pattern: /\bCREF[:\s/\-]*\d{4,8}[-]?[A-Z]?(?:[/\-]?[A-Z]{2})?\b/gi,
+    confidence: 0.9,
+    validate: validateLabeledDigits(4, 8),
+  },
   // PIS / PASEP / NIT — 11 digits, with or without dots/hyphens
   // Format: DDD.DDDDD.DD-D  or 11 raw digits with context label
   {
@@ -306,6 +338,15 @@ const PATTERNS: PatternDef[] = [
     type: 'ADDRESS',
     pattern: /\bCEP\s*[:\s.]*\d{5}[-\s]?\d{3}\b/gi,
     confidence: 0.85,
+  },
+  // Conta bancária — requer rótulo explícito ("conta", "conta corrente",
+  // "conta poupança", "número da conta", "conta bancária"). Sem rótulo um
+  // número solto é ambíguo demais pra virar entidade.
+  {
+    type: 'BANK_ACCOUNT',
+    pattern: /\b(?:n[uú]mero\s+da\s+conta|conta\s+banc[aá]ria|conta\s+corrente|conta\s+poupan[çc]a|conta)[:\s.]*(?:n[ºo°]\.?\s*)?\d[\d.\-\s]{2,14}\d\b/gi,
+    confidence: 0.85,
+    validate: validateLabeledDigits(4, 16),
   },
   // CNJ process number — NNNNNNN-DD.AAAA.J.TR.OOOO
   {

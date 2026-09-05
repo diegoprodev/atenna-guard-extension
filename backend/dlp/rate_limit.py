@@ -8,6 +8,7 @@ from __future__ import annotations
 import os, logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
+from zoneinfo import ZoneInfo
 from supabase import create_client, Client
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,15 @@ PRO_HOURLY_LIMIT   = 20
 PRO_DAILY_LIMIT    = 60
 PRO_WEEKLY_LIMIT   = 150
 PRO_MONTHLY_LIMIT  = 300
+
+# FASE 10.9.5 — achado real do dono: "usei 2x hoje mas só conta 1, fuso
+# horário?". Sim: janela 'day'/'week' era calculada em meia-noite UTC, que é
+# 21h em Brasília. Duas gerações no MESMO dia local (uma antes, outra depois
+# das 21h) caíam em dois "dias UTC" diferentes — nunca batia o limite de
+# 5/dia (bypass de cota) e o contador "Hoje" ficava errado pro usuário.
+# Fuso fixo e decidido pelo servidor (nunca o que o cliente declarar —
+# zero-trust) porque hoje 100% do público é Brasil.
+BUSINESS_TZ = ZoneInfo("America/Sao_Paulo")
 
 _sb: Optional[Client] = None
 
@@ -37,10 +47,14 @@ def _now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
 def _window_start(window: str) -> str:
-    now = _now_utc()
+    # 'hour' pode ficar em UTC — BRT é offset de hora cheia (UTC-3), o
+    # início da hora coincide nos dois fusos. 'day'/'week'/'month' têm que
+    # ser no fuso de negócio, senão a virada cai às 21h de Brasília.
     if window == 'hour':
-        start = now.replace(minute=0, second=0, microsecond=0)
-    elif window == 'day':
+        start = _now_utc().replace(minute=0, second=0, microsecond=0)
+        return start.isoformat()
+    now = datetime.now(BUSINESS_TZ)
+    if window == 'day':
         start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     elif window == 'week':
         start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -48,13 +62,14 @@ def _window_start(window: str) -> str:
         start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     else:
         raise ValueError(f'Unknown window: {window}')
-    return start.isoformat()
+    return start.astimezone(timezone.utc).isoformat()
 
 def _next_window_reset(window: str) -> str:
-    now = _now_utc()
     if window == 'hour':
-        reset = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
-    elif window == 'day':
+        reset = _now_utc().replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+        return reset.isoformat()
+    now = datetime.now(BUSINESS_TZ)
+    if window == 'day':
         reset = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     elif window == 'week':
         reset = (now + timedelta(days=(7 - now.weekday()))).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -65,7 +80,7 @@ def _next_window_reset(window: str) -> str:
             reset = now.replace(month=now.month+1, day=1, hour=0, minute=0, second=0, microsecond=0)
     else:
         reset = now + timedelta(hours=1)
-    return reset.isoformat()
+    return reset.astimezone(timezone.utc).isoformat()
 
 def get_user_plan(user_id: str) -> str:
     sb = _get_client()

@@ -24,6 +24,7 @@ resend>=2.0.0
 sentry-sdk[fastapi]>=2.20.0
 prometheus-client>=0.20.0
 prometheus-fastapi-instrumentator>=7.0.0
+tzdata>=2024.1  # FASE 10.9.5 — zoneinfo (America/Sao_Paulo) precisa disso; python:3.12-slim não tem /usr/share/zoneinfo
 # Modelos NLP (baixados no Dockerfile):
 #   python -m spacy download pt_core_news_sm
 #   python -m spacy download en_core_web_sm

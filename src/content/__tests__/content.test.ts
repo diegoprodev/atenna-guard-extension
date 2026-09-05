@@ -81,6 +81,9 @@ vi.mock('../../content/injectButton', () => ({
   injectButton: vi.fn(),
   removeButton: vi.fn(),
   disconnectInjector: vi.fn(),
+  injectFallbackButton: vi.fn(),
+  isFallbackButton: vi.fn(() => false),
+  isRealButtonInjected: vi.fn(() => true),
 }));
 
 vi.mock('../../dlp/imageInterceptor', () => ({

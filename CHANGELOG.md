@@ -6,6 +6,54 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### FASE 10.9.5 — B13.1: badge sumia em página idle; cota/contador "Hoje" com bug de fuso; geração ~15s; UX
+- **B13.1 — badge não reaparecia sem interação do usuário.** Achado real: dono viu o badge
+  ausente numa aba ChatGPT logada e ativa; ao apagar texto do composer o badge reapareceu
+  sozinho. Causa raiz: `tryInject()` roda 1x no load/navegação e só reinjeta via
+  `MutationObserver` (childList/subtree) — uma falha na 1ª tentativa (composer ainda com
+  `opacity:0` num fade-in, por exemplo) nunca tinha 2ª chance numa página que não muta mais a
+  árvore do DOM depois disso. Editar texto só "consertava" por acidente (mutação incidental de
+  outro re-render da SPA). Fix: poll de retry limitado (10s, a cada 500ms) em todo ponto de
+  injeção (`init`, troca de sessão, mensagens do popup, navegação SPA), independente de
+  mutação nenhuma. Teste E2E novo (`F14`) reproduz exatamente esse cenário — composer existe
+  desde o load, só muda de opacity, nenhum nó entra/sai da árvore.
+- **Cota/contador "Hoje" errado — bug de fuso horário confirmado pelo dono.** `_window_start('day')`
+  calculava meia-noite **UTC**, que é **21h em Brasília**. Duas gerações no MESMO dia local (uma
+  antes, outra depois das 21h BRT) caíam em dois "dias UTC" diferentes: o contador "Hoje"
+  mostrava errado (achado do dono: "usei 2x mas só conta 1") **e** o limite real de 5/dia podia
+  ser furado (bypass de cota, não só bug visual — mesma função alimenta o rate limiter real em
+  `main.py`). Fix: janela `day`/`week`/`month` agora ancorada em `America/Sao_Paulo`
+  (`BUSINESS_TZ`, fixo e decidido pelo servidor — zero-trust, nunca o fuso que o cliente
+  declarar), tanto no rate limiter (`dlp/rate_limit.py`) quanto no contador exibido
+  (`/auth/usage`). Adicionado `tzdata` ao `requirements.txt` (`python:3.12-slim` não tem
+  `/usr/share/zoneinfo`).
+- **Geração de prompt ~15s (achado do dono).** Causa: `AsyncOpenAI(max_retries=2)` fazia o SDK
+  tentar de novo internamente (com backoff) ANTES de devolver o erro — e `prompt_service.py`
+  JÁ cai pro Gemini (~8s) quando o OpenAI falha. As duas camadas de retry somavam. Um 429
+  (`rate_limit_exceeded`/`insufficient_quota`) quase nunca resolve tentando de novo no mesmo
+  segundo. Fix: `max_retries=0` — falha rápido, cai pro fallback sem retry redundante.
+- **DLP — rótulo + número não identificado.** Achado do dono: digitou "tel 8331234567" (sem
+  DDD/formatação) e nada foi detectado nessa combinação específica de contexto. Adicionado
+  detector genérico "rótulo + sequência numérica" reusável (`validateLabeledDigits`) e 3 novos
+  casos: telefone/celular/whatsapp com abreviação + qualquer contagem de dígitos (7–11), CREF
+  (faltava — único conselho profissional sem recognizer), conta bancária com rótulo explícito
+  (não existia tipo nenhum pra isso).
+- **UX:** label "Geração pela canetinha" → "Geração automática (varinha)" (achado do dono:
+  nome não profissional). Toggle "Alerta automático de dados" saindo da borda do card: inline
+  `padding:8px 0` sobrescrevia o `padding:8px 14px` da classe CSS (que as linhas vizinhas
+  usam) — inline sempre vence sobre a folha de estilo. Removido; a classe volta a valer.
+- **Harness:** `npx vitest run` 349/350 (1 skip pré-existente); build limpo; backend local
+  (sem presidio/fpdf instalados neste PC — dependência pesada, validado via container é o
+  próximo passo) 175 passed / 6 failed + 24 errors, **todos** os failed/errors por dependência
+  ausente localmente (presidio_analyzer, fpdf), nenhum nos 3 arquivos tocados aqui; testes
+  novos: `test_rate_limit_timezone.py` (3), `test_openai_no_wasted_retries.py` (1),
+  `patterns.test.ts` (+13 no rótulo+número).
+- **NÃO validado ainda:** E2E `--project=extension` está com uma falha de infra pré-existente
+  (browser fecha ~7s após abrir a página fixture em qualquer teste que combine
+  `context.route` + `injectSession`, reproduzido até com o código original sem nenhuma mudança
+  minha) — reportado à parte, não bloqueia este fix mas significa que a validação E2E "real"
+  ponta a ponta continua pendente até essa infra ser destravada.
+
 ### SEGURANÇA/OBSERVABILIDADE — 429 dos providers de LLM não chegava no GlitchTip
 - **O que era:** o dono perguntou "chegou uma mensagem de créditos de 429, qual a origem?".
   Achei nos logs: `[Atenna] OpenAI rate limit atingido` — mas era um `print()`, nunca um

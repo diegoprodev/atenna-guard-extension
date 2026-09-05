@@ -394,7 +394,10 @@ export function renderSettingsPage(
 
       const toggleRow = document.createElement('label');
       toggleRow.className = 'atenna-modal__account-toggle-row';
-      toggleRow.style.padding = '8px 0';
+      // NÃO sobrescrever padding aqui — a classe já define '8px 14px' (mesmo
+      // padding horizontal de colorRow/styleRow). Um inline 'padding:8px 0'
+      // zerava o padding horizontal só desta linha e o toggle ficava colado
+      // na borda direita do card, "fora do layout" (achado real do dono).
 
       const toggleLabel = document.createElement('span');
       toggleLabel.textContent = 'Alerta automático de dados';
@@ -424,7 +427,7 @@ export function renderSettingsPage(
 
         const styleLabel = document.createElement('span');
         styleLabel.style.cssText = `font-size:13px;color:${_tc};font-weight:500;white-space:nowrap;opacity:0.85;font-family:inherit;`;
-        styleLabel.textContent = 'Geração pela canetinha';
+        styleLabel.textContent = 'Geração automática (varinha)';
 
         const styleSelect = document.createElement('select');
         styleSelect.className = 'atenna-modal__login-input';
