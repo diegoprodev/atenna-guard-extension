@@ -21,7 +21,7 @@ import os
 import logging
 from datetime import datetime, timezone
 
-from services.client_ip import ip_key
+from services.request_ip import ip_key
 
 logger = logging.getLogger(__name__)
 

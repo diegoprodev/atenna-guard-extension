@@ -34,12 +34,18 @@ jobs:
 
       - name: rsync backend/ -> VPS (sem --delete; exclui local-only)
         run: |
+          # ATENÇÃO: nada de globs largos aqui. `--exclude='c*.py'` (removido)
+          # já derrubou prod uma vez ao excluir client_ip.py — qualquer .py
+          # novo que comece com a letra do glob some silenciosamente. Excluir
+          # SÓ por nome exato / diretório.
           rsync -az --no-perms --no-owner --no-group \
             -e "ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes" \
             --exclude='.env' --exclude='.env.*' \
             --exclude='data/' --exclude='nginx/certs/' --exclude='static/admin/' \
             --exclude='__pycache__/' --exclude='*.pyc' \
-            --exclude='*.bak*' --exclude='.pre-*' --exclude='*.tgz' --exclude='c*.py' \
+            --exclude='.pytest_cache/' --exclude='*.tgz' \
+            --exclude='checkout_tmp.py' --exclude='doc_parser_new.py' --exclude='doc_parser_v2.py' \
+            --exclude='check_gemini_config.py' --exclude='debug_gemini_response.py' \
             backend/ root@157.90.246.156:/root/atenna-backend/
 
       - name: Deploy (build -> health check -> rollback)
