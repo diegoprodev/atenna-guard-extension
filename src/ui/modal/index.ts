@@ -7,5 +7,5 @@ export { openUploadFromBadge } from './upload-flow';
 export { renderSignupView } from './auth-views';
 export { updateUsageBadge } from './settings';
 export type { PromptResponse } from './network';
-export { QuotaExceededError, fetchPrompts } from './network';
+export { QuotaExceededError, DeviceConflictError, fetchPrompts } from './network';
 export type { PromptData } from './state';

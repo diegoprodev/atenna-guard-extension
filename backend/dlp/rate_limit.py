@@ -15,7 +15,10 @@ logger = logging.getLogger(__name__)
 
 FREE_DAILY_LIMIT   = 5
 FREE_MONTHLY_LIMIT = 25
-PRO_HOURLY_LIMIT   = 20
+# FASE P-ZT.4 — 20 → 12/hora. Um assento PRO é 1 pessoa; 12/h cobre uso
+# individual com folga e corta o abuso de login compartilhado (família/time
+# usando a mesma conta) que multiplicava o custo de API por assento.
+PRO_HOURLY_LIMIT   = 12
 PRO_DAILY_LIMIT    = 60
 PRO_WEEKLY_LIMIT   = 150
 PRO_MONTHLY_LIMIT  = 300

@@ -43,6 +43,20 @@ export class QuotaExceededError extends Error {
   }
 }
 
+/**
+ * FASE P-ZT.4 — conta PRO usada em 2 dispositivos/IPs ao mesmo tempo. O 2º
+ * dispositivo vê esta mensagem no lugar dos prompts.
+ */
+export class DeviceConflictError extends Error {
+  constructor(
+    public readonly friendlyMessage: string,
+    public readonly hint: string,
+  ) {
+    super('account_in_use_elsewhere');
+    this.name = 'DeviceConflictError';
+  }
+}
+
 export async function fetchPrompts(inputText: string): Promise<PromptResponse> {
   const fallback: PromptResponse = {
     direct:      `Explique de forma clara e objetiva:\n\n${inputText}`,
@@ -56,6 +70,13 @@ export async function fetchPrompts(inputText: string): Promise<PromptResponse> {
       const r = response as { limit?: number; count?: number; reset_at?: string | null };
       throw new QuotaExceededError(r.count ?? 5, r.limit ?? 5, r.reset_at ?? null);
     }
+    if (response && (response as { error?: string }).error === 'account_in_use_elsewhere') {
+      const r = response as { message?: string; hint?: string };
+      throw new DeviceConflictError(
+        r.message || 'Você só pode usar o Atenna Safe Prompt em um único dispositivo de forma simultânea.',
+        r.hint || '',
+      );
+    }
     if (!response || !response.ok) {
       console.warn('[Atenna] backend response not ok:', response);
       throw new Error('backend error');
@@ -65,6 +86,7 @@ export async function fetchPrompts(inputText: string): Promise<PromptResponse> {
     return data;
   } catch (err) {
     if (err instanceof QuotaExceededError) throw err;
+    if (err instanceof DeviceConflictError) throw err;
     console.warn('[Atenna] erro backend:', err);
     return fallback;
   }

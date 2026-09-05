@@ -28,7 +28,7 @@ import time
 import asyncio
 import logging
 from collections import deque
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from services.supabase_admin import get_admin_client, get_auth_client
@@ -107,6 +107,20 @@ def _get_plan(user_id: str) -> str:
         logger.warning(f"_get_plan failed: {e}")
         return "free"
 
+def _claim_ip_lock_if_pro(user_id: str, plan: str, request: Request) -> None:
+    """FASE P-ZT.4 — login PRO reivindica o lock de IP pro IP do login (quem
+    foi bloqueado só precisa entrar de novo aqui). No-op se não for PRO ou
+    PRO_IP_LOCK_MODE=off. Nunca lança."""
+    if plan != "pro":
+        return
+    try:
+        from services.client_ip import get_client_ip
+        from services.pro_ip_lock import claim_on_login
+        claim_on_login(user_id, get_client_ip(request))
+    except Exception:
+        pass
+
+
 def _get_onboarding_seen(user_id: str) -> bool:
     try:
         client = get_admin_client()
@@ -116,7 +130,7 @@ def _get_onboarding_seen(user_id: str) -> bool:
         return False
 
 @router.post("/login")
-async def login(req: LoginRequest):
+async def login(req: LoginRequest, request: Request):
     # Rate limiting check — 5 attempts per email per minute
     if not _check_login_rate_limit(req.email):
         log_security_event("login_rate_limited", {"email": req.email[:30]}, severity="MEDIUM")
@@ -136,6 +150,7 @@ async def login(req: LoginRequest):
     uid = r.user.id
     email = r.user.email or req.email
     plan = _get_plan(uid)
+    _claim_ip_lock_if_pro(uid, plan, request)
     return _issue_token(jwt, refresh_tok, uid, email, plan)
 
 
@@ -441,7 +456,7 @@ class GoogleAuthRequest(BaseModel):
 
 
 @router.post("/google")
-async def google_auth(req: GoogleAuthRequest):
+async def google_auth(req: GoogleAuthRequest, request: Request):
     if not req.code and not req.access_token:
         raise HTTPException(422, "code ou access_token é obrigatório")
     try:
@@ -466,4 +481,5 @@ async def google_auth(req: GoogleAuthRequest):
     uid = r.user.id
     email = r.user.email
     plan = _get_plan(uid)
+    _claim_ip_lock_if_pro(uid, plan, request)
     return _issue_token(jwt, refresh_tok, uid, email, plan)

@@ -601,6 +601,23 @@ describe('fetchPrompts', () => {
     const result = await fetchPrompts('texto');
     expect(result.direct).toContain('texto');
   });
+
+  it('lança DeviceConflictError com a mensagem amigável quando o backend barra por 2 IPs (FASE P-ZT.4)', async () => {
+    const { DeviceConflictError } = await import('./modal');
+    stubChrome({
+      ok: false,
+      error: 'account_in_use_elsewhere',
+      status: 429,
+      message: 'Você só pode usar o Atenna Safe Prompt em um único dispositivo de forma simultânea.',
+      hint: 'Sua conta está ativa em outro local.',
+    });
+    await expect(fetchPrompts('texto')).rejects.toBeInstanceOf(DeviceConflictError);
+    await fetchPrompts('texto').catch((e: unknown) => {
+      expect((e as { friendlyMessage: string }).friendlyMessage).toBe(
+        'Você só pode usar o Atenna Safe Prompt em um único dispositivo de forma simultânea.',
+      );
+    });
+  });
 });
 
 describe('renderSignupView — email confirmation screen', () => {

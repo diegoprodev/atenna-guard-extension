@@ -156,6 +156,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           if (res.status === 401) { sendResponse({ ok: false, error: 'auth_required', status: 401 }); return; }
           if (res.status === 429) {
             return res.json().then(body => {
+              // FASE P-ZT.4 — o 429 pode ser cota (daily_limit_reached) OU
+              // "conta em uso em outro IP" (account_in_use_elsewhere). O
+              // backend diz qual em body.detail.error.
+              const be = body?.detail?.error;
+              if (be === 'account_in_use_elsewhere') {
+                sendResponse({
+                  ok: false,
+                  error: 'account_in_use_elsewhere',
+                  status: 429,
+                  message: body?.detail?.message ?? '',
+                  hint: body?.detail?.hint ?? '',
+                });
+                return;
+              }
               sendResponse({
                 ok: false,
                 error: 'daily_limit_reached',
