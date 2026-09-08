@@ -36,14 +36,22 @@ Then use: `ssh atenna-vps`
 
 **Environment File:** `/root/atenna-backend/.env`
 
-**Key Variables:**
+**Key Variables** (valores reais só no `/root/atenna-backend/.env` da VPS e no cofre — NUNCA aqui):
 ```
-GEMINI_API_KEY=AIzaSyCds3pmir9nOVsAxcSt6w695PUd-hhHJg8
-OPENAI_API_KEY=sk-proj-...
+GEMINI_API_KEY=<no .env da VPS>
+OPENAI_API_KEY=<no .env da VPS>
 SUPABASE_URL=https://kezbssjmgwtrunqeoyir.supabase.co
-SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_ANON_KEY=<no .env da VPS>
+SUPABASE_SERVICE_ROLE_KEY=<no .env da VPS — NUNCA em log/commit>
+CF_AIG_TOKEN=<no .env da VPS>
+CF_ACCOUNT_ID=e6d552f924497f01ac4a986ef8f8c342   # id público, não é credencial
 ```
+
+> ⚠️ **Incidente:** a `GEMINI_API_KEY` real ficou versionada aqui do commit `b8643c3`
+> até 2026-09-08. **Ação do dono:** rotacionar no Google Cloud Console (a chave antiga
+> `AIza…HHJg8` deve ser revogada) e, idealmente, purgar do histórico git
+> (`git filter-repo --path docs/VPS_ACCESS_GUIDE.md --invert-paths` + force-push —
+> repo privado, 1 dono, impacto baixo). Ver `docs/SECURITY_TRIAGE_GITGUARD_2026-09-02.md` R-1.
 
 ---
 
