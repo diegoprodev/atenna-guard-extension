@@ -409,5 +409,6 @@ VPS: 157.90.246.156 (Hetzner)
 ## References
 
 - [VPS Access Guide](VPS_ACCESS_GUIDE.md)
-- [Multi-LLM Deployment Report](DEPLOYMENT_2026_05_08.md)
-- [TASK 3: Strict Mode Infrastructure](TASK3_STRICT_MODE_STATUS.md)
+- [Multi-LLM Deployment Report](_archive/build-log/DEPLOYMENT_2026_05_08.md)
+- [TASK 3: Strict Mode Infrastructure](_archive/build-log/TASK3_STRICT_MODE_STATUS.md)
+- [PRD — Jornada de Uso](PRD_JORNADA_DE_USO.md)
