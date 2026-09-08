@@ -4,7 +4,19 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ---
 
-## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
+## [Unreleased]
+
+_(sem mudanças ainda — próximo trabalho entra aqui)_
+
+---
+
+## [2.3.0] — 2026-09-08
+
+Primeiro pacote publicado na Chrome Web Store desde a linha 2.1.x. Consolida o que ficou
+sem publicar: **FASE 9.0** (reconciliação do backend com o repo + DLP revalidado
+server-side), **FASE 10** (design system único welcome→popup→modal→admin→e-mails +
+onboarding), **FASE P3** (CI/CD enterprise) e **FASE P-ZT** (zero-trust do frontend:
+anti-IDOR, RLS endurecida, JWT-por-request, anti-abuso de conta PRO). Manifesto `2.3.0`.
 
 ### CI — teste flaky bloqueava deploy silenciosamente
 - `dlp/test_supabase_persistence.py::test_safe_event_schema` tinha `assert "050" not in
@@ -542,9 +554,9 @@ All notable changes to **Atenna Guard Extension** are documented here.
 - `FASE_P3.6_P3.7_STAGING_MUTACAO_CARGA.md` — staging (schema isolado + CD por tag),
   mutação (`mutmut`/`Stryker`), carga (`k6`), contrato cliente↔servidor.
 
-## [Unreleased] — FASE P3: CI/CD
+### FASE P3 — CI/CD enterprise
 
-### P3.3 — portões de qualidade no CI
+#### P3.3 — portões de qualidade no CI
 - **Cobertura com ratchet** (`scripts/coverage-ratchet.mjs`): backend `pytest --cov` (baseline **62%**,
   real 63%), frontend `vitest --coverage` v8 (baseline **33%**). PR que derruba a cobertura > 0.5
   ponto → CI falha. Subiu ≥ 1 → avisa p/ atualizar o baseline.
@@ -631,11 +643,9 @@ Fluxo validado: merge no `main` → CI verde → `deploy.yml` → rsync → `doc
 - `.nvmrc` (24), `.github/pull_request_template.md` (checklist canônico 9.5), `.github/CODEOWNERS`.
 - Pendente do dono: branch protection em `main` + secret scanning/push protection no repo.
 
----
+### FASE 9.0/9.1 — reconciliação do backend + correção do DLP server-side (trabalho de 2026-09-02)
 
-## [2.3.0] — 2026-09-02 — FASE 9.0: reconciliação do backend + correção do DLP server-side
-
-### Crítico — 2 falhas de segurança achadas ao instrumentar as métricas (FASE 9.1)
+#### Crítico — 2 falhas de segurança achadas ao instrumentar as métricas (FASE 9.1)
 - **Cota server-side de `/generate-prompts` estava desligada desde 2026-05.** O handler lia
   `_user.get("id") or _user.get("sub")`, mas `require_auth` (token opaco BFF) devolve
   `{"user_id": ...}`. Resultado: `user_id` era sempre `None` → o ramo `else` assumia
