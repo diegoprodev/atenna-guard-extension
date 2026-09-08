@@ -6,6 +6,14 @@ All notable changes to **Atenna Guard Extension** are documented here.
 
 ## [Unreleased] — FASE 10 (design/onboarding) + FASE P3
 
+### CI — teste flaky bloqueava deploy silenciosamente
+- `dlp/test_supabase_persistence.py::test_safe_event_schema` tinha `assert "050" not in
+  event_json` num evento SEM nenhum CPF — a string "050" batia por acaso no timestamp
+  wall-clock do `created_at` (~poucos % dos runs). CI vermelha na `main` → `deploy.yml`
+  (gate `workflow_run.conclusion == 'success'`) pulava TODO deploy seguinte sem erro visível.
+  Removida a asserção sem sentido; o vazamento de prefixo "050" continua coberto de verdade,
+  com payload real, em `test_no_sensitive_data_in_persisted_event`. 20/20 runs verdes.
+
 ### FASE P-ZT.4 — anti-abuso de conta PRO (spec `docs/specs/FASE_P-ZT_PARTE4_ANTI_ABUSO_PRO.md`)
 - **Teto PRO/hora: 20 → 12** (`PRO_HOURLY_LIMIT`). Pedido do dono: um assento PRO é 1 pessoa;
   12/h cobre uso individual com folga e corta o abuso de login compartilhado (família/time

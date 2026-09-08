@@ -292,9 +292,14 @@ class TestDataIntegrity:
         persistence.persist(event)
         assert len(persistence.events) >= 1
 
-        # Verify no sensitive data in serialized form
+        # Verify no sensitive data in serialized form. This event carries NO
+        # CPF value, so the leak check that matters here is the entity-type
+        # label format — a raw "CPF: <n>" would mean the value tagged along.
+        # (The "050"-prefix leak is covered for real, with a real payload, in
+        # test_no_sensitive_data_in_persisted_event. Asserting it here matched
+        # the wall-clock created_at timestamp ~a few % of runs → flaky CI that
+        # silently skipped deploys.)
         event_json = event.to_json()
-        assert "050" not in event_json
         assert "CPF:" not in event_json
 
 
