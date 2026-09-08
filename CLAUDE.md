@@ -184,3 +184,4 @@ key) para ID local == publicado. Sem isso, `--project=extension` não cobre o lo
 - **NÃO implementar na extensão** o que já existe na plataforma — isso desvia da estratégia
 - O fluxo de upsell é: Extensão (free/pro) → Atenna Plataforma → Arckos Enterprise
 - Features da extensão devem ter fricção proposital no free para converter para pro/plataforma
+- **Jornada de uso ponta a ponta:** `docs/PRD_JORNADA_DE_USO.md` (descoberta → onboarding → badge → DLP → varinha → cota → upsell → LGPD → desinstalação)
