@@ -55,7 +55,7 @@ async function mockBff(context: BrowserContext, plan: 'free' | 'pro' = 'free') {
 // ─────────────────────────────────────────────────────────────────────────────
 
 test('V1.2: ID da extensão é o fixo do manifest "key"', async ({ extensionId }) => {
-  expect(extensionId).toBe('eeejlbiagiieioangpmhhfjlnpphljao');
+  expect(extensionId).toBe('mcofdpebfbkbgnekidmepbpebapliifa'); // = ID do item publicado na CWS (key extraída do .crx da loja)
 });
 
 test('V2.4: olho de senha alterna o type do campo (welcome)', async ({ context, extensionId }) => {
