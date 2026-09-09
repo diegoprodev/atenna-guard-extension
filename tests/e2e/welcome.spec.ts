@@ -207,9 +207,9 @@ test('W7: signup com dados válidos cai logado direto (auto-login, FASE 10 O1)',
   await page.click('#signup-btn');
 
   // O backend cria a conta confirmada → welcome.ts faz bffLogin logo em seguida
-  // → cai direto na tela de "Proteção ativada" (sem passo "agora faça login").
+  // → cai direto na tela de ativação (sem passo "agora faça login").
   await page.waitForSelector('#w-success', { state: 'visible', timeout: 5000 });
-  await expect(page.locator('#w-title')).toHaveText('Proteção ativada');
+  await expect(page.locator('#w-success-title')).toHaveText('Tudo pronto');
 
   // Tabs / form / Google ocultos no estado de sucesso
   await expect(page.locator('#form-signup')).toBeHidden();
@@ -252,11 +252,21 @@ test('W8: login with valid credentials shows success screen with platform links'
 
   await page.click('#login-btn');
 
-  // Aguarda tela de sucesso
+  // Aguarda tela de sucesso (ativação + como funciona)
   await page.waitForSelector('#w-success', { state: 'visible', timeout: 5000 });
 
-  await expect(page.locator('#w-title')).toContainText('Proteção ativada');
-  await expect(page.locator('#w-sub')).toContainText('teste@atenna.ai');
+  await expect(page.locator('#w-success-title')).toContainText('Tudo pronto');
+  await expect(page.locator('#w-success-sub')).toContainText('teste@atenna.ai');
+  // o header do formulário fica escondido — a tela de ativação tem título próprio
+  await expect(page.locator('#w-form-header')).toBeHidden();
+
+  // 3 passos "como funciona" ensinam badge / varinha / escudo
+  const steps = page.locator('.w-steps .w-step');
+  await expect(steps).toHaveCount(3);
+  await expect(steps.nth(0)).toContainText('campo de mensagem');
+  await expect(steps.nth(1)).toContainText('três versões');
+  await expect(steps.nth(2)).toContainText('dados sensíveis');
+  await expect(page.locator('.w-quota')).toContainText('Cinco gerações por dia');
 
   // Links das plataformas visíveis
   const platformLinks = page.locator('.w-plat-link');
@@ -405,7 +415,7 @@ test('W13: pressing Enter on login fields submits the form', async ({ context, e
   await page.press('#login-pass', 'Enter');
 
   await page.waitForSelector('#w-success', { state: 'visible', timeout: 5000 });
-  await expect(page.locator('#w-title')).toContainText('Proteção ativada');
+  await expect(page.locator('#w-success-title')).toContainText('Tudo pronto');
 
   await page.close();
 });

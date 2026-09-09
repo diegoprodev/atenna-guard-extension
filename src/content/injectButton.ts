@@ -258,7 +258,7 @@ function dismissProtectionBanner(): void {
   lastBannerBtn  = undefined;
 }
 
-function getLogoUrl(): string {
+export function getLogoUrl(): string {
   try { return chrome.runtime.getURL('icons/icon128.png'); }
   catch { return ''; }
 }

@@ -7,6 +7,7 @@ import { getSession } from '../auth/sessionManager';
 import { setStorageUser } from '../core/scopedStorage';
 import { attachImageInterceptor } from '../dlp/imageInterceptor';
 import { throttleLeadingEdge } from '../lib/throttle';
+import { maybeShowCoachmark } from './coachmark';
 
 self.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
   console.error('[Atenna] unhandledrejection:', event.reason);
@@ -91,7 +92,19 @@ function tryInject(allowFallback = false): void {
 
   injectButton(config, () => toggleModal());
   attachImageInterceptor(config.inputSelector);
+
+  // FASE B14 — coach mark de 1ª vez: uma vez por perfil, ~1s depois do badge
+  // ancorar (deixa a posição assentar). maybeShowCoachmark checa o "visto".
+  if (!_coachmarkTried) {
+    _coachmarkTried = true;
+    setTimeout(() => {
+      const badge = document.getElementById('atenna-guard-btn');
+      if (badge) void maybeShowCoachmark(badge as HTMLElement);
+    }, 1000);
+  }
 }
+
+let _coachmarkTried = false;
 
 // FASE B13.1 — tryInject() sozinho só roda 1x por evento (init, nav, login).
 // O MutationObserver cobre re-tentativas SE algo mutar o childList da página,

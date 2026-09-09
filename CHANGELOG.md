@@ -18,6 +18,25 @@ server-side), **FASE 10** (design system único welcome→popup→modal→admin�
 onboarding), **FASE P3** (CI/CD enterprise) e **FASE P-ZT** (zero-trust do frontend:
 anti-IDOR, RLS endurecida, JWT-por-request, anti-abuso de conta PRO). Manifesto `2.3.0`.
 
+### FASE B14 — onboarding enterprise (spec `docs/specs/FASE_B14_ONBOARDING_ENTERPRISE.md`)
+- **Achado do dono: "não vejo onboarding nenhum, como o user vai saber usar?"** A tela de
+  sucesso da welcome só dizia "abra uma plataforma". Nada ensinava a varinha, o escudo, o
+  limite. In-page, zero.
+- **welcome pós-login** virou uma tela de ativação: título "Tudo pronto" + **3 conceitos**
+  (o botão fica no campo / a varinha reescreve em 3 versões / o escudo segura dados sensíveis
+  antes do envio) + "Cinco gerações por dia no plano grátis" + os 4 links. Sem emoji, sem
+  cards genéricos, sem números de seção — linhas-conceito no design system, a tarja de censura
+  (`--redact`) na frase "dados sensíveis" amarrando ao herói. Dirigido pelo `impeccable`.
+- **Coach mark in-page** (`src/content/coachmark.ts`, novo, dependency-free): 1 card escuro
+  auto-contido ancorado no badge na **1ª vez** que ele aparece por perfil — "O Atenna está
+  ativo aqui / passe o mouse para gerar um prompt melhor ou proteger dados sensíveis". Some
+  no "Entendi", clique fora, ou 12s. Marca visto local (`atenna_coachmark_seen`) + servidor
+  (`POST /auth/mark-onboarding-seen`, que já existia). **Nunca reaparece.**
+- **Testes:** E2E F16 novo (coach mark: aparece 1x, "Entendi" fecha, não volta na 2ª visita);
+  W7/W8/W13 atualizados pro novo `#w-success-title`; V6.2 endurecido (esperava só "Uso de
+  prompts", agora espera a seção de privacidade também — tirou o flake). vitest 353/354
+  (1 skip). `npm run test:e2e` **49/50** (1 skip). Screenshots validados pelo dono.
+
 ### FASE B13.2 — badge sem "pisca" + permissões mínimas (spec `docs/specs/FASE_B13.2_PERMISSOES_MINIMAS.md`)
 - **Badge "piscava" no canto (achado do dono):** ao abrir uma IA, o badge de espera (B13)
   aparecia imediato no canto inferior direito e só ~3s depois pulava pro input. Agora tem

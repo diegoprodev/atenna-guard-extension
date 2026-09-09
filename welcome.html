@@ -184,6 +184,29 @@
     .w-plat-link-ico img{width:16px;height:16px;opacity:.85}
     .w-plat-link-arr{margin-left:auto;color:var(--text-soft)}
 
+    /* ── ativação: como funciona (tela de sucesso) ─────────────────── */
+    .w-activate{text-align:left;padding:20px 0 4px}
+    .w-activate-head{display:flex;align-items:baseline;gap:8px;margin-bottom:3px}
+    .w-activate-head h2{font-family:var(--serif);font-weight:500;font-size:21px;color:var(--text);letter-spacing:-.01em}
+    .w-activate-sub{font-size:12.5px;color:var(--text-soft);line-height:1.55;margin-bottom:18px}
+    .w-steps{display:flex;flex-direction:column;gap:15px;padding:16px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+    .w-step{opacity:0;transform:translateY(6px);animation:wstep .5s cubic-bezier(.2,.7,.3,1) forwards}
+    .w-step:nth-child(1){animation-delay:.05s}
+    .w-step:nth-child(2){animation-delay:.13s}
+    .w-step:nth-child(3){animation-delay:.21s}
+    @keyframes wstep{to{opacity:1;transform:none}}
+    @media (prefers-reduced-motion:reduce){.w-step{opacity:1;transform:none;animation:none}}
+    .w-step-t{font-size:13px;font-weight:650;color:var(--text);line-height:1.4;letter-spacing:-.005em}
+    .w-step-d{font-size:12px;color:var(--text-soft);line-height:1.6;margin-top:3px}
+    .w-step-t .rd-mini{
+      position:relative;white-space:nowrap;color:transparent;
+      background:var(--redact);border-radius:2px;padding:0 .12em;
+      box-shadow:.1em 0 0 var(--redact),-.1em 0 0 var(--redact);
+    }
+    .w-quota{font-size:11px;color:var(--text-soft);letter-spacing:.005em;margin-top:14px;display:flex;align-items:center;gap:7px}
+    .w-quota::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0}
+    .w-open-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-soft);margin:20px 0 9px}
+
     @media(max-width:820px){.w-left{display:none}.w-right{padding:28px 20px;border-left:none}}
   </style>
 </head>
@@ -331,12 +354,31 @@
         <button class="w-link-btn" id="signup-success-back" style="margin-top:8px">Voltar ao login</button>
       </div>
 
-      <!-- SUCCESS state -->
-      <div id="w-success" style="display:none" class="w-state">
-        <div class="w-state-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16 9-5.5 5.5L8 12"/></svg>
+      <!-- SUCCESS state — ativação + como funciona -->
+      <div id="w-success" style="display:none" class="w-activate">
+        <div class="w-activate-head">
+          <h2 id="w-success-title">Tudo pronto</h2>
         </div>
-        <p>Abra uma plataforma abaixo.<br>O Atenna já está protegendo você automaticamente.</p>
+        <p class="w-activate-sub" id="w-success-sub">Você está protegido nas quatro plataformas de IA.</p>
+
+        <div class="w-steps">
+          <div class="w-step">
+            <div class="w-step-t">O botão fica no seu campo de mensagem</div>
+            <div class="w-step-d">Ao abrir o ChatGPT, Claude, Gemini ou Perplexity, ele aparece ancorado onde você digita.</div>
+          </div>
+          <div class="w-step">
+            <div class="w-step-t">A varinha reescreve seu texto em três versões</div>
+            <div class="w-step-d">Direta, técnica e estruturada. Você escolhe a que serve e envia.</div>
+          </div>
+          <div class="w-step">
+            <div class="w-step-t">O escudo segura <span class="rd-mini">dados sensíveis</span> antes do envio</div>
+            <div class="w-step-d">CPF, e-mail, telefone e cartão são detectados. Você decide o que sai.</div>
+          </div>
+        </div>
+
+        <div class="w-quota">Cinco gerações por dia no plano grátis</div>
+
+        <div class="w-open-label">Abra uma plataforma</div>
         <div class="w-plat-links">
           <a href="https://chatgpt.com/" target="_blank" class="w-plat-link">
             <span class="w-plat-link-ico"><img src="icons/openai.svg" alt="ChatGPT"></span>

@@ -118,6 +118,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // ── Marca o onboarding como visto no servidor (coach mark in-page) ──
+  if (msg.type === 'MARK_ONBOARDING_SEEN') {
+    void (async () => {
+      try {
+        const token = await getBffToken();
+        if (token) {
+          await fetch(`${BFF_BASE}/auth/mark-onboarding-seen`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        }
+      } catch { /* best-effort — o flag local já cobre */ }
+    })();
+    sendResponse({ ok: true });
+    return true;
+  }
+
   // ── Prompt generation ────────────────────────────────────
   if (msg.type === 'ATENNA_FETCH') {
     const inputText = typeof msg.input === 'string' ? msg.input.trim() : '';
