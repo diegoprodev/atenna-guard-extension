@@ -10,13 +10,15 @@ _(sem mudanças ainda — próximo trabalho entra aqui)_
 
 ---
 
-## [2.3.0] — 2026-09-09
+## [2.4.0] — 2026-09-09
 
-Primeiro pacote publicado na Chrome Web Store desde a linha 2.1.x. Consolida o que ficou
-sem publicar: **FASE 9.0** (reconciliação do backend com o repo + DLP revalidado
-server-side), **FASE 10** (design system único welcome→popup→modal→admin→e-mails +
-onboarding), **FASE P3** (CI/CD enterprise) e **FASE P-ZT** (zero-trust do frontend:
-anti-IDOR, RLS endurecida, JWT-por-request, anti-abuso de conta PRO). Manifesto `2.3.0`.
+Primeiro pacote publicado na Chrome Web Store desde a linha 2.1.x (o item publicado é a
+2.1.0; 2.2.x/2.3.x nunca chegaram à loja). Consolida o que ficou sem publicar:
+**FASE 9.0** (reconciliação do backend com o repo + DLP revalidado server-side),
+**FASE 10** (design system único welcome→popup→modal→admin→e-mails + onboarding),
+**FASE P3** (CI/CD enterprise), **FASE P-ZT** (zero-trust do frontend: anti-IDOR, RLS
+endurecida, JWT-por-request, anti-abuso de conta PRO), **B13.2** (badge sem "pisca" +
+permissões mínimas: `tabs` → `activeTab`) e **B14** (onboarding enterprise). Manifesto `2.4.0`.
 
 ### FASE B14 — onboarding enterprise (spec `docs/specs/FASE_B14_ONBOARDING_ENTERPRISE.md`)
 - **Achado do dono: "não vejo onboarding nenhum, como o user vai saber usar?"** A tela de

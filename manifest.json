@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Atenna Safe Prompt",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv7zJ7mxqDCIEV0KcOl3P0re1d/3KnVCbDNmVDH/hNqaYcP7jMcoQGzBZBtsbB6hdf2ihiir49qcjsT2e0VjRIdl/XV9A1oynppbv0pgRYKZCcxsudO5QManwX49+lyExsd0cBEpT0GkYbR8DT5XuwsF2irDZR6BOjMzR/t+fQaFy+QsqPNPdbkyTTVx4BegkADN56ELlndvV3V6UVLZmJbpyVj+U5Vh7cO5JwI9rC6CTmG50fzdlL/etRzAFyQqOP+ppZtI57LTSYIh0/cT7AeRLdXB2ybv5p3Diw6zpY298y9cDwtUSYIMev0AlpqXcbnGqDAZd1c6vJJ9ZKqxyjwIDAQAB",
   "description": "Proteja seus dados sensíveis e gere prompts melhores com IA no ChatGPT, Claude, Gemini e Perplexity.",
   "homepage_url": "https://api.atennaia.com.br/privacy",
-  "version_name": "2.3.0",
+  "version_name": "2.4.0",
   "permissions": ["storage", "activeTab", "identity"],
   "host_permissions": [
     "https://chatgpt.com/*",

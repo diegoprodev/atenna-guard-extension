@@ -18,7 +18,7 @@ export const SUPABASE_PROJECT_REF = 'kezbssjmgwtrunqeoyir';
 export const SUPABASE_URL = `https://${SUPABASE_PROJECT_REF}.supabase.co`;
 
 /** Versão da extensão — manter em sync com manifest.json / package.json. */
-export const VERSION = '2.3.0';
+export const VERSION = '2.4.0';
 
 /** URL da extensão publicada na Chrome Web Store. */
 export const EXTENSION_URL =
