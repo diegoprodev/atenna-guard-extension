@@ -13,7 +13,7 @@ export function detectPlatform(): PlatformConfig | null {
   const host = window.location.hostname;
   const path = window.location.pathname;
 
-  if (host.includes('chatgpt.com') || host.includes('chat.openai.com')) {
+  if (host.includes('chatgpt.com')) {
     if (CHATGPT_NON_CHAT.test(path)) return null;
     return { name: 'ChatGPT', inputSelector: '#prompt-textarea' };
   }

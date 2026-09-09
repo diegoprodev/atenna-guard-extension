@@ -10,7 +10,7 @@ self.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
   console.error('[Atenna] unhandledrejection:', event.reason);
 });
 
-const SUPPORTED_HOSTS = ['chatgpt.com', 'chat.openai.com', 'claude.ai', 'gemini.google.com', 'perplexity.ai'];
+const SUPPORTED_HOSTS = ['chatgpt.com', 'claude.ai', 'gemini.google.com', 'perplexity.ai'];
 
 async function getActiveTabInfo(): Promise<{ url: string; host: string; supported: boolean } | null> {
   return new Promise(resolve => {
@@ -35,9 +35,10 @@ function relayInjectBadge(tabId: number): void {
 
 async function getActiveTabId(): Promise<number | null> {
   return new Promise(resolve => {
-    chrome.tabs.query({ active: true }, tabs => {
-      // Find the non-popup tab (popup has url chrome-extension://)
-      const tab = tabs.find(t => t.url && !t.url.startsWith('chrome-extension://')) ?? tabs[0];
+    // `activeTab` (concedido no clique do ícone) só popula `.url` da aba ativa
+    // da janela atual — é essa que queremos.
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+      const tab = tabs.find(t => !t.url?.startsWith('chrome-extension://')) ?? tabs[0];
       resolve(tab?.id ?? null);
     });
   });

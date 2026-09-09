@@ -36,21 +36,16 @@ try {
 // então a mensagem se perde e o badge só aparece no reload da página.
 // Aqui o SW observa a sessão no storage e injeta o badge em toda aba suportada
 // que já esteja aberta — funciona pra e-mail, Google e login pela welcome.
-// Fonte única: os mesmos matches do content script (o script de E2E injeta
-// localhost aqui, então o backstop também vale nos testes).
-function supportedTabMatches(): string[] {
-  try {
-    const cs = chrome.runtime.getManifest().content_scripts ?? [];
-    const all = cs.flatMap(s => s.matches ?? []);
-    return all.length ? all : ['https://chatgpt.com/*'];
-  } catch {
-    return ['https://chatgpt.com/*'];
-  }
-}
+// A welcome também dispara isso via a mensagem BROADCAST_INJECT_BADGE (ela
+// não tem `activeTab` pra descobrir as abas de IA sozinha).
 
+// FASE B13.2 — sem a permissão `tabs`, `query({url:…})` tem comportamento
+// ambíguo. `query({})` devolve só os ids (que é tudo que usamos) e o content
+// script só existe nas plataformas de IA (content_scripts.matches) — mandar
+// mensagem pra qualquer outra aba só gera um lastError silencioso.
 function broadcastToSupportedTabs(message: { type: string }): void {
   try {
-    chrome.tabs.query({ url: supportedTabMatches() }, tabs => {
+    chrome.tabs.query({}, tabs => {
       void chrome.runtime.lastError;
       for (const t of tabs) {
         if (typeof t.id === 'number') {
@@ -111,6 +106,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (tabId) {
       chrome.tabs.sendMessage(tabId, { type: 'INJECT_BADGE' }, () => void chrome.runtime.lastError);
     }
+    sendResponse({ ok: true });
+    return true;
+  }
+
+  // ── Broadcast INJECT_BADGE a todas as abas (a welcome pede isso pós-login —
+  //    ela não tem como descobrir as abas de IA sem a permissão `tabs`) ──
+  if (msg.type === 'BROADCAST_INJECT_BADGE') {
+    broadcastToSupportedTabs({ type: 'INJECT_BADGE' });
     sendResponse({ ok: true });
     return true;
   }

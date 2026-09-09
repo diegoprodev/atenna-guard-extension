@@ -77,7 +77,7 @@ test.describe('Frontend 429 handling — UI', () => {
     // Intercept the chrome.runtime.sendMessage response
     // by injecting into page context and testing the modal behavior
 
-    await page.goto('https://chat.openai.com', { waitUntil: 'domcontentloaded' });
+    await page.goto('https://chatgpt.com', { waitUntil: 'domcontentloaded' });
 
     // Evaluate that QuotaExceededError exists in the module
     // (would be bundled into content.js)

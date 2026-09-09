@@ -10,13 +10,35 @@ _(sem mudanças ainda — próximo trabalho entra aqui)_
 
 ---
 
-## [2.3.0] — 2026-09-08
+## [2.3.0] — 2026-09-09
 
 Primeiro pacote publicado na Chrome Web Store desde a linha 2.1.x. Consolida o que ficou
 sem publicar: **FASE 9.0** (reconciliação do backend com o repo + DLP revalidado
 server-side), **FASE 10** (design system único welcome→popup→modal→admin→e-mails +
 onboarding), **FASE P3** (CI/CD enterprise) e **FASE P-ZT** (zero-trust do frontend:
 anti-IDOR, RLS endurecida, JWT-por-request, anti-abuso de conta PRO). Manifesto `2.3.0`.
+
+### FASE B13.2 — badge sem "pisca" + permissões mínimas (spec `docs/specs/FASE_B13.2_PERMISSOES_MINIMAS.md`)
+- **Badge "piscava" no canto (achado do dono):** ao abrir uma IA, o badge de espera (B13)
+  aparecia imediato no canto inferior direito e só ~3s depois pulava pro input. Agora tem
+  grace period de 2,5s (`FALLBACK_GRACE_MS`) — numa carga normal o composer monta nesse
+  tempo e o badge vai **direto pro input**, sem passar pelo canto. O de espera fica só pra
+  quando o composer realmente não vem (usuário não logado na plataforma).
+- **Permissão `tabs` → `activeTab`:** `tabs` gerava o aviso **"Ler seu histórico de
+  navegação"** na instalação — o dono: "ninguém instala extensão que lê histórico".
+  `activeTab` dá a URL da aba ativa só no clique do ícone, que é quando o popup precisa.
+  `broadcastToSupportedTabs` passou a usar `tabs.query({})` (só ids); a welcome pede o
+  broadcast pro service worker via `BROADCAST_INJECT_BADGE` (ela não tem `activeTab`).
+- **`chat.openai.com` removido** de `host_permissions`, `content_scripts.matches` e
+  `web_accessible_resources` — domínio legado (ChatGPT é `chatgpt.com` desde 2024, o velho
+  só redireciona). Também tirado dos `SUPPORTED_HOSTS` (popup/welcome) e das checagens em
+  `detectInput.ts`/`upload-flow.ts`.
+- **Diálogo de permissão agora:** "ler e alterar dados em chatgpt.com, claude.ai, gemini,
+  perplexity, api.atennaia.com.br, supabase.co" — **sem "ler histórico de navegação"**.
+- `identity` e `storage` mantidos (login Google / sessão + prefs).
+- Novo `docs/CWS_PERMISSION_JUSTIFICATIONS.md` — texto pronto pros campos da CWS.
+- **Testes:** vitest 353/354 (+3). `npm run test:e2e` **48/49** (1 skip; F15 novo — badge
+  vai direto pro input, badge de espera nunca aparece na carga normal). Build limpo.
 
 ### CI — teste flaky bloqueava deploy silenciosamente
 - `dlp/test_supabase_persistence.py::test_safe_event_schema` tinha `assert "050" not in

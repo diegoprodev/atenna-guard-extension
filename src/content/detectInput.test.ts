@@ -17,9 +17,9 @@ describe('detectPlatform', () => {
     expect(config!.inputSelector).toBe('#prompt-textarea');
   });
 
-  it('returns ChatGPT config for chat.openai.com', () => {
+  it('NÃO reconhece mais chat.openai.com (domínio legado — FASE B13.2)', () => {
     setLocation('chat.openai.com');
-    expect(detectPlatform()?.name).toBe('ChatGPT');
+    expect(detectPlatform()).toBeNull();
   });
 
   it('returns Claude config on chat page', () => {

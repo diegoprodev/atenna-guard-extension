@@ -6,9 +6,8 @@
   "description": "Proteja seus dados sensíveis e gere prompts melhores com IA no ChatGPT, Claude, Gemini e Perplexity.",
   "homepage_url": "https://api.atennaia.com.br/privacy",
   "version_name": "2.3.0",
-  "permissions": ["storage", "tabs", "identity"],
+  "permissions": ["storage", "activeTab", "identity"],
   "host_permissions": [
-    "https://chat.openai.com/*",
     "https://chatgpt.com/*",
     "https://claude.ai/*",
     "https://gemini.google.com/*",
@@ -22,7 +21,6 @@
   "content_scripts": [
     {
       "matches": [
-        "https://chat.openai.com/*",
         "https://chatgpt.com/*",
         "https://claude.ai/*",
         "https://gemini.google.com/*",
@@ -62,7 +60,6 @@
         "icons/icon128.png"
       ],
       "matches": [
-        "https://chat.openai.com/*",
         "https://chatgpt.com/*",
         "https://claude.ai/*",
         "https://gemini.google.com/*",
