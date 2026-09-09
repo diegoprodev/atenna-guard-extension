@@ -88,6 +88,16 @@
 - Logs: `docker compose logs -f backend --tail=50`
 - Rebuild: `docker compose up --build -d backend`
 
+## Versão / Release
+- Fonte da verdade da versão = `manifest.json` (`version` + `version_name`).
+  Bater junto: `package.json`, `package-lock.json` (raiz + `packages[""]`), `src/config.ts` (`VERSION`).
+- **Todo pacote publicado na Chrome Web Store ganha uma tag git anotada `vX.Y.Z`**
+  no commit de release: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
+- CHANGELOG: a seção da versão publicada leva a data + marca `— PUBLICADA NA CHROME WEB STORE`.
+- Item publicado na CWS: `mcofdpebfbkbgnekidmepbpebapliifa`. `key` do manifest = a chave
+  desse item (extraída do `.crx`). Ver `memory/extension-id-dev`.
+- Tags hoje: `v2.0.0`, `v2.4.0`. Publicadas na loja: 2.0.0, 2.1.0, **2.4.0** (atual).
+
 ## Fases Completas
 - 4.6, 4.7, 5.1, 5.2, 5.3, 6.1, 6.2 — ver `docs/specs/SPEC_INDEX.md`
 

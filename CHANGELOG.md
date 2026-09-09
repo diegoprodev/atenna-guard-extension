@@ -1,6 +1,20 @@
 # Changelog
 
-All notable changes to **Atenna Guard Extension** are documented here.
+All notable changes to **Atenna Safe Prompt** (extensão) are documented here.
+Formato: [Keep a Changelog](https://keepachangelog.com/). Versionamento: SemVer no
+`manifest.json` (= fonte da verdade). **Todo release publicado ganha uma tag git
+`vX.Y.Z`** apontando pro commit de release.
+
+### Histórico de numeração (pra não confundir quem lê o rodapé)
+- **mai/2026:** série de desenvolvimento `2.24.0`–`2.45.0` (numeração antiga, muitos
+  bumps por fase). Só **2.0.0** e **2.1.0** foram efetivamente publicados na Chrome Web Store.
+- **jun–set/2026:** reset pra uma linha limpa `1.x`–`2.x`. `2.2.0` (recuperação de prod) e
+  `2.3.x` (trabalho interno) **não** chegaram à loja.
+- **2026-09-09:** **`2.4.0` publicada na Chrome Web Store** — primeiro release desde a 2.1.0.
+  Tag `v2.4.0`.
+
+Tags existentes: `v2.0.0`, `v2.4.0`. (2.1.0 foi publicada mas nunca teve tag; não vale
+arqueologia.)
 
 ---
 
@@ -10,9 +24,9 @@ _(sem mudanças ainda — próximo trabalho entra aqui)_
 
 ---
 
-## [2.4.0] — 2026-09-09
+## [2.4.0] — 2026-09-09 — **PUBLICADA NA CHROME WEB STORE**
 
-Primeiro pacote publicado na Chrome Web Store desde a linha 2.1.x (o item publicado é a
+Primeiro pacote publicado na Chrome Web Store desde a linha 2.1.x (o item publicado era a
 2.1.0; 2.2.x/2.3.x nunca chegaram à loja). Consolida o que ficou sem publicar:
 **FASE 9.0** (reconciliação do backend com o repo + DLP revalidado server-side),
 **FASE 10** (design system único welcome→popup→modal→admin→e-mails + onboarding),
@@ -1101,7 +1115,7 @@ vermelho (não era só teste velho):
 
 ---
 
-## [Unreleased]
+## [Histórico — "Unreleased" de mai/2026, já incorporado nas releases seguintes]
 
 ### Fixed — 2026-05-27
 - **Usuário Pro vendo "Grátis" nas configurações**: `openSettingsOverlay()` lia plano do cache local sem sincronizar com o BFF; usuários Pro que abriam configurações via ícone de engrenagem (sem passar pelo modal principal) viam badge "Grátis". Corrigido: `syncPlanFromBff(me)` agora é chamado antes de `isPro()` em toda abertura de configurações
@@ -1659,7 +1673,7 @@ Após `PAYMENT_RECEIVED` / `PAYMENT_CONFIRMED`:
 
 ---
 
-## [UNRELEASED] — FASE: Consolidação Operacional Canônica (2026-05-13)
+## [Histórico — "UNRELEASED" de 2026-05-13, já incorporado] — FASE: Consolidação Operacional Canônica
 
 ### Canonical System State Documentation & Infrastructure Fixes
 
