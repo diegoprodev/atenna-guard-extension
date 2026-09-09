@@ -150,7 +150,12 @@ test('V6.2/V6.3/V6.4: config — seções, cards de privacidade clicáveis, Sair
   await page.hover('#atenna-guard-btn');
   await page.locator('.atenna-btn__action[aria-label="Configurações"]').click({ force: true });
   await page.waitForSelector('#atenna-settings-overlay', { timeout: 8000 });
-  await page.waitForFunction(() => document.getElementById('atenna-settings-overlay')?.textContent?.includes('Uso de prompts'), { timeout: 12000 });
+  // espera o overlay renderizar POR INTEIRO — a seção de privacidade entra async;
+  // snapshot cedo demais deixava o toContain('Privacidade e Dados') flaky
+  await page.waitForFunction(() => {
+    const t = document.getElementById('atenna-settings-overlay')?.textContent ?? '';
+    return t.includes('Uso de prompts') && t.includes('Privacidade e Dados');
+  }, { timeout: 12000 });
 
   const txt = (await page.locator('#atenna-settings-overlay').textContent()) ?? '';
   expect(txt).toContain('Uso de prompts');

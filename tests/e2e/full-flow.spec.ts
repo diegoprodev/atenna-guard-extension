@@ -449,3 +449,36 @@ test('F15 [B13.2]: carga normal — badge vai direto pro input, sem "piscar" no 
 
   await page.close();
 });
+
+test('F16 [B14]: coach mark de 1ª vez — aparece uma vez, some no "Entendi", não volta', async ({ context }) => {
+  await clearAll(context);
+  await injectSession(context);
+  await new Promise((r) => setTimeout(r, 1200));
+  await mockBff(context);
+
+  // 1ª visita — badge injeta e o coach mark aparece ~1s depois
+  const page = await openFixturePage(context);
+  await page.waitForSelector('#atenna-guard-btn:not([data-atenna-fallback])', { timeout: 12_000 });
+  const cm = page.locator('#atenna-coachmark');
+  await cm.waitFor({ state: 'visible', timeout: 6_000 });
+  await expect(cm).toContainText('O Atenna está ativo aqui');
+
+  // "Entendi" fecha
+  await page.locator('#atenna-coachmark .atn-cm-btn').click();
+  await cm.waitFor({ state: 'detached', timeout: 3_000 });
+
+  // grava o "visto" no storage
+  const s = await sw(context);
+  const seen = await s.evaluate(() => new Promise<boolean>((r) =>
+    chrome.storage.local.get('atenna_coachmark_seen', (v) => r(v?.atenna_coachmark_seen === true)),
+  ));
+  expect(seen).toBe(true);
+  await page.close();
+
+  // 2ª visita — NÃO volta
+  const page2 = await openFixturePage(context);
+  await page2.waitForSelector('#atenna-guard-btn', { timeout: 12_000 });
+  await page2.waitForTimeout(2500);
+  expect(await page2.locator('#atenna-coachmark').count()).toBe(0);
+  await page2.close();
+});

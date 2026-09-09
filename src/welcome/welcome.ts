@@ -61,6 +61,7 @@ function switchTab(tab: Tab) {
   const isForgot = tab === 'forgot';
   // Restore main content area and hide signup-success/success states
   $('w-main-content').style.display = '';
+  $('w-form-header').style.display  = '';
   $('w-signup-success').style.display       = 'none';
   $('w-success').style.display      = 'none';
   $('form-login').style.display   = tab === 'login'  ? '' : 'none';
@@ -199,9 +200,10 @@ function showSuccess(email: string) {
   $('w-google-btn').style.display   = 'none';
   $('w-divider').style.display      = 'none';
   $('w-tabs').style.display         = 'none';
+  $('w-form-header').style.display  = 'none'; // a tela de ativação tem seu próprio título
   $('w-success').style.display      = '';
-  $('w-title').textContent = 'Proteção ativada';
-  $('w-sub').textContent   = email ? `Logado como ${email}` : 'Sua extensão está pronta.';
+  const sub = document.getElementById('w-success-sub');
+  if (sub && email) sub.textContent = `Você está protegido nas quatro plataformas de IA. Conta: ${email}.`;
 }
 
 // ── init ──────────────────────────────────────────────────────────────────────
