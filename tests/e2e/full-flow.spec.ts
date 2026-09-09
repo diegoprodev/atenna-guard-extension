@@ -425,3 +425,27 @@ test('F14 [B13.1]: badge aparece mesmo sem mutação nenhuma no DOM (composer s�
 
   await page.close();
 });
+
+test('F15 [B13.2]: carga normal — badge vai direto pro input, sem "piscar" no canto', async ({ context }) => {
+  // Bug relatado pelo dono: ao abrir o chat o badge de espera aparece no canto
+  // inferior direito e só ~3s depois pula pro input. Numa carga normal o
+  // composer JÁ está no DOM — o badge de espera não devia aparecer nunca.
+  // O grace period (FALLBACK_GRACE_MS) segura o de espera por 2,5s.
+  await clearAll(context);
+  await injectSession(context);
+  await new Promise((r) => setTimeout(r, 1500));
+  await mockBff(context);
+
+  const page = await openFixturePage(context); // chatgpt.html — composer presente e visível
+
+  // badge injeta ancorado no input
+  await page.waitForSelector('#atenna-guard-btn', { timeout: 10_000 });
+  expect(await page.locator('[data-atenna-injected]').count()).toBe(1);
+
+  // e NUNCA passou pelo badge de espera — segura 3s (mais que o grace de 2,5s)
+  // pra provar que ele não aparece nem tardiamente
+  await page.waitForTimeout(3000);
+  expect(await page.locator('#atenna-guard-btn').getAttribute('data-atenna-fallback')).toBeNull();
+
+  await page.close();
+});

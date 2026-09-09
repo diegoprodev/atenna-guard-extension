@@ -214,7 +214,7 @@ export function openUploadFromBadge(): void {
 
         const applyToTarget = (text: string, fileName?: string) => {
           const host = location.hostname;
-          const isChatGPT = host.includes('chatgpt.com') || host.includes('chat.openai.com');
+          const isChatGPT = host.includes('chatgpt.com');
 
           if (isChatGPT) {
             // ChatGPT: file attachment first (shows badge above input), fallback to text

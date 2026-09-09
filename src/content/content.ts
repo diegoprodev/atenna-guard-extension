@@ -54,7 +54,7 @@ function removeBadge(): void {
   document.querySelector('[data-atenna-injected]')?.removeAttribute('data-atenna-injected');
 }
 
-function tryInject(): void {
+function tryInject(allowFallback = false): void {
   // Only inject badge if user is authenticated — DLP must not run without login
   if (!_isAuthenticated) return;
 
@@ -70,8 +70,12 @@ function tryInject(): void {
     // FASE 10.9 (B13): sem o composer da plataforma no DOM (ex.: usuário
     // ainda não logado no ChatGPT/Claude/etc) — mostra o badge mínimo mesmo
     // assim, em vez de sumir. Vira o badge completo assim que o composer
-    // aparecer (próxima chamada de tryInject, via o MutationObserver).
-    injectFallbackButton(() => toggleModal());
+    // aparecer (próxima chamada de tryInject).
+    // FASE B13.2: só mostra o badge de espera depois do grace period — numa
+    // carga normal o composer monta em 1–3s, então o badge não "pisca" no
+    // canto antes de ancorar no input. `allowFallback` só vem true do
+    // tryInjectWithRetry depois de FALLBACK_GRACE_MS sem o composer.
+    if (allowFallback) injectFallbackButton(() => toggleModal());
     return;
   }
 
@@ -95,11 +99,15 @@ function tryInject(): void {
 // da árvore) não dispara esse observer — o badge ficava perdido pra sempre
 // numa página que já carregou e não muta mais. Poll curto e limitado cobre
 // esse buraco sem depender de mutação nenhuma.
-const REINJECT_POLL_MS  = 500;
-const REINJECT_POLL_MAX = 20; // 20 x 500ms = 10s
+const REINJECT_POLL_MS   = 500;
+const REINJECT_POLL_MAX   = 20;   // 20 x 500ms = 10s
+// FASE B13.2 — segura o badge de espera por 2,5s: numa carga normal o composer
+// monta nesse tempo e o badge vai direto pro input, sem "piscar" no canto.
+const FALLBACK_GRACE_MS  = 2500;
 
 function tryInjectWithRetry(attemptsLeft = REINJECT_POLL_MAX): void {
-  tryInject();
+  const elapsedMs = (REINJECT_POLL_MAX - attemptsLeft) * REINJECT_POLL_MS;
+  tryInject(elapsedMs >= FALLBACK_GRACE_MS);
   if (isRealButtonInjected() || attemptsLeft <= 0) return;
   setTimeout(() => tryInjectWithRetry(attemptsLeft - 1), REINJECT_POLL_MS);
 }
